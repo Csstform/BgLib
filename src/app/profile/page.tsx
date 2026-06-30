@@ -5,7 +5,9 @@ import { getActiveGroupId } from "@/lib/group";
 import { SetupBanner } from "@/components/SetupBanner";
 import { ProfileForm } from "./ProfileForm";
 import { PushNotificationToggle } from "@/components/PushNotificationToggle";
+import { EmailNotificationToggle } from "@/components/EmailNotificationToggle";
 import { GroupInviteCard } from "@/components/GroupInviteCard";
+import { BggCollectionImport } from "@/components/BggCollectionImport";
 
 export default async function ProfilePage() {
   if (!isSupabaseConfigured()) {
@@ -50,7 +52,12 @@ export default async function ProfilePage() {
         {activeGroup && (
           <GroupInviteCard name={activeGroup.name} inviteCode={activeGroup.invite_code} />
         )}
+        <BggCollectionImport />
         <PushNotificationToggle />
+        <EmailNotificationToggle
+          enabled={profile.email_notifications !== false}
+          userId={user.id}
+        />
         <ProfileForm profile={profile} />
       </div>
     </div>

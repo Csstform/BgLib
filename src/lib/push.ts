@@ -1,5 +1,6 @@
 import webpush from "web-push";
 import { createClient } from "@supabase/supabase-js";
+import { notifyUsers as notifyUsersMulti } from "./email";
 
 function getVapidConfigured(): boolean {
   return !!(
@@ -80,7 +81,15 @@ export async function notifyGroupMembers(
     .map((m) => m.user_id)
     .filter((id) => id !== excludeUserId);
 
-  return sendPushToUsers(userIds, payload);
+  const result = await notifyUsersMulti(userIds, payload, sendPushToUsers);
+  return result.push + result.email;
+}
+
+export async function notifyUsersWithEmail(
+  userIds: string[],
+  payload: { title: string; body: string; url?: string }
+): Promise<void> {
+  await notifyUsersMulti(userIds, payload, sendPushToUsers);
 }
 
 export async function notifyAllUsersExcept(

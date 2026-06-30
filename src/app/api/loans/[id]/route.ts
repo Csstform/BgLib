@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import { sendPushToUsers } from "@/lib/push";
+import { notifyUsersWithEmail } from "@/lib/push";
 
 export async function PATCH(
   request: NextRequest,
@@ -54,13 +54,13 @@ export async function PATCH(
   const borrowerName = (Array.isArray(loan.borrower) ? loan.borrower[0] : loan.borrower)?.display_name;
 
   if (status === "active" && loan.borrower_id) {
-    await sendPushToUsers([loan.borrower_id], {
+    await notifyUsersWithEmail([loan.borrower_id], {
       title: "Loan approved",
       body: `${lenderName ?? "The owner"} approved your borrow request for ${gameTitle}`,
       url: "/loans",
     });
   } else if (status === "declined" && loan.borrower_id) {
-    await sendPushToUsers([loan.borrower_id], {
+    await notifyUsersWithEmail([loan.borrower_id], {
       title: "Loan declined",
       body: `Your request to borrow ${gameTitle} was declined`,
       url: "/loans",
@@ -69,7 +69,7 @@ export async function PATCH(
     const notifyId =
       user.id === loan.borrower_id ? loan.lender_id : loan.borrower_id;
     const who = user.id === loan.borrower_id ? borrowerName : lenderName;
-    await sendPushToUsers([notifyId], {
+    await notifyUsersWithEmail([notifyId], {
       title: "Game returned",
       body: `${who ?? "Someone"} marked ${gameTitle} as returned`,
       url: "/loans",

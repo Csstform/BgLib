@@ -139,3 +139,11 @@ export type DuplicateMatch = {
   bgg_id: number | null;
   match_type: "bgg_id" | "title";
 };
+
+export type WantToPlay = {
+  id: string;
+  user_id: string;
+  game_id: string;
+  group_id: string;
+  created_at: string;
+};

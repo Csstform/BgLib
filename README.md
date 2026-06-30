@@ -20,6 +20,12 @@ A mobile-friendly web app for iOS and Android that serves as a shared board game
 - **Duplicate detection** — Warns when adding a game that already exists in your group
 - **Onboarding** — Guided setup for new users (group, first game, notifications)
 - **Realtime updates** — Live refresh when loans, RSVPs, or games change
+- **Game picker on game nights** — Suggest games based on who's Going
+- **Want to play** — Mark interest in games; visible on game detail pages
+- **Edit & merge games** — Fix catalogue entries and combine duplicates
+- **BGG collection import** — Bulk import owned games from a BGG username
+- **Email notifications** — Fallback for loans, game nights, and reminders (via Resend)
+- **Loan due-date reminders** — Daily cron for overdue/upcoming returns
 
 ## Tech Stack
 
@@ -35,8 +41,13 @@ A mobile-friendly web app for iOS and Android that serves as a shared board game
 ### 1. Create a Supabase project
 
 1. Go to [supabase.com](https://supabase.com) and create a free project
-2. Open the **SQL Editor** and run [`supabase/schema.sql`](supabase/schema.sql), then [`supabase/migrations/002_extensions.sql`](supabase/migrations/002_extensions.sql)
-3. Under **Project Settings → API**, copy your **Project URL**, **anon public** key, and (optionally) **service role** key
+2. Open the **SQL Editor** and run migrations in order:
+   - [`supabase/schema.sql`](supabase/schema.sql)
+   - [`supabase/migrations/002_extensions.sql`](supabase/migrations/002_extensions.sql)
+   - [`supabase/migrations/003_priority_features.sql`](supabase/migrations/003_priority_features.sql)
+   - [`supabase/migrations/004_tier1_features.sql`](supabase/migrations/004_tier1_features.sql)
+3. Enable **Realtime** in Supabase Dashboard → Database → Replication for tables: `games`, `loans`, `game_night_rsvps`, `plays`, `want_to_play`
+4. Under **Project Settings → API**, copy your **Project URL**, **anon public** key, and (optionally) **service role** key
 
 ### 2. Configure environment
 
@@ -54,7 +65,11 @@ SUPABASE_SERVICE_ROLE_KEY=your-service-role-key   # for push notifications
 # Generate VAPID keys: npx web-push generate-vapid-keys
 NEXT_PUBLIC_VAPID_PUBLIC_KEY=...
 VAPID_PRIVATE_KEY=...
-VAPID_SUBJECT=mailto:you@example.com
+# Email via Resend (https://resend.com)
+RESEND_API_KEY=re_...
+EMAIL_FROM=BgLib <notifications@yourdomain.com>
+NEXT_PUBLIC_APP_URL=https://your-app.vercel.app
+CRON_SECRET=your-random-secret
 ```
 
 ### 3. Enable push notifications (optional)
@@ -98,8 +113,24 @@ Deploy to [Vercel](https://vercel.com) (recommended for Next.js):
 | `game_night_games` | Games planned for a game night |
 | `loans` | Borrow/lend tracking between owners |
 | `push_subscriptions` | Web push notification endpoints |
+| `groups` | Gaming groups with invite codes |
+| `group_members` | Group membership and roles |
+| `plays` | Logged play sessions |
+| `play_participants` | Who played in each session |
+| `want_to_play` | Games users want to try in a group |
 
-Row Level Security ensures users can only modify their own profile and ownership records, while all data is readable by authenticated and anonymous users for easy sharing.
+Row Level Security scopes data by group membership. Users manage their own profile, ownership, and loans they're involved in.
+
+## Key routes
+
+| Route | Purpose |
+|-------|---------|
+| `/picker` | What can we play? — filter by players, time, attendees |
+| `/plays` | Play history for your group |
+| `/onboarding` | First-run setup wizard |
+| `/game-nights` | Plan and RSVP to sessions |
+| `/loans` | Borrow/lend tracking |
+| `/profile` | Invite code, notifications, settings |
 
 ## Project Structure
 
@@ -114,7 +145,7 @@ src/
 supabase/
 ├── schema.sql            # Base database migration
 └── migrations/
-    └── 002_extensions.sql  # Game nights, loans, push
+    └── 004_tier1_features.sql  # Want-to-play, email prefs, edit/merge RLS
 ```
 
 ## License

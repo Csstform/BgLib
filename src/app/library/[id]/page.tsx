@@ -1,11 +1,16 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft, Users } from "lucide-react";
+import { ArrowLeft, Users, Heart } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured, formatPlayTime, formatPlayers } from "@/lib/utils";
+import { getActiveGroupId } from "@/lib/group";
 import { SetupBanner } from "@/components/SetupBanner";
 import { OwnerRow } from "@/components/OwnerRow";
 import { OwnGameButton } from "./OwnGameButton";
+import { WantToPlayButton } from "@/components/WantToPlayButton";
+import { EditGameForm } from "@/components/EditGameForm";
+import { MergeGamesPanel } from "@/components/MergeGamesPanel";
+import type { DuplicateMatch } from "@/lib/types";
 
 export default async function GameDetailPage({
   params,
@@ -46,6 +51,57 @@ export default async function GameDetailPage({
     .single();
 
   if (!game) notFound();
+
+  const groupId = game.group_id ?? (await getActiveGroupId());
+
+  const duplicates: DuplicateMatch[] = [];
+  if (groupId) {
+    const params = new URLSearchParams();
+    if (game.bgg_id) params.set("bgg_id", String(game.bgg_id));
+    params.set("title", game.title);
+    // Server-side duplicate check
+    const { data: byBgg } = game.bgg_id
+      ? await supabase
+          .from("games")
+          .select("id, title, bgg_id")
+          .eq("group_id", groupId)
+          .eq("bgg_id", game.bgg_id)
+      : { data: [] };
+    const { data: byTitle } = await supabase
+      .from("games")
+      .select("id, title, bgg_id")
+      .eq("group_id", groupId)
+      .ilike("title", game.title);
+
+    const seen = new Set<string>();
+    [...(byBgg ?? []), ...(byTitle ?? [])].forEach((d) => {
+      if (!seen.has(d.id)) {
+        seen.add(d.id);
+        duplicates.push({
+          ...d,
+          match_type: d.bgg_id === game.bgg_id && game.bgg_id ? "bgg_id" : "title",
+        });
+      }
+    });
+  }
+
+  let userWantsToPlay = false;
+  let wantToPlayUsers: { display_name: string }[] = [];
+  if (groupId) {
+    const { data: wants } = await supabase
+      .from("want_to_play")
+      .select("user_id, profiles (display_name)")
+      .eq("game_id", id)
+      .eq("group_id", groupId);
+
+    wantToPlayUsers = (wants ?? []).map((w) => ({
+      display_name: (Array.isArray(w.profiles) ? w.profiles[0] : w.profiles)?.display_name ?? "Someone",
+    }));
+
+    if (user) {
+      userWantsToPlay = (wants ?? []).some((w) => w.user_id === user.id);
+    }
+  }
 
   const owners = (game.ownership ?? []).map(
     (o: {
@@ -133,6 +189,17 @@ export default async function GameDetailPage({
         </div>
       )}
 
+      {user && groupId && (
+        <div className="mt-3">
+          <WantToPlayButton
+            gameId={game.id}
+            groupId={groupId}
+            userId={user.id}
+            wantsToPlay={userWantsToPlay}
+          />
+        </div>
+      )}
+
       {user && (
         <Link
           href={`/plays/new?game=${game.id}`}
@@ -140,6 +207,30 @@ export default async function GameDetailPage({
         >
           Log a play of this game
         </Link>
+      )}
+
+      {user && (
+        <div className="mt-4">
+          <EditGameForm game={game} />
+        </div>
+      )}
+
+      {duplicates.length > 1 && (
+        <div className="mt-4">
+          <MergeGamesPanel gameId={game.id} duplicates={duplicates} />
+        </div>
+      )}
+
+      {wantToPlayUsers.length > 0 && (
+        <div className="mt-4 rounded-xl border border-border bg-surface p-3">
+          <h2 className="flex items-center gap-2 text-sm font-semibold mb-2">
+            <Heart className="h-4 w-4 text-red-400" />
+            Want to play ({wantToPlayUsers.length})
+          </h2>
+          <p className="text-sm text-muted">
+            {wantToPlayUsers.map((u) => u.display_name).join(", ")}
+          </p>
+        </div>
       )}
 
       <div className="mt-6">

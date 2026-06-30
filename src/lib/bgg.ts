@@ -23,7 +23,7 @@ const parser = new XMLParser({
   ignoreAttributes: false,
   attributeNamePrefix: "@_",
   isArray: (name) =>
-    ["item", "name", "link", "poll", "result"].includes(name),
+    ["item", "name", "link", "poll", "result", "item"].includes(name),
 });
 
 async function fetchBgg(path: string): Promise<string> {
@@ -135,4 +135,41 @@ export async function getBggGameDetails(
       ? parseInt(game.yearpublished["@_value"], 10)
       : undefined,
   };
+}
+
+export type BggCollectionItem = {
+  id: number;
+  name: string;
+  owned: boolean;
+  yearPublished?: number;
+};
+
+export async function getBggCollection(
+  username: string
+): Promise<BggCollectionItem[]> {
+  const xml = await fetchBgg(
+    `/collection?username=${encodeURIComponent(username)}&own=1&stats=1&subtype=boardgame`
+  );
+  const parsed = parser.parse(xml);
+  const items = parsed?.items?.item;
+
+  if (!items) return [];
+
+  const list = Array.isArray(items) ? items : [items];
+
+  return list.map(
+    (item: {
+      "@_objectid": string;
+      name?: { "@_value": string };
+      yearpublished?: { "@_value": string };
+      status?: { "@_own": string };
+    }) => ({
+      id: parseInt(item["@_objectid"], 10),
+      name: typeof item.name === "object" ? item.name["@_value"] : String(item.name ?? ""),
+      owned: item.status?.["@_own"] === "1",
+      yearPublished: item.yearpublished
+        ? parseInt(item.yearpublished["@_value"], 10)
+        : undefined,
+    })
+  );
 }

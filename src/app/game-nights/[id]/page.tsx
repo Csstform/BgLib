@@ -6,6 +6,7 @@ import { isSupabaseConfigured, formatDateTime, formatRsvpStatus } from "@/lib/ut
 import { SetupBanner } from "@/components/SetupBanner";
 import { RsvpButtons } from "./RsvpButtons";
 import { CancelGameNightButton } from "./CancelGameNightButton";
+import { GameNightPicker } from "@/components/GameNightPicker";
 import { getInitials } from "@/lib/utils";
 
 export default async function GameNightDetailPage({
@@ -70,6 +71,12 @@ export default async function GameNightDetailPage({
     ? rsvps.find((r: { user_id: string }) => r.user_id === user.id)
     : null;
 
+  const goingUserIds = rsvps
+    .filter((r: { status: string }) => r.status === "going")
+    .map((r: { user_id: string }) => r.user_id);
+
+  const plannedGameIds = games.map((g: { id: string }) => g.id);
+
   const grouped = {
     going: rsvps.filter((r: { status: string }) => r.status === "going"),
     maybe: rsvps.filter((r: { status: string }) => r.status === "maybe"),
@@ -126,6 +133,16 @@ export default async function GameNightDetailPage({
           </div>
         </div>
       )}
+
+      <div className="mt-6 rounded-xl border border-border bg-surface p-4">
+        <GameNightPicker
+          gameNightId={night.id}
+          hostId={night.host_id}
+          currentUserId={user?.id ?? ""}
+          goingUserIds={goingUserIds}
+          plannedGameIds={plannedGameIds}
+        />
+      </div>
 
       {user && (
         <div className="mt-6">

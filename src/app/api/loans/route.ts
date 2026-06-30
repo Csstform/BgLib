@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import { sendPushToUsers } from "@/lib/push";
+import { notifyUsersWithEmail } from "@/lib/push";
 
 export async function POST(request: NextRequest) {
   const supabase = await createClient();
@@ -48,7 +48,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  await sendPushToUsers([lender_id], {
+  await notifyUsersWithEmail([lender_id], {
     title: "Loan request",
     body: `${borrower?.display_name ?? "Someone"} wants to borrow ${game?.title ?? "a game"}`,
     url: "/loans",

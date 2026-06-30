@@ -144,13 +144,20 @@ export function OnboardingWizard({ hasGroup }: { hasGroup: boolean }) {
           <p className="text-sm text-muted">
             Search BoardGameGeek to quickly add games to your group library.
           </p>
-          <button
-            type="button"
-            onClick={() => router.push("/add-game")}
-            className="w-full rounded-xl bg-primary py-3 font-medium text-primary-fg"
-          >
-            Add a game
-          </button>
+        <button
+          type="button"
+          onClick={() => router.push("/add-game")}
+          className="w-full rounded-xl bg-primary py-3 font-medium text-primary-fg"
+        >
+          Add a game manually
+        </button>
+        <button
+          type="button"
+          onClick={() => router.push("/profile")}
+          className="w-full rounded-xl border border-border py-3 font-medium hover:bg-surface-2"
+        >
+          Import from BoardGameGeek
+        </button>
           <button
             type="button"
             onClick={() => setStep("notifications")}

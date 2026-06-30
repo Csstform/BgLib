@@ -1,8 +1,9 @@
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured, getInitials } from "@/lib/utils";
+import { getActiveGroupId } from "@/lib/group";
 import { SetupBanner } from "@/components/SetupBanner";
 import { GameCard } from "@/components/GameCard";
 import type { GameWithOwners } from "@/lib/types";
@@ -22,6 +23,9 @@ export default async function UserProfilePage({
     );
   }
 
+  const groupId = await getActiveGroupId();
+  if (!groupId) redirect("/onboarding");
+
   const supabase = await createClient();
 
   const { data: profile } = await supabase
@@ -31,6 +35,13 @@ export default async function UserProfilePage({
     .single();
 
   if (!profile) notFound();
+
+  const { data: groupGames } = await supabase
+    .from("games")
+    .select("id")
+    .eq("group_id", groupId);
+
+  const gameIds = (groupGames ?? []).map((g) => g.id);
 
   const { data: ownerships } = await supabase
     .from("ownership")
@@ -43,7 +54,8 @@ export default async function UserProfilePage({
       )
     `
     )
-    .eq("user_id", id);
+    .eq("user_id", id)
+    .in("game_id", gameIds.length > 0 ? gameIds : ["00000000-0000-0000-0000-000000000000"]);
 
   const games: GameWithOwners[] = (ownerships ?? [])
     .map((o) => {
@@ -82,14 +94,14 @@ export default async function UserProfilePage({
             <p className="text-sm text-muted mt-0.5">{profile.bio}</p>
           )}
           <p className="text-sm text-muted mt-1">
-            {games.length} game{games.length !== 1 ? "s" : ""}
+            {games.length} game{games.length !== 1 ? "s" : ""} in this group
           </p>
         </div>
       </div>
 
       {games.length === 0 ? (
         <p className="text-center text-muted py-8">
-          No games in this collection yet.
+          No games in this group&apos;s collection yet.
         </p>
       ) : (
         <div className="space-y-2">
