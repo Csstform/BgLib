@@ -96,6 +96,24 @@ Open [http://localhost:3000](http://localhost:3000).
 
 Set `CRON_SECRET` in Vercel and ensure `SUPABASE_SERVICE_ROLE_KEY`, `RESEND_API_KEY`, and `EMAIL_FROM` are set for reminders and email.
 
+## Self-host (DigitalOcean + Cloudflare)
+
+To run on your own server with a custom domain (e.g. `bglib.csst.rocks` through Cloudflare):
+
+1. Follow **[`deploy/README.md`](deploy/README.md)** — droplet setup, nginx, systemd, origin SSL
+2. Set `NEXT_PUBLIC_APP_URL` to your public HTTPS URL
+3. Use the included systemd timer for loan reminders (replaces Vercel cron)
+
+Quick path on a fresh Ubuntu droplet:
+
+```bash
+git clone https://github.com/Csstform/BgLib.git /opt/bglib
+cd /opt/bglib
+cp deploy/env.production.example .env.local   # edit with your keys
+npm ci && npm run build
+npm run start:prod   # smoke test, then set up systemd + nginx per deploy/README.md
+```
+
 ## Scripts
 
 | Command | Purpose |
@@ -158,7 +176,14 @@ supabase/
 ├── migrations/           # Ordered migrations 002–005
 └── README.md             # Database setup guide
 scripts/
-└── build-install-sql.sh  # Builds install.sql
+├── build-install-sql.sh  # Builds install.sql
+└── start-production.sh   # Standalone server for self-hosting
+deploy/
+├── README.md             # DigitalOcean + Cloudflare guide
+├── env.production.example
+├── nginx-bglib.conf
+├── bglib.service
+└── bglib-cron.service / .timer
 ```
 
 ## License
