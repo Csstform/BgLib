@@ -8,6 +8,7 @@ import { PushNotificationToggle } from "@/components/PushNotificationToggle";
 import { EmailNotificationToggle } from "@/components/EmailNotificationToggle";
 import { GroupInviteCard } from "@/components/GroupInviteCard";
 import { BggCollectionImport } from "@/components/BggCollectionImport";
+import { isEmailConfigured } from "@/lib/email";
 
 export default async function ProfilePage() {
   if (!isSupabaseConfigured()) {
@@ -54,10 +55,12 @@ export default async function ProfilePage() {
         )}
         <BggCollectionImport />
         <PushNotificationToggle />
-        <EmailNotificationToggle
-          enabled={profile.email_notifications !== false}
-          userId={user.id}
-        />
+        {isEmailConfigured() && (
+          <EmailNotificationToggle
+            enabled={profile.email_notifications !== false}
+            userId={user.id}
+          />
+        )}
         <ProfileForm profile={profile} />
       </div>
     </div>

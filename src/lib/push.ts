@@ -1,5 +1,5 @@
 import webpush from "web-push";
-import { createClient } from "@supabase/supabase-js";
+import { getAdminClient } from "@/lib/supabase/admin";
 import { notifyUsers as notifyUsersMulti } from "./email";
 
 function getVapidConfigured(): boolean {
@@ -7,14 +7,6 @@ function getVapidConfigured(): boolean {
     process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY &&
     process.env.VAPID_PRIVATE_KEY
   );
-}
-
-function getAdminClient() {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-  const key =
-    process.env.SUPABASE_SERVICE_ROLE_KEY ??
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
-  return createClient(url, key);
 }
 
 export async function sendPushToUsers(
@@ -90,20 +82,6 @@ export async function notifyUsersWithEmail(
   payload: { title: string; body: string; url?: string }
 ): Promise<void> {
   await notifyUsersMulti(userIds, payload, sendPushToUsers);
-}
-
-export async function notifyAllUsersExcept(
-  excludeUserId: string,
-  payload: { title: string; body: string; url?: string }
-): Promise<number> {
-  const supabase = getAdminClient();
-  const { data: profiles } = await supabase.from("profiles").select("id");
-
-  const userIds = (profiles ?? [])
-    .map((p) => p.id)
-    .filter((id) => id !== excludeUserId);
-
-  return sendPushToUsers(userIds, payload);
 }
 
 export function isPushConfigured(): boolean {

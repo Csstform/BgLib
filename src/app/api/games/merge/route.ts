@@ -67,10 +67,31 @@ export async function POST(request: NextRequest) {
     await supabase.from("game_night_games").delete().eq("game_id", mergeId);
     await supabase.from("loans").update({ game_id: keep_id }).eq("game_id", mergeId);
     await supabase.from("plays").update({ game_id: keep_id }).eq("game_id", mergeId);
-    await supabase
+
+    // Merge want-to-play: keep existing entries, drop conflicts
+    const { data: wants } = await supabase
       .from("want_to_play")
-      .update({ game_id: keep_id })
+      .select("user_id, group_id")
       .eq("game_id", mergeId);
+    for (const w of wants ?? []) {
+      const { data: existing } = await supabase
+        .from("want_to_play")
+        .select("id")
+        .eq("user_id", w.user_id)
+        .eq("game_id", keep_id)
+        .eq("group_id", w.group_id)
+        .maybeSingle();
+      if (existing) {
+        await supabase.from("want_to_play").delete().eq("game_id", mergeId).eq("user_id", w.user_id);
+      } else {
+        await supabase
+          .from("want_to_play")
+          .update({ game_id: keep_id })
+          .eq("game_id", mergeId)
+          .eq("user_id", w.user_id);
+      }
+    }
+
     await supabase.from("games").delete().eq("id", mergeId);
   }
 

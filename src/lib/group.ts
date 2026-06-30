@@ -1,19 +1,37 @@
 import { cookies } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
 import type { Group } from "@/lib/types";
+import { GROUP_COOKIE } from "./group-constants";
 
-export const GROUP_COOKIE = "bglib_group_id";
+export { GROUP_COOKIE };
+
+async function verifyMembership(
+  userId: string,
+  groupId: string
+): Promise<boolean> {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("group_members")
+    .select("id")
+    .eq("group_id", groupId)
+    .eq("user_id", userId)
+    .single();
+  return !!data;
+}
 
 export async function getActiveGroupId(): Promise<string | null> {
-  const cookieStore = await cookies();
-  const fromCookie = cookieStore.get(GROUP_COOKIE)?.value;
-  if (fromCookie) return fromCookie;
-
   const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) return null;
+
+  const cookieStore = await cookies();
+  const fromCookie = cookieStore.get(GROUP_COOKIE)?.value;
+
+  if (fromCookie && (await verifyMembership(user.id, fromCookie))) {
+    return fromCookie;
+  }
 
   const { data: profile } = await supabase
     .from("profiles")
@@ -21,7 +39,21 @@ export async function getActiveGroupId(): Promise<string | null> {
     .eq("id", user.id)
     .single();
 
-  return profile?.active_group_id ?? null;
+  if (
+    profile?.active_group_id &&
+    (await verifyMembership(user.id, profile.active_group_id))
+  ) {
+    return profile.active_group_id;
+  }
+
+  const { data: membership } = await supabase
+    .from("group_members")
+    .select("group_id")
+    .eq("user_id", user.id)
+    .limit(1)
+    .single();
+
+  return membership?.group_id ?? null;
 }
 
 export async function getUserGroups(): Promise<Group[]> {
@@ -66,4 +98,22 @@ export async function getGroupMembers(groupId: string) {
     role: row.role as string,
     profile: Array.isArray(row.profile) ? row.profile[0] : row.profile,
   }));
+}
+
+export async function isGroupMember(groupId: string): Promise<boolean> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return false;
+  return verifyMembership(user.id, groupId);
+}
+
+export async function getGroupGameIds(groupId: string): Promise<string[]> {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("games")
+    .select("id")
+    .eq("group_id", groupId);
+  return (data ?? []).map((g) => g.id);
 }

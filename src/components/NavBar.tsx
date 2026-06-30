@@ -1,7 +1,7 @@
 import Link from "next/link";
 import {
   Library,
-  User,
+  LayoutGrid,
   LogIn,
   LogOut,
   Sparkles,
@@ -18,7 +18,7 @@ const navItems = [
   { href: "/picker", label: "Picker", icon: Sparkles },
   { href: "/game-nights", label: "Nights", icon: CalendarDays },
   { href: "/loans", label: "Loans", icon: ArrowLeftRight },
-  { href: "/profile", label: "Profile", icon: User },
+  { href: "/more", label: "More", icon: LayoutGrid },
 ];
 
 export async function NavBar() {

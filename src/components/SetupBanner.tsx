@@ -10,8 +10,10 @@ export function SetupBanner() {
           <p className="mt-1 text-sm text-muted">
             Copy <code className="text-foreground">.env.local.example</code> to{" "}
             <code className="text-foreground">.env.local</code>, add your
-            Supabase credentials, and run the SQL in{" "}
-            <code className="text-foreground">supabase/schema.sql</code>.
+            Supabase credentials, then run{" "}
+            <code className="text-foreground">supabase/install.sql</code> in the
+            SQL editor (see{" "}
+            <code className="text-foreground">supabase/README.md</code>).
           </p>
         </div>
       </div>

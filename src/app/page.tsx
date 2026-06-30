@@ -1,5 +1,14 @@
 import Link from "next/link";
-import { Dices, Library, Users, Share2, CalendarDays, ArrowLeftRight, Sparkles, History } from "lucide-react";
+import {
+  Dices,
+  Library,
+  Users,
+  Share2,
+  CalendarDays,
+  ArrowLeftRight,
+  Sparkles,
+  LayoutGrid,
+} from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/utils";
 
@@ -16,12 +25,8 @@ export default async function HomePage() {
   if (user) {
     return (
       <div className="px-4 py-6 pb-24">
-        <h1 className="text-2xl font-bold mb-1">
-          Welcome back!
-        </h1>
-        <p className="text-muted mb-8">
-          Your shared board game library
-        </p>
+        <h1 className="text-2xl font-bold mb-1">Welcome back!</h1>
+        <p className="text-muted mb-8">Your shared board game library</p>
 
         <div className="grid gap-3">
           <Link
@@ -49,30 +54,6 @@ export default async function HomePage() {
             </div>
           </Link>
           <Link
-            href="/users"
-            className="flex items-center gap-4 rounded-xl border border-border bg-surface p-4 hover:border-primary/30 transition-colors"
-          >
-            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary/20 text-primary">
-              <Users className="h-6 w-6" />
-            </div>
-            <div>
-              <h2 className="font-semibold">Find Players</h2>
-              <p className="text-sm text-muted">Browse collections by player</p>
-            </div>
-          </Link>
-          <Link
-            href="/collection"
-            className="flex items-center gap-4 rounded-xl border border-border bg-surface p-4 hover:border-primary/30 transition-colors"
-          >
-            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary/20 text-primary">
-              <Dices className="h-6 w-6" />
-            </div>
-            <div>
-              <h2 className="font-semibold">My Collection</h2>
-              <p className="text-sm text-muted">Games you own</p>
-            </div>
-          </Link>
-          <Link
             href="/game-nights"
             className="flex items-center gap-4 rounded-xl border border-border bg-surface p-4 hover:border-primary/30 transition-colors"
           >
@@ -97,15 +78,17 @@ export default async function HomePage() {
             </div>
           </Link>
           <Link
-            href="/plays"
+            href="/more"
             className="flex items-center gap-4 rounded-xl border border-border bg-surface p-4 hover:border-primary/30 transition-colors"
           >
             <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary/20 text-primary">
-              <History className="h-6 w-6" />
+              <LayoutGrid className="h-6 w-6" />
             </div>
             <div>
-              <h2 className="font-semibold">Play History</h2>
-              <p className="text-sm text-muted">Log and review games you&apos;ve played</p>
+              <h2 className="font-semibold">More</h2>
+              <p className="text-sm text-muted">
+                Collection, players, plays, profile, and settings
+              </p>
             </div>
           </Link>
         </div>

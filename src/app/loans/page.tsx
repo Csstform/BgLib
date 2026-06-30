@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/utils";
+import { getActiveGroupId, getGroupGameIds } from "@/lib/group";
 import { SetupBanner } from "@/components/SetupBanner";
 import { LoanCard } from "@/components/LoanCard";
 import type { LoanWithDetails } from "@/lib/types";
@@ -21,21 +22,30 @@ export default async function LoansPage() {
 
   if (!user) redirect("/login");
 
-  const { data: loans } = await supabase
-    .from("loans")
-    .select(
-      `
+  const groupId = await getActiveGroupId();
+  if (!groupId) redirect("/onboarding");
+
+  const gameIds = await getGroupGameIds(groupId);
+
+  const { data: loans } =
+    gameIds.length > 0
+      ? await supabase
+          .from("loans")
+          .select(
+            `
       *,
-      game:games (id, title, description, min_players, max_players, play_time_minutes, image_url, bgg_id, created_by, created_at),
+      game:games (id, title, description, min_players, max_players, play_time_minutes, image_url, bgg_id, created_by, created_at, group_id),
       lender:profiles!loans_lender_id_fkey (id, display_name, avatar_url, bio, created_at),
       borrower:profiles!loans_borrower_id_fkey (id, display_name, avatar_url, bio, created_at)
     `
-    )
-    .or(`lender_id.eq.${user.id},borrower_id.eq.${user.id}`)
-    .neq("status", "returned")
-    .neq("status", "cancelled")
-    .neq("status", "declined")
-    .order("created_at", { ascending: false });
+          )
+          .or(`lender_id.eq.${user.id},borrower_id.eq.${user.id}`)
+          .in("game_id", gameIds)
+          .neq("status", "returned")
+          .neq("status", "cancelled")
+          .neq("status", "declined")
+          .order("created_at", { ascending: false })
+      : { data: [] };
 
   const loansWithDetails: LoanWithDetails[] = (loans ?? []).map((l) => ({
     ...l,
@@ -51,7 +61,7 @@ export default async function LoansPage() {
     <div className="px-4 py-6 pb-24">
       <h1 className="text-2xl font-bold mb-1">Loans</h1>
       <p className="text-sm text-muted mb-6">
-        Track games you&apos;ve lent or borrowed
+        Games lent or borrowed in this group
       </p>
 
       {loansWithDetails.length === 0 ? (

@@ -3,6 +3,7 @@ export type Profile = {
   display_name: string;
   avatar_url: string | null;
   bio: string | null;
+  email_notifications?: boolean;
   created_at: string;
   onboarding_completed?: boolean;
   active_group_id?: string | null;
@@ -64,11 +65,13 @@ export type OwnershipWithProfile = Ownership & {
 
 export type GameNight = {
   id: string;
+  group_id?: string | null;
   title: string;
   description: string | null;
   host_id: string;
   scheduled_at: string;
   location: string | null;
+  cancelled_at?: string | null;
   created_at: string;
 };
 

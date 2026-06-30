@@ -58,7 +58,7 @@ export function GameNightPicker({
     await fetch(`/api/game-nights/${gameNightId}/games`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ game_night_id: gameNightId, game_ids: [...selected] }),
+      body: JSON.stringify({ game_ids: [...selected] }),
     });
     router.refresh();
     setSaving(false);

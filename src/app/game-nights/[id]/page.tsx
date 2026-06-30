@@ -8,6 +8,7 @@ import { RsvpButtons } from "./RsvpButtons";
 import { CancelGameNightButton } from "./CancelGameNightButton";
 import { GameNightPicker } from "@/components/GameNightPicker";
 import { getInitials } from "@/lib/utils";
+import { isGroupMember } from "@/lib/group";
 
 export default async function GameNightDetailPage({
   params,
@@ -48,6 +49,10 @@ export default async function GameNightDetailPage({
     .single();
 
   if (!night) notFound();
+
+  if (night.group_id && user && !(await isGroupMember(night.group_id))) {
+    notFound();
+  }
 
   const host = Array.isArray(night.host) ? night.host[0] : night.host;
   const rsvps = (night.rsvps ?? []).map(

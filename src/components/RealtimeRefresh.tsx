@@ -43,6 +43,16 @@ export function RealtimeRefresh({ groupId }: { groupId: string | null }) {
         },
         () => router.refresh()
       )
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "want_to_play",
+          filter: `group_id=eq.${groupId}`,
+        },
+        () => router.refresh()
+      )
       .subscribe();
 
     return () => {

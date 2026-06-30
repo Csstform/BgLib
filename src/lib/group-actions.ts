@@ -3,7 +3,7 @@
 import { cookies } from "next/headers";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
-import { GROUP_COOKIE } from "@/lib/group";
+import { GROUP_COOKIE } from "@/lib/group-constants";
 
 export async function setActiveGroup(groupId: string) {
   const supabase = await createClient();

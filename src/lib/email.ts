@@ -1,19 +1,8 @@
 import { Resend } from "resend";
-import { createClient } from "@supabase/supabase-js";
-
-function getAdminClient() {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-  const key =
-    process.env.SUPABASE_SERVICE_ROLE_KEY ??
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
-  return createClient(url, key);
-}
+import { getAdminClient } from "@/lib/supabase/admin";
 
 export function isEmailConfigured(): boolean {
-  return !!(
-    process.env.RESEND_API_KEY &&
-    process.env.EMAIL_FROM
-  );
+  return !!(process.env.RESEND_API_KEY && process.env.EMAIL_FROM);
 }
 
 async function getUserEmail(userId: string): Promise<string | null> {
@@ -23,16 +12,6 @@ async function getUserEmail(userId: string): Promise<string | null> {
   return data.user?.email ?? null;
 }
 
-async function shouldEmailUser(userId: string): Promise<boolean> {
-  const supabase = getAdminClient();
-  const { data } = await supabase
-    .from("profiles")
-    .select("email_notifications")
-    .eq("id", userId)
-    .single();
-  return data?.email_notifications !== false;
-}
-
 export async function sendEmailToUsers(
   userIds: string[],
   subject: string,
@@ -40,12 +19,22 @@ export async function sendEmailToUsers(
 ): Promise<number> {
   if (!isEmailConfigured() || userIds.length === 0) return 0;
 
+  const supabase = getAdminClient();
+  const { data: profiles } = await supabase
+    .from("profiles")
+    .select("id, email_notifications")
+    .in("id", userIds);
+
+  const profileMap = new Map(
+    (profiles ?? []).map((p) => [p.id, p.email_notifications !== false])
+  );
+
   const resend = new Resend(process.env.RESEND_API_KEY);
   let sent = 0;
 
   await Promise.all(
     userIds.map(async (userId) => {
-      if (!(await shouldEmailUser(userId))) return;
+      if (profileMap.get(userId) === false) return;
       const email = await getUserEmail(userId);
       if (!email) return;
 
@@ -58,7 +47,7 @@ export async function sendEmailToUsers(
         });
         sent++;
       } catch {
-        // Silently skip failed sends
+        // Skip failed sends
       }
     })
   );
