@@ -39,3 +39,42 @@ export function isSupabaseConfigured(): boolean {
     !process.env.NEXT_PUBLIC_SUPABASE_URL.includes("your-project")
   );
 }
+
+export function formatDateTime(iso: string): string {
+  const d = new Date(iso);
+  return d.toLocaleDateString(undefined, {
+    weekday: "short",
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  });
+}
+
+export function formatDate(iso: string): string {
+  return new Date(iso).toLocaleDateString(undefined, {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
+}
+
+export function formatLoanStatus(status: string): string {
+  const labels: Record<string, string> = {
+    pending: "Pending approval",
+    active: "On loan",
+    returned: "Returned",
+    declined: "Declined",
+    cancelled: "Cancelled",
+  };
+  return labels[status] ?? status;
+}
+
+export function formatRsvpStatus(status: string): string {
+  const labels: Record<string, string> = {
+    going: "Going",
+    maybe: "Maybe",
+    declined: "Can't make it",
+  };
+  return labels[status] ?? status;
+}

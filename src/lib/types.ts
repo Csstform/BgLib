@@ -49,3 +49,52 @@ export type OwnershipWithGame = Ownership & {
 export type OwnershipWithProfile = Ownership & {
   profile: Profile;
 };
+
+export type GameNight = {
+  id: string;
+  title: string;
+  description: string | null;
+  host_id: string;
+  scheduled_at: string;
+  location: string | null;
+  created_at: string;
+};
+
+export type GameNightRsvp = {
+  id: string;
+  game_night_id: string;
+  user_id: string;
+  status: "going" | "maybe" | "declined";
+  created_at: string;
+};
+
+export type GameNightWithDetails = GameNight & {
+  host: Profile;
+  rsvps: (GameNightRsvp & { profile: Profile })[];
+  games: Game[];
+};
+
+export type Loan = {
+  id: string;
+  game_id: string;
+  lender_id: string;
+  borrower_id: string;
+  status: "pending" | "active" | "returned" | "declined" | "cancelled";
+  due_date: string | null;
+  notes: string | null;
+  borrowed_at: string | null;
+  returned_at: string | null;
+  created_at: string;
+};
+
+export type LoanWithDetails = Loan & {
+  game: Game;
+  lender: Profile;
+  borrower: Profile;
+};
+
+export type BggSearchResult = {
+  id: number;
+  name: string;
+  yearPublished?: number;
+};

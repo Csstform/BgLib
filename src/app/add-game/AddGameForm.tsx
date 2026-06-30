@@ -3,6 +3,18 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { BggSearch } from "@/components/BggSearch";
+import { HandCoins } from "lucide-react";
+
+type BggDetails = {
+  id: number;
+  name: string;
+  description: string;
+  minPlayers: number;
+  maxPlayers: number | null;
+  playTimeMinutes: number | null;
+  imageUrl: string | null;
+};
 
 export function AddGameForm({ userId }: { userId: string }) {
   const router = useRouter();
@@ -12,9 +24,20 @@ export function AddGameForm({ userId }: { userId: string }) {
   const [maxPlayers, setMaxPlayers] = useState("");
   const [playTime, setPlayTime] = useState("");
   const [imageUrl, setImageUrl] = useState("");
+  const [bggId, setBggId] = useState<number | null>(null);
   const [addToCollection, setAddToCollection] = useState(true);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+
+  function handleBggSelect(details: BggDetails) {
+    setTitle(details.name);
+    setDescription(details.description);
+    setMinPlayers(String(details.minPlayers));
+    setMaxPlayers(details.maxPlayers ? String(details.maxPlayers) : "");
+    setPlayTime(details.playTimeMinutes ? String(details.playTimeMinutes) : "");
+    setImageUrl(details.imageUrl ?? "");
+    setBggId(details.id);
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -31,6 +54,7 @@ export function AddGameForm({ userId }: { userId: string }) {
         max_players: maxPlayers ? parseInt(maxPlayers) : null,
         play_time_minutes: playTime ? parseInt(playTime) : null,
         image_url: imageUrl.trim() || null,
+        bgg_id: bggId,
         created_by: userId,
       })
       .select()
@@ -62,6 +86,15 @@ export function AddGameForm({ userId }: { userId: string }) {
         <div className="rounded-lg bg-red-500/10 border border-red-500/30 px-4 py-3 text-sm text-red-400">
           {error}
         </div>
+      )}
+
+      <BggSearch onSelect={handleBggSelect} />
+
+      {bggId && (
+        <p className="text-xs text-muted flex items-center gap-1">
+          <HandCoins className="h-3 w-3" />
+          Imported from BoardGameGeek (ID: {bggId})
+        </p>
       )}
 
       <div>

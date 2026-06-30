@@ -73,6 +73,19 @@ export default async function GameDetailPage({
     ? owners.find((o: { user_id: string }) => o.user_id === user.id)
     : null;
 
+  let activeLoanLenderIds = new Set<string>();
+  if (user) {
+    const { data: activeLoans } = await supabase
+      .from("loans")
+      .select("lender_id, status")
+      .eq("game_id", id)
+      .eq("borrower_id", user.id)
+      .in("status", ["pending", "active"]);
+    activeLoanLenderIds = new Set(
+      (activeLoans ?? []).map((l: { lender_id: string }) => l.lender_id)
+    );
+  }
+
   return (
     <div className="px-4 py-6 pb-24">
       <Link
@@ -140,7 +153,13 @@ export default async function GameDetailPage({
                 notes: string | null;
                 acquired_date: string | null;
               }) => (
-                <OwnerRow key={owner.user_id} owner={owner} />
+                <OwnerRow
+                  key={owner.user_id}
+                  owner={owner}
+                  gameId={game.id}
+                  currentUserId={user?.id}
+                  hasActiveLoan={activeLoanLenderIds.has(owner.user_id)}
+                />
               )
             )}
           </div>

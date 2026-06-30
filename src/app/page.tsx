@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Dices, Library, Users, Share2 } from "lucide-react";
+import { Dices, Library, Users, Share2, CalendarDays, ArrowLeftRight } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/utils";
 
@@ -58,6 +58,30 @@ export default async function HomePage() {
             <div>
               <h2 className="font-semibold">My Collection</h2>
               <p className="text-sm text-muted">Games you own</p>
+            </div>
+          </Link>
+          <Link
+            href="/game-nights"
+            className="flex items-center gap-4 rounded-xl border border-border bg-surface p-4 hover:border-primary/30 transition-colors"
+          >
+            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary/20 text-primary">
+              <CalendarDays className="h-6 w-6" />
+            </div>
+            <div>
+              <h2 className="font-semibold">Game Nights</h2>
+              <p className="text-sm text-muted">Plan and RSVP to sessions</p>
+            </div>
+          </Link>
+          <Link
+            href="/loans"
+            className="flex items-center gap-4 rounded-xl border border-border bg-surface p-4 hover:border-primary/30 transition-colors"
+          >
+            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary/20 text-primary">
+              <ArrowLeftRight className="h-6 w-6" />
+            </div>
+            <div>
+              <h2 className="font-semibold">Loans</h2>
+              <p className="text-sm text-muted">Track borrowed and lent games</p>
             </div>
           </Link>
         </div>

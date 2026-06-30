@@ -1,20 +1,20 @@
 import Link from "next/link";
 import {
   Library,
-  Users,
-  PlusCircle,
   User,
   LogIn,
   LogOut,
   Dices,
+  CalendarDays,
+  ArrowLeftRight,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/utils";
 
 const navItems = [
   { href: "/library", label: "Library", icon: Library },
-  { href: "/users", label: "Players", icon: Users },
-  { href: "/add-game", label: "Add", icon: PlusCircle },
+  { href: "/game-nights", label: "Nights", icon: CalendarDays },
+  { href: "/loans", label: "Loans", icon: ArrowLeftRight },
   { href: "/collection", label: "Mine", icon: Dices },
   { href: "/profile", label: "Profile", icon: User },
 ];
