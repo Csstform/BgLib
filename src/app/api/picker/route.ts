@@ -1,0 +1,124 @@
+import { NextRequest, NextResponse } from "next/server";
+import { createClient } from "@/lib/supabase/server";
+import { getActiveGroupId } from "@/lib/group";
+
+export async function GET(request: NextRequest) {
+  const groupId = await getActiveGroupId();
+  if (!groupId) {
+    return NextResponse.json({ error: "No active group" }, { status: 400 });
+  }
+
+  const playerCount = parseInt(
+    request.nextUrl.searchParams.get("players") ?? "2",
+    10
+  );
+  const maxTime = request.nextUrl.searchParams.get("max_time");
+  const attendeeIds =
+    request.nextUrl.searchParams.get("attendees")?.split(",").filter(Boolean) ??
+    [];
+
+  const supabase = await createClient();
+
+  const { data: games } = await supabase
+    .from("games")
+    .select(
+      `
+      *,
+      ownership (
+        user_id,
+        profiles (id, display_name, avatar_url)
+      )
+    `
+    )
+    .eq("group_id", groupId);
+
+  const { data: plays } = await supabase
+    .from("plays")
+    .select("game_id, played_at")
+    .eq("group_id", groupId)
+    .order("played_at", { ascending: false });
+
+  const lastPlayed = new Map<string, string>();
+  (plays ?? []).forEach((p) => {
+    if (!lastPlayed.has(p.game_id)) lastPlayed.set(p.game_id, p.played_at);
+  });
+
+  const maxTimeMin = maxTime ? parseInt(maxTime, 10) : null;
+
+  const results = (games ?? [])
+    .map((g) => {
+      const owners = (g.ownership ?? []).map(
+        (o: {
+          user_id: string;
+          profiles: { id: string; display_name: string; avatar_url: string | null };
+        }) => ({
+          user_id: o.user_id,
+          display_name: (Array.isArray(o.profiles) ? o.profiles[0] : o.profiles)
+            ?.display_name,
+          avatar_url: (Array.isArray(o.profiles) ? o.profiles[0] : o.profiles)
+            ?.avatar_url,
+        })
+      );
+
+      if (owners.length === 0) return null;
+
+      const ownerIds = owners.map((o: { user_id: string }) => o.user_id);
+      const hasOwner =
+        attendeeIds.length === 0 ||
+        attendeeIds.some((id) => ownerIds.includes(id));
+      if (!hasOwner) return null;
+
+      const minP = g.min_players ?? 1;
+      const maxP = g.max_players ?? 99;
+      if (playerCount < minP || playerCount > maxP) return null;
+
+      if (
+        maxTimeMin &&
+        g.play_time_minutes &&
+        g.play_time_minutes > maxTimeMin
+      ) {
+        return null;
+      }
+
+      const matchingOwners =
+        attendeeIds.length > 0
+          ? owners.filter((o: { user_id: string }) =>
+              attendeeIds.includes(o.user_id)
+            )
+          : owners;
+
+      return {
+        ...g,
+        owners: matchingOwners.map(
+          (o: {
+            user_id: string;
+            display_name: string;
+            avatar_url: string | null;
+          }) => ({
+            user_id: o.user_id,
+            display_name: o.display_name,
+            avatar_url: o.avatar_url,
+            condition: "good",
+            notes: null,
+            acquired_date: null,
+          })
+        ),
+        last_played_at: lastPlayed.get(g.id) ?? null,
+        owner_names: matchingOwners.map(
+          (o: { display_name: string }) => o.display_name
+        ),
+      };
+    })
+    .filter(Boolean)
+    .sort((a, b) => {
+      if (!a!.last_played_at && !b!.last_played_at) return 0;
+      if (!a!.last_played_at) return -1;
+      if (!b!.last_played_at) return 1;
+      return (
+        new Date(a!.last_played_at).getTime() -
+        new Date(b!.last_played_at).getTime()
+      );
+    });
+
+  return NextResponse.json({ games: results });
+}

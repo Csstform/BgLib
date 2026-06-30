@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured, formatDateTime, formatRsvpStatus } from "@/lib/utils";
 import { SetupBanner } from "@/components/SetupBanner";
 import { RsvpButtons } from "./RsvpButtons";
+import { CancelGameNightButton } from "./CancelGameNightButton";
 import { getInitials } from "@/lib/utils";
 
 export default async function GameNightDetailPage({
@@ -183,6 +184,10 @@ export default async function GameNightDetailPage({
           ) : null
         )}
       </div>
+
+      {user && user.id === night.host_id && !night.cancelled_at && (
+        <CancelGameNightButton gameNightId={night.id} />
+      )}
     </div>
   );
 }

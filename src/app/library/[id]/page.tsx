@@ -133,6 +133,15 @@ export default async function GameDetailPage({
         </div>
       )}
 
+      {user && (
+        <Link
+          href={`/plays/new?game=${game.id}`}
+          className="mt-3 block text-center text-sm text-primary hover:underline"
+        >
+          Log a play of this game
+        </Link>
+      )}
+
       <div className="mt-6">
         <h2 className="flex items-center gap-2 font-semibold mb-2">
           <Users className="h-5 w-5" />

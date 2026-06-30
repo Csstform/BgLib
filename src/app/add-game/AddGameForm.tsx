@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { BggSearch } from "@/components/BggSearch";
+import { DuplicateWarning } from "@/components/DuplicateWarning";
 import { HandCoins } from "lucide-react";
 
 type BggDetails = {
@@ -16,7 +17,13 @@ type BggDetails = {
   imageUrl: string | null;
 };
 
-export function AddGameForm({ userId }: { userId: string }) {
+export function AddGameForm({
+  userId,
+  groupId,
+}: {
+  userId: string;
+  groupId: string;
+}) {
   const router = useRouter();
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
@@ -56,6 +63,7 @@ export function AddGameForm({ userId }: { userId: string }) {
         image_url: imageUrl.trim() || null,
         bgg_id: bggId,
         created_by: userId,
+        group_id: groupId,
       })
       .select()
       .single();
@@ -89,6 +97,8 @@ export function AddGameForm({ userId }: { userId: string }) {
       )}
 
       <BggSearch onSelect={handleBggSelect} />
+
+      <DuplicateWarning title={title} bggId={bggId} />
 
       {bggId && (
         <p className="text-xs text-muted flex items-center gap-1">

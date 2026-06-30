@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { NavBar } from "@/components/NavBar";
+import { RealtimeProvider } from "@/components/RealtimeProvider";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -50,6 +51,7 @@ export default function RootLayout({
       <body className="min-h-full flex flex-col bg-background text-foreground">
         <NavBar />
         <main className="flex-1 mx-auto w-full max-w-lg">{children}</main>
+        <RealtimeProvider />
       </body>
     </html>
   );

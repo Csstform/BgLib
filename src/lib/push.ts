@@ -65,6 +65,24 @@ export async function sendPushToUsers(
   return sent;
 }
 
+export async function notifyGroupMembers(
+  groupId: string,
+  excludeUserId: string | null,
+  payload: { title: string; body: string; url?: string }
+): Promise<number> {
+  const supabase = getAdminClient();
+  const { data: members } = await supabase
+    .from("group_members")
+    .select("user_id")
+    .eq("group_id", groupId);
+
+  const userIds = (members ?? [])
+    .map((m) => m.user_id)
+    .filter((id) => id !== excludeUserId);
+
+  return sendPushToUsers(userIds, payload);
+}
+
 export async function notifyAllUsersExcept(
   excludeUserId: string,
   payload: { title: string; body: string; url?: string }

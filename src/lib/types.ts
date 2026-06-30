@@ -4,6 +4,17 @@ export type Profile = {
   avatar_url: string | null;
   bio: string | null;
   created_at: string;
+  onboarding_completed?: boolean;
+  active_group_id?: string | null;
+};
+
+export type Group = {
+  id: string;
+  name: string;
+  description: string | null;
+  invite_code: string;
+  created_by: string | null;
+  created_at: string;
 };
 
 export type Game = {
@@ -17,6 +28,7 @@ export type Game = {
   bgg_id: number | null;
   created_by: string | null;
   created_at: string;
+  group_id?: string | null;
 };
 
 export type Ownership = {
@@ -97,4 +109,33 @@ export type BggSearchResult = {
   id: number;
   name: string;
   yearPublished?: number;
+};
+
+export type Play = {
+  id: string;
+  group_id: string;
+  game_id: string;
+  played_at: string;
+  duration_minutes: number | null;
+  notes: string | null;
+  logged_by: string;
+  created_at: string;
+};
+
+export type PlayWithDetails = Play & {
+  game: Game;
+  participants: Profile[];
+  logger: Profile;
+};
+
+export type PickerGame = GameWithOwners & {
+  last_played_at: string | null;
+  owner_names: string[];
+};
+
+export type DuplicateMatch = {
+  id: string;
+  title: string;
+  bgg_id: number | null;
+  match_type: "bgg_id" | "title";
 };

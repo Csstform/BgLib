@@ -14,6 +14,12 @@ A mobile-friendly web app for iOS and Android that serves as a shared board game
 - **Game night planning** — Schedule sessions, pick games, RSVP (going/maybe/declined)
 - **Push notifications** — Get notified on your phone when someone plans a game night
 - **Loan tracking** — Request, approve, and return borrowed games between owners
+- **Gaming groups** — Separate libraries per friend group with invite codes
+- **Game picker** — "What can we play?" filters by players, time, and who's attending
+- **Play logging** — Record session history; picker prioritizes least-recently played games
+- **Duplicate detection** — Warns when adding a game that already exists in your group
+- **Onboarding** — Guided setup for new users (group, first game, notifications)
+- **Realtime updates** — Live refresh when loans, RSVPs, or games change
 
 ## Tech Stack
 

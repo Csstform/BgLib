@@ -1,7 +1,9 @@
 import Link from "next/link";
 import { Plus } from "lucide-react";
+import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/utils";
+import { getActiveGroupId } from "@/lib/group";
 import { SetupBanner } from "@/components/SetupBanner";
 import { GameNightCard } from "@/components/GameNightCard";
 import type { GameNightWithDetails } from "@/lib/types";
@@ -14,6 +16,9 @@ export default async function GameNightsPage() {
       </div>
     );
   }
+
+  const groupId = await getActiveGroupId();
+  if (!groupId) redirect("/onboarding");
 
   const supabase = await createClient();
 
@@ -32,6 +37,8 @@ export default async function GameNightsPage() {
       )
     `
     )
+    .eq("group_id", groupId)
+    .is("cancelled_at", null)
     .gte("scheduled_at", new Date().toISOString())
     .order("scheduled_at");
 

@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { createClient } from "@/lib/supabase/client";
 import { HandCoins } from "lucide-react";
 
 type Props = {
@@ -32,19 +31,21 @@ export function BorrowButton({
   async function requestLoan() {
     setLoading(true);
     setError("");
-    const supabase = createClient();
 
-    const { error: loanError } = await supabase.from("loans").insert({
-      game_id: gameId,
-      lender_id: lenderId,
-      borrower_id: currentUserId,
-      status: "pending",
-      due_date: dueDate || null,
-      notes: notes.trim() || null,
+    const res = await fetch("/api/loans", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        game_id: gameId,
+        lender_id: lenderId,
+        due_date: dueDate || null,
+        notes: notes.trim() || null,
+      }),
     });
 
-    if (loanError) {
-      setError(loanError.message);
+    const data = await res.json();
+    if (!res.ok) {
+      setError(data.error ?? "Request failed");
     } else {
       setShowForm(false);
       router.refresh();

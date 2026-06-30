@@ -1,11 +1,17 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { getActiveGroupId, getGroupMembers } from "@/lib/group";
 import { isSupabaseConfigured } from "@/lib/utils";
-import { getActiveGroupId } from "@/lib/group";
 import { SetupBanner } from "@/components/SetupBanner";
-import { CreateGameNightForm } from "./CreateGameNightForm";
+import { LogPlayForm } from "../LogPlayForm";
 
-export default async function NewGameNightPage() {
+export default async function NewPlayPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ game?: string }>;
+}) {
+  const { game: gameId } = await searchParams;
+
   if (!isSupabaseConfigured()) {
     return (
       <div className="px-4 py-6">
@@ -18,7 +24,6 @@ export default async function NewGameNightPage() {
   const {
     data: { user },
   } = await supabase.auth.getUser();
-
   if (!user) redirect("/login");
 
   const groupId = await getActiveGroupId();
@@ -30,10 +35,18 @@ export default async function NewGameNightPage() {
     .eq("group_id", groupId)
     .order("title");
 
+  const members = await getGroupMembers(groupId);
+
   return (
     <div className="px-4 py-6 pb-24">
-      <h1 className="text-2xl font-bold mb-6">Plan a Game Night</h1>
-      <CreateGameNightForm games={games ?? []} />
+      <h1 className="text-2xl font-bold mb-6">Log a Play</h1>
+      <LogPlayForm
+        groupId={groupId}
+        games={games ?? []}
+        members={members}
+        userId={user.id}
+        preselectedGameId={gameId}
+      />
     </div>
   );
 }

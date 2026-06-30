@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Dices, Library, Users, Share2, CalendarDays, ArrowLeftRight } from "lucide-react";
+import { Dices, Library, Users, Share2, CalendarDays, ArrowLeftRight, Sparkles, History } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/utils";
 
@@ -34,6 +34,18 @@ export default async function HomePage() {
             <div>
               <h2 className="font-semibold">Browse Library</h2>
               <p className="text-sm text-muted">See all games and who owns them</p>
+            </div>
+          </Link>
+          <Link
+            href="/picker"
+            className="flex items-center gap-4 rounded-xl border border-primary/30 bg-primary/5 p-4 hover:border-primary/50 transition-colors"
+          >
+            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary/20 text-primary">
+              <Sparkles className="h-6 w-6" />
+            </div>
+            <div>
+              <h2 className="font-semibold">What can we play?</h2>
+              <p className="text-sm text-muted">Pick a game for tonight</p>
             </div>
           </Link>
           <Link
@@ -82,6 +94,18 @@ export default async function HomePage() {
             <div>
               <h2 className="font-semibold">Loans</h2>
               <p className="text-sm text-muted">Track borrowed and lent games</p>
+            </div>
+          </Link>
+          <Link
+            href="/plays"
+            className="flex items-center gap-4 rounded-xl border border-border bg-surface p-4 hover:border-primary/30 transition-colors"
+          >
+            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary/20 text-primary">
+              <History className="h-6 w-6" />
+            </div>
+            <div>
+              <h2 className="font-semibold">Play History</h2>
+              <p className="text-sm text-muted">Log and review games you&apos;ve played</p>
             </div>
           </Link>
         </div>

@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import { notifyAllUsersExcept } from "@/lib/push";
+import { notifyGroupMembers } from "@/lib/push";
 import { formatDateTime } from "@/lib/utils";
+import { getActiveGroupId } from "@/lib/group";
 
 export async function POST(request: NextRequest) {
   const supabase = await createClient();
@@ -11,6 +12,11 @@ export async function POST(request: NextRequest) {
 
   if (!user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const groupId = await getActiveGroupId();
+  if (!groupId) {
+    return NextResponse.json({ error: "No active group" }, { status: 400 });
   }
 
   const body = await request.json();
@@ -31,6 +37,7 @@ export async function POST(request: NextRequest) {
       scheduled_at,
       location: location?.trim() || null,
       host_id: user.id,
+      group_id: groupId,
     })
     .select()
     .single();
@@ -60,7 +67,7 @@ export async function POST(request: NextRequest) {
     .eq("id", user.id)
     .single();
 
-  await notifyAllUsersExcept(user.id, {
+  await notifyGroupMembers(groupId, user.id, {
     title: "New game night planned!",
     body: `${host?.display_name ?? "Someone"} is hosting "${title}" on ${formatDateTime(scheduled_at)}`,
     url: `/game-nights/${gameNight.id}`,

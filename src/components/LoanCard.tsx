@@ -3,7 +3,6 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { createClient } from "@/lib/supabase/client";
 import {
   formatDate,
   formatLoanStatus,
@@ -27,13 +26,11 @@ export function LoanCard({
     status: "active" | "returned" | "declined" | "cancelled"
   ) {
     setLoading(true);
-    const supabase = createClient();
-    const updates: Record<string, unknown> = { status };
-
-    if (status === "active") updates.borrowed_at = new Date().toISOString();
-    if (status === "returned") updates.returned_at = new Date().toISOString();
-
-    await supabase.from("loans").update(updates).eq("id", loan.id);
+    await fetch(`/api/loans/${loan.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ status }),
+    });
     router.refresh();
     setLoading(false);
   }

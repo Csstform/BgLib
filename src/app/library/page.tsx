@@ -1,7 +1,9 @@
 import Link from "next/link";
 import { Plus } from "lucide-react";
+import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/utils";
+import { getActiveGroupId } from "@/lib/group";
 import { SetupBanner } from "@/components/SetupBanner";
 import { LibraryClient } from "./LibraryClient";
 import type { GameWithOwners } from "@/lib/types";
@@ -14,6 +16,9 @@ export default async function LibraryPage() {
       </div>
     );
   }
+
+  const groupId = await getActiveGroupId();
+  if (!groupId) redirect("/onboarding");
 
   const supabase = await createClient();
   const { data: games } = await supabase
@@ -29,6 +34,7 @@ export default async function LibraryPage() {
       )
     `
     )
+    .eq("group_id", groupId)
     .order("title");
 
   const gamesWithOwners: GameWithOwners[] = (games ?? []).map((g) => ({

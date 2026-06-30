@@ -29,16 +29,45 @@ export async function updateSession(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser();
 
-  const protectedPaths = ["/collection", "/add-game", "/profile", "/loans", "/game-nights/new"];
+  const protectedPaths = [
+    "/collection",
+    "/add-game",
+    "/profile",
+    "/loans",
+    "/game-nights/new",
+    "/picker",
+    "/plays",
+  ];
   const isProtected = protectedPaths.some((p) =>
     request.nextUrl.pathname.startsWith(p)
   );
+
+  const isOnboardingExempt =
+    request.nextUrl.pathname.startsWith("/onboarding") ||
+    request.nextUrl.pathname.startsWith("/login") ||
+    request.nextUrl.pathname.startsWith("/signup") ||
+    request.nextUrl.pathname.startsWith("/auth") ||
+    request.nextUrl.pathname.startsWith("/api");
 
   if (isProtected && !user) {
     const url = request.nextUrl.clone();
     url.pathname = "/login";
     url.searchParams.set("redirect", request.nextUrl.pathname);
     return NextResponse.redirect(url);
+  }
+
+  if (user && !isOnboardingExempt) {
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("onboarding_completed")
+      .eq("id", user.id)
+      .single();
+
+    if (profile && !profile.onboarding_completed) {
+      const url = request.nextUrl.clone();
+      url.pathname = "/onboarding";
+      return NextResponse.redirect(url);
+    }
   }
 
   if (
