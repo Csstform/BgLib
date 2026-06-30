@@ -273,11 +273,49 @@ To block direct access to the droplet IP (bypassing Cloudflare), allow nginx onl
 
 | Symptom | Check |
 |---------|-------|
+| `curl` returns **000** | Nothing listening on port 3000 — see below |
 | 502 Bad Gateway | `systemctl status bglib`, `journalctl -u bglib -n 50` |
 | Auth loops / cookies fail | `NEXT_PUBLIC_APP_URL` must be `https://bglib.csst.rocks` (no trailing slash) |
 | Push not working | VAPID keys set, `SUPABASE_SERVICE_ROLE_KEY` set, HTTPS works |
-| Cron 401 | `CRON_SECRET` in `.env.local` matches the `Authorization` header |
+| Cron 401 | `CRON_SECRET` in env file matches the `Authorization` header |
 | SSL error in browser | Origin cert installed, Cloudflare mode is Full (strict) |
+
+### curl returns 000
+
+`000` means **connection refused** — the app is not running on that port (not an HTTP error).
+
+Run these **on the droplet** (SSH in first):
+
+```bash
+# 1. Are you in the app directory with a build?
+cd /opt/bglib
+ls -la .next/standalone/server.js   # must exist
+
+# 2. Is anything on port 3000?
+curl -v http://127.0.0.1:3000/    # use -v to see "Connection refused" vs HTTP response
+
+# 3. Start manually in the foreground (watch for errors)
+npm run start:prod
+```
+
+Leave that running in one SSH session. In a **second** SSH session:
+
+```bash
+curl -s -o /dev/null -w "%{http_code}\n" http://127.0.0.1:3000/
+# Expect 200 (or 500 if Supabase keys are missing/wrong)
+```
+
+**Common causes of 000:**
+
+| Cause | Fix |
+|-------|-----|
+| `npm run build` not run | `npm ci && npm run build` |
+| `.env.local` missing Supabase keys | Copy `deploy/env.production.example` → `.env.local` and fill in URL + anon key |
+| Server exited immediately | Run `npm run start:prod` in foreground — read the error |
+| systemd service dead | `sudo systemctl status bglib` and `journalctl -u bglib -n 50` |
+| curl from your laptop to droplet IP:3000 | Port 3000 is not public — test `127.0.0.1` **on the droplet**, or use `https://bglib.csst.rocks` after nginx is set up |
+
+**systemd env file tip:** Values with spaces must be quoted, e.g. `EMAIL_FROM="BgLib <notifications@csst.rocks>"`. Unquoted angle brackets break `EnvironmentFile` parsing and the service won't start.
 
 ---
 
