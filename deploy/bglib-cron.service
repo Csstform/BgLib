@@ -1,0 +1,9 @@
+[Unit]
+Description=BgLib loan due-date reminders
+
+[Service]
+Type=oneshot
+User=bglib
+# Reads CRON_SECRET from the app env file
+EnvironmentFile=/opt/bglib/.env.local
+ExecStart=/usr/bin/curl -fsS -H "Authorization: Bearer ${CRON_SECRET}" "https://bglib.csst.rocks/api/cron/loan-reminders"
