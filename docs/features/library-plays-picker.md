@@ -196,4 +196,3 @@ When deploying or debugging this feature cluster:
 | Picker ignores an expansion | Expansions are shown as metadata for eligible base games, not standalone candidates. |
 | Stats show no winners | Winners are counted only from plays where participants were marked with `is_winner`. |
 | Offline library shows old data | The cache is updated only after a successful online `/library` load for that group. |
-
