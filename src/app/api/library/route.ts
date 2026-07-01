@@ -1,30 +1,15 @@
-import Link from "next/link";
-import { Plus } from "lucide-react";
-import { redirect } from "next/navigation";
+import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import { isSupabaseConfigured } from "@/lib/utils";
 import { getActiveGroupId } from "@/lib/group";
-import { SetupBanner } from "@/components/SetupBanner";
-import { LibraryClient } from "./LibraryClient";
-import { groupLibraryGames } from "@/lib/game-expansions";
 import type { GameWithOwners } from "@/lib/types";
 
-export default async function LibraryPage() {
-  if (!isSupabaseConfigured()) {
-    return (
-      <div className="px-4 py-6">
-        <SetupBanner />
-      </div>
-    );
+export async function GET() {
+  const groupId = await getActiveGroupId();
+  if (!groupId) {
+    return NextResponse.json({ error: "No active group" }, { status: 400 });
   }
 
-  const groupId = await getActiveGroupId();
-  if (!groupId) redirect("/onboarding");
-
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
 
   const [{ data: games }, { data: plays }] = await Promise.all([
     supabase
@@ -91,35 +76,12 @@ export default async function LibraryPage() {
     ),
   }));
 
-  const grouped = groupLibraryGames(gamesWithOwners);
-
-  return (
-    <div className="px-4 py-6 pb-24">
-      <div className="mb-6 flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold">Game Library</h1>
-          <p className="text-sm text-muted mt-0.5">
-            {grouped.bases.length} base game
-            {grouped.bases.length !== 1 ? "s" : ""}
-            {gamesWithOwners.length !== grouped.bases.length
-              ? ` · ${gamesWithOwners.length} total entries`
-              : ""}
-          </p>
-        </div>
-        <Link
-          href="/add-game"
-          className="flex items-center gap-1.5 rounded-xl bg-primary px-3 py-2 text-sm font-medium text-primary-fg hover:bg-primary-hover transition-colors"
-        >
-          <Plus className="h-4 w-4" />
-          Add
-        </Link>
-      </div>
-      <LibraryClient
-        groupId={groupId}
-        games={gamesWithOwners}
-        lastPlayedByGameId={lastPlayedByGameId}
-        userId={user?.id}
-      />
-    </div>
+  return NextResponse.json(
+    { groupId, games: gamesWithOwners, lastPlayedByGameId },
+    {
+      headers: {
+        "Cache-Control": "private, max-age=60",
+      },
+    }
   );
 }

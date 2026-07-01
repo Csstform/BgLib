@@ -1,79 +1,131 @@
 "use client";
 
-import { useState, useMemo, type CSSProperties } from "react";
-import { Layers, List } from "lucide-react";
+import { useState, useMemo, useEffect, type CSSProperties } from "react";
+import { Layers, List, WifiOff } from "lucide-react";
 import { GameCard } from "@/components/GameCard";
 import { SearchBar } from "@/components/SearchBar";
-import { groupLibraryGames, type LibraryEntry } from "@/lib/game-expansions";
+import { LibraryFiltersPanel } from "@/components/LibraryFiltersPanel";
+import { groupLibraryGames } from "@/lib/game-expansions";
+import {
+  applyLibraryFilters,
+  DEFAULT_LIBRARY_FILTERS,
+  uniqueOwners,
+  type LibraryFilters,
+} from "@/lib/library-filters";
+import {
+  cacheLibrary,
+  getCachedLibrary,
+  isOffline,
+} from "@/lib/offline-library";
+import { formatDateTime } from "@/lib/utils";
 import type { GameWithOwners } from "@/lib/types";
 
 type ViewMode = "nested" | "flat";
 
-export function LibraryClient({ games }: { games: GameWithOwners[] }) {
+export function LibraryClient({
+  groupId,
+  games: initialGames,
+  lastPlayedByGameId: initialLastPlayed,
+  userId,
+}: {
+  groupId: string;
+  games: GameWithOwners[];
+  lastPlayedByGameId: Record<string, string>;
+  userId?: string;
+}) {
+  const [games, setGames] = useState(initialGames);
+  const [lastPlayedByGameId, setLastPlayedByGameId] = useState(initialLastPlayed);
   const [search, setSearch] = useState("");
   const [viewMode, setViewMode] = useState<ViewMode>("nested");
+  const [filters, setFilters] = useState<LibraryFilters>(DEFAULT_LIBRARY_FILTERS);
+  const [offline, setOffline] = useState(false);
+  const [cachedAt, setCachedAt] = useState<string | null>(null);
 
-  const grouped = useMemo(() => groupLibraryGames(games), [games]);
+  useEffect(() => {
+    setGames(initialGames);
+    setLastPlayedByGameId(initialLastPlayed);
+    cacheLibrary(groupId, initialGames).catch(() => {});
+  }, [groupId, initialGames, initialLastPlayed]);
 
-  const flatGames = useMemo(() => {
+  useEffect(() => {
+    function handleOnline() {
+      setOffline(false);
+    }
+    function handleOffline() {
+      setOffline(true);
+    }
+    setOffline(isOffline());
+    window.addEventListener("online", handleOnline);
+    window.addEventListener("offline", handleOffline);
+    return () => {
+      window.removeEventListener("online", handleOnline);
+      window.removeEventListener("offline", handleOffline);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!offline) return;
+    getCachedLibrary(groupId).then((cached) => {
+      if (cached) {
+        setGames(cached.games);
+        setCachedAt(cached.cachedAt);
+      }
+    });
+  }, [offline, groupId]);
+
+  const owners = useMemo(() => uniqueOwners(games), [games]);
+
+  const filteredGames = useMemo(() => {
+    const filtered = applyLibraryFilters(games, filters, {
+      userId,
+      lastPlayedByGameId,
+    });
     const q = search.toLowerCase().trim();
-    if (!q) return games;
-    return games.filter(
+    if (!q) return filtered;
+    return filtered.filter(
       (g) =>
         g.title.toLowerCase().includes(q) ||
         g.owners?.some((o) => o.display_name.toLowerCase().includes(q))
     );
-  }, [games, search]);
+  }, [games, filters, userId, lastPlayedByGameId, search]);
 
-  const nestedBases = useMemo(() => {
-    const q = search.toLowerCase().trim();
-    if (!q) return grouped.bases;
-
-    return grouped.bases
-      .map((base) => {
-        const baseMatches =
-          base.title.toLowerCase().includes(q) ||
-          base.owners?.some((o) => o.display_name.toLowerCase().includes(q));
-
-        const matchingExpansions = (base.expansions ?? []).filter(
-          (exp) =>
-            exp.title.toLowerCase().includes(q) ||
-            exp.owners?.some((o) => o.display_name.toLowerCase().includes(q))
-        );
-
-        if (baseMatches) return base;
-        if (matchingExpansions.length > 0) {
-          return { ...base, expansions: matchingExpansions };
-        }
-        return null;
-      })
-      .filter(Boolean) as LibraryEntry[];
-  }, [grouped.bases, search]);
-
-  const nestedOrphans = useMemo(() => {
-    const q = search.toLowerCase().trim();
-    if (!q) return grouped.orphanExpansions;
-    return grouped.orphanExpansions.filter(
-      (g) =>
-        g.title.toLowerCase().includes(q) ||
-        g.owners?.some((o) => o.display_name.toLowerCase().includes(q))
-    );
-  }, [grouped.orphanExpansions, search]);
+  const grouped = useMemo(
+    () => groupLibraryGames(filteredGames),
+    [filteredGames]
+  );
 
   const displayCount =
     viewMode === "flat"
-      ? flatGames.length
-      : nestedBases.length + nestedOrphans.length;
+      ? filteredGames.length
+      : grouped.bases.length + grouped.orphanExpansions.length;
 
   const isEmpty =
     viewMode === "flat"
-      ? flatGames.length === 0
-      : nestedBases.length === 0 && nestedOrphans.length === 0;
+      ? filteredGames.length === 0
+      : grouped.bases.length === 0 && grouped.orphanExpansions.length === 0;
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center gap-2">
+      {offline && (
+        <div className="flex items-center gap-2 rounded-xl border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-200">
+          <WifiOff className="h-4 w-4 shrink-0" />
+          <span>
+            Offline
+            {cachedAt
+              ? ` — showing library cached ${formatDateTime(cachedAt)}`
+              : " — limited browsing"}
+          </span>
+        </div>
+      )}
+
+      <div className="flex items-start gap-2">
         <SearchBar value={search} onChange={setSearch} className="flex-1" />
+        <LibraryFiltersPanel
+          filters={filters}
+          onChange={setFilters}
+          owners={owners}
+          userId={userId}
+        />
         <div className="flex rounded-xl border border-border bg-surface p-0.5 shrink-0">
           <button
             type="button"
@@ -106,11 +158,13 @@ export function LibraryClient({ games }: { games: GameWithOwners[] }) {
 
       {isEmpty ? (
         <p className="text-center text-muted py-8">
-          {search ? "No games match your search." : "No games in the library yet."}
+          {search || filters.ownerId
+            ? "No games match your filters."
+            : "No games in the library yet."}
         </p>
       ) : viewMode === "flat" ? (
         <div className="space-y-2">
-          {flatGames.map((game, i) => (
+          {filteredGames.map((game, i) => (
             <div
               key={game.id}
               className="stagger-item"
@@ -122,7 +176,7 @@ export function LibraryClient({ games }: { games: GameWithOwners[] }) {
         </div>
       ) : (
         <div className="space-y-4">
-          {nestedBases.map((base, i) => (
+          {grouped.bases.map((base, i) => (
             <div
               key={base.id}
               className="stagger-item space-y-1"
@@ -144,12 +198,12 @@ export function LibraryClient({ games }: { games: GameWithOwners[] }) {
             </div>
           ))}
 
-          {nestedOrphans.length > 0 && (
+          {grouped.orphanExpansions.length > 0 && (
             <div className="space-y-2 pt-2">
               <p className="text-xs font-medium uppercase tracking-wide text-muted px-1">
                 Expansions (base not in library)
               </p>
-              {nestedOrphans.map((game, i) => (
+              {grouped.orphanExpansions.map((game, i) => (
                 <div
                   key={game.id}
                   className="stagger-item"

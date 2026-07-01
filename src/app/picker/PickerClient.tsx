@@ -2,7 +2,7 @@
 
 import { useState, useCallback } from "react";
 import Link from "next/link";
-import { Sparkles, Users, Clock, Loader2 } from "lucide-react";
+import { Sparkles, Users, Clock, Loader2, Shuffle, Heart } from "lucide-react";
 import { GameCard } from "@/components/GameCard";
 import type { PickerGame, Profile } from "@/lib/types";
 import { formatDate } from "@/lib/utils";
@@ -12,6 +12,7 @@ type Member = { user_id: string; profile: Profile };
 export function PickerClient({ members }: { members: Member[] }) {
   const [players, setPlayers] = useState(4);
   const [maxTime, setMaxTime] = useState("90");
+  const [wantToPlayOnly, setWantToPlayOnly] = useState(false);
   const [selectedAttendees, setSelectedAttendees] = useState<string[]>(() =>
     members.map((m) => m.user_id)
   );
@@ -19,20 +20,25 @@ export function PickerClient({ members }: { members: Member[] }) {
   const [loading, setLoading] = useState(false);
   const [searched, setSearched] = useState(false);
 
-  const search = useCallback(async () => {
-    setLoading(true);
-    setSearched(true);
-    const params = new URLSearchParams({
-      players: String(players),
-      attendees: selectedAttendees.join(","),
-    });
-    if (maxTime) params.set("max_time", maxTime);
+  const fetchGames = useCallback(
+    async (random = false) => {
+      setLoading(true);
+      setSearched(true);
+      const params = new URLSearchParams({
+        players: String(players),
+        attendees: selectedAttendees.join(","),
+      });
+      if (maxTime) params.set("max_time", maxTime);
+      if (wantToPlayOnly) params.set("want_to_play", "1");
+      if (random) params.set("random", "1");
 
-    const res = await fetch(`/api/picker?${params}`);
-    const data = await res.json();
-    setGames(data.games ?? []);
-    setLoading(false);
-  }, [players, maxTime, selectedAttendees]);
+      const res = await fetch(`/api/picker?${params}`);
+      const data = await res.json();
+      setGames(data.games ?? []);
+      setLoading(false);
+    },
+    [players, maxTime, selectedAttendees, wantToPlayOnly]
+  );
 
   function toggleAttendee(id: string) {
     setSelectedAttendees((prev) =>
@@ -51,8 +57,8 @@ export function PickerClient({ members }: { members: Member[] }) {
           <h2 className="font-semibold">What can we play?</h2>
         </div>
         <p className="text-sm text-muted">
-          Find games owned by tonight&apos;s players that fit your headcount and
-          time. Least recently played games appear first.
+          Prioritizes never-played and underplayed games, plus titles someone
+          wants to play. Use random pick when you&apos;re stuck deciding.
         </p>
       </div>
 
@@ -107,20 +113,42 @@ export function PickerClient({ members }: { members: Member[] }) {
         </div>
       </div>
 
-      <button
-        type="button"
-        onClick={search}
-        disabled={loading || selectedAttendees.length === 0}
-        className="w-full rounded-xl bg-primary py-3 font-medium text-primary-fg hover:bg-primary-hover disabled:opacity-50 flex items-center justify-center gap-2"
-      >
-        {loading ? (
-          <>
-            <Loader2 className="h-4 w-4 animate-spin" /> Searching...
-          </>
-        ) : (
-          "Find games"
-        )}
-      </button>
+      <label className="flex items-center gap-2 cursor-pointer text-sm">
+        <input
+          type="checkbox"
+          checked={wantToPlayOnly}
+          onChange={(e) => setWantToPlayOnly(e.target.checked)}
+          className="accent-primary"
+        />
+        <Heart className="h-4 w-4 text-red-400" />
+        Only games someone wants to play
+      </label>
+
+      <div className="grid grid-cols-2 gap-2">
+        <button
+          type="button"
+          onClick={() => fetchGames(false)}
+          disabled={loading || selectedAttendees.length === 0}
+          className="rounded-xl bg-primary py-3 font-medium text-primary-fg hover:bg-primary-hover disabled:opacity-50 flex items-center justify-center gap-2"
+        >
+          {loading ? (
+            <>
+              <Loader2 className="h-4 w-4 animate-spin" /> Searching...
+            </>
+          ) : (
+            "Find games"
+          )}
+        </button>
+        <button
+          type="button"
+          onClick={() => fetchGames(true)}
+          disabled={loading || selectedAttendees.length === 0}
+          className="rounded-xl border border-primary/30 bg-primary/10 py-3 font-medium text-primary hover:bg-primary/15 disabled:opacity-50 flex items-center justify-center gap-2"
+        >
+          <Shuffle className="h-4 w-4" />
+          Random pick
+        </button>
+      </div>
 
       {searched && !loading && (
         <div className="space-y-2">
@@ -136,20 +164,7 @@ export function PickerClient({ members }: { members: Member[] }) {
             games.map((game) => (
               <div key={game.id}>
                 <GameCard game={game} />
-                <p className="text-xs text-muted px-1 mt-0.5">
-                  Owned by {game.owner_names.join(", ")}
-                  {game.last_played_at
-                    ? ` · Last played ${formatDate(game.last_played_at)}`
-                    : " · Never played in this group"}
-                </p>
-                {(game.owned_expansions?.length ?? 0) > 0 && (
-                  <p className="text-xs text-amber-400/90 px-1 mt-0.5">
-                    Expansions:{" "}
-                    {game.owned_expansions!
-                      .map((e) => e.title)
-                      .join(", ")}
-                  </p>
-                )}
+                <PickerMeta game={game} />
               </div>
             ))
           )}
@@ -162,5 +177,33 @@ export function PickerClient({ members }: { members: Member[] }) {
         </div>
       )}
     </div>
+  );
+}
+
+function PickerMeta({ game }: { game: PickerGame }) {
+  const tags: string[] = [];
+  if (game.never_played) tags.push("Never played");
+  if ((game.want_count ?? 0) > 0) tags.push("Want to play");
+  if (game.play_count && game.play_count > 0 && game.last_played_at) {
+    tags.push(`Played ${game.play_count}×`);
+  }
+
+  return (
+    <>
+      <p className="text-xs text-muted px-1 mt-0.5">
+        Owned by {game.owner_names.join(", ")}
+        {game.last_played_at
+          ? ` · Last played ${formatDate(game.last_played_at)}`
+          : " · Never played in this group"}
+      </p>
+      {tags.length > 0 && (
+        <p className="text-xs text-primary/80 px-1 mt-0.5">{tags.join(" · ")}</p>
+      )}
+      {(game.owned_expansions?.length ?? 0) > 0 && (
+        <p className="text-xs text-amber-400/90 px-1 mt-0.5">
+          Expansions: {game.owned_expansions!.map((e) => e.title).join(", ")}
+        </p>
+      )}
+    </>
   );
 }

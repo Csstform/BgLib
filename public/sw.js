@@ -1,6 +1,7 @@
-// BgLib service worker — required for PWA install + push notifications
+// BgLib service worker — PWA install, push, offline library API cache
 
-const CACHE = "bglib-v1";
+const CACHE = "bglib-v2";
+const LIBRARY_API = "/api/library";
 
 self.addEventListener("install", (event) => {
   self.skipWaiting();
@@ -17,9 +18,25 @@ self.addEventListener("activate", (event) => {
   );
 });
 
-// Network-first; required for Chrome installability
 self.addEventListener("fetch", (event) => {
   if (event.request.method !== "GET") return;
+
+  const url = new URL(event.request.url);
+
+  if (url.pathname === LIBRARY_API) {
+    event.respondWith(
+      fetch(event.request)
+        .then((response) => {
+          if (response.ok) {
+            const clone = response.clone();
+            caches.open(CACHE).then((cache) => cache.put(LIBRARY_API, clone));
+          }
+          return response;
+        })
+        .catch(() => caches.match(LIBRARY_API))
+    );
+    return;
+  }
 
   event.respondWith(
     fetch(event.request)

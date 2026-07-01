@@ -4,7 +4,7 @@ import { useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Trophy } from "lucide-react";
 import type { Game, Profile } from "@/lib/types";
 
 type Member = { user_id: string; profile: Profile };
@@ -39,6 +39,9 @@ export function LogPlayForm({
   const [duration, setDuration] = useState("");
   const [notes, setNotes] = useState("");
   const [participants, setParticipants] = useState<string[]>([userId]);
+  const [winners, setWinners] = useState<string[]>([]);
+  const [scores, setScores] = useState<Record<string, string>>({});
+  const [firstTimePlayed, setFirstTimePlayed] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -61,7 +64,25 @@ export function LogPlayForm({
   }
 
   function toggleParticipant(id: string) {
-    setParticipants((prev) =>
+    setParticipants((prev) => {
+      const next = prev.includes(id)
+        ? prev.filter((x) => x !== id)
+        : [...prev, id];
+      if (!next.includes(id)) {
+        setWinners((w) => w.filter((x) => x !== id));
+        setScores((s) => {
+          const copy = { ...s };
+          delete copy[id];
+          return copy;
+        });
+      }
+      return next;
+    });
+  }
+
+  function toggleWinner(id: string) {
+    if (!participants.includes(id)) return;
+    setWinners((prev) =>
       prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
     );
   }
@@ -88,6 +109,7 @@ export function LogPlayForm({
         duration_minutes: duration ? parseInt(duration) : null,
         notes: notes.trim() || null,
         logged_by: userId,
+        first_time_played: firstTimePlayed,
       })
       .select()
       .single();
@@ -100,7 +122,12 @@ export function LogPlayForm({
 
     if (participants.length > 0) {
       await supabase.from("play_participants").insert(
-        participants.map((uid) => ({ play_id: play!.id, user_id: uid }))
+        participants.map((uid) => ({
+          play_id: play!.id,
+          user_id: uid,
+          is_winner: winners.includes(uid),
+          score: scores[uid] ? parseInt(scores[uid], 10) : null,
+        }))
       );
     }
 
@@ -227,6 +254,74 @@ export function LogPlayForm({
         </div>
       </div>
 
+      {participants.length > 0 && (
+        <div>
+          <label className="block text-sm font-medium mb-1.5">
+            <Trophy className="inline h-4 w-4 mr-1 text-amber-400" />
+            Winner(s)
+          </label>
+          <p className="text-xs text-muted mb-2">
+            Tap players who won (optional — supports ties)
+          </p>
+          <div className="flex flex-wrap gap-2">
+            {members
+              .filter((m) => participants.includes(m.user_id))
+              .map((m) => (
+                <button
+                  key={m.user_id}
+                  type="button"
+                  onClick={() => toggleWinner(m.user_id)}
+                  className={`rounded-full px-3 py-1.5 text-sm border ${
+                    winners.includes(m.user_id)
+                      ? "border-amber-500/50 bg-amber-500/15 text-amber-300"
+                      : "border-border bg-surface-2 text-muted"
+                  }`}
+                >
+                  {m.profile.display_name}
+                </button>
+              ))}
+          </div>
+        </div>
+      )}
+
+      {participants.length > 0 && (
+        <div>
+          <label className="block text-sm font-medium mb-1.5">
+            Scores (optional)
+          </label>
+          <div className="space-y-2">
+            {members
+              .filter((m) => participants.includes(m.user_id))
+              .map((m) => (
+                <div key={m.user_id} className="flex items-center gap-2">
+                  <span className="text-sm w-28 truncate shrink-0">
+                    {m.profile.display_name}
+                  </span>
+                  <input
+                    type="number"
+                    value={scores[m.user_id] ?? ""}
+                    onChange={(e) =>
+                      setScores((s) => ({ ...s, [m.user_id]: e.target.value }))
+                    }
+                    className={inputClass}
+                    placeholder="Points"
+                  />
+                </div>
+              ))}
+          </div>
+        </div>
+      )}
+
+      <label className="flex items-center gap-2 cursor-pointer">
+        <input
+          type="checkbox"
+          checked={firstTimePlayed}
+          onChange={(e) => setFirstTimePlayed(e.target.checked)}
+          className="h-4 w-4 rounded border-border accent-primary"
+        />
+        <span className="text-sm">First time our group played this game</span>
+      </label>
+
       <div>
         <label className="block text-sm font-medium mb-1.5">Notes</label>
         <textarea
@@ -234,7 +329,7 @@ export function LogPlayForm({
           onChange={(e) => setNotes(e.target.value)}
           rows={2}
           className={inputClass}
-          placeholder="Who won, house rules..."
+          placeholder="House rules, memorable moments..."
         />
       </div>
 

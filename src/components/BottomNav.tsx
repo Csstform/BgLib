@@ -24,7 +24,7 @@ const navItems = [
     href: "/more",
     label: "More",
     icon: LayoutGrid,
-    match: ["/more", "/collection", "/users", "/plays", "/add-game", "/profile"],
+    match: ["/more", "/collection", "/users", "/plays", "/stats", "/add-game", "/profile"],
   },
 ];
 
