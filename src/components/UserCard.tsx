@@ -13,7 +13,7 @@ export function UserCard({
   return (
     <Link
       href={`/users/${profile.id}`}
-      className="flex items-center gap-3 rounded-xl border border-border bg-surface p-3 shadow-sm hover:border-primary/30 hover:shadow-md transition-all active:scale-[0.98]"
+      className="touch-card flex items-center gap-3 rounded-xl border border-border bg-surface p-3 shadow-sm"
     >
       <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/20 font-medium text-primary overflow-hidden shrink-0">
         {profile.avatar_url ? (

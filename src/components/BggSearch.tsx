@@ -112,14 +112,14 @@ export function BggSearch({ onSelect }: Props) {
       {error && <p className="mt-1 text-xs text-red-400">{error}</p>}
 
       {open && results.length > 0 && (
-        <ul className="absolute z-20 mt-1 w-full rounded-xl border border-border bg-surface shadow-lg max-h-60 overflow-y-auto">
+        <ul className="animate-dropdown absolute z-20 mt-1 w-full rounded-xl border border-border bg-surface shadow-lg max-h-60 overflow-y-auto">
           {results.map((r) => (
             <li key={r.id}>
               <button
                 type="button"
                 onClick={() => selectGame(r)}
                 disabled={fetchingId === r.id}
-                className="w-full px-4 py-2.5 text-left text-sm hover:bg-surface-2 transition-colors flex items-center justify-between disabled:opacity-50"
+                className="pressable w-full px-4 py-2.5 text-left text-sm hover:bg-surface-2 flex items-center justify-between disabled:opacity-50"
               >
                 <span>
                   {r.name}

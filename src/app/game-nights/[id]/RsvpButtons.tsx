@@ -45,7 +45,7 @@ export function RsvpButtons({
             key={status}
             onClick={() => setRsvp(status)}
             disabled={loading !== null}
-            className={`flex-1 rounded-xl border py-2.5 text-sm font-medium transition-colors disabled:opacity-50 ${
+            className={`btn-secondary flex-1 rounded-xl border py-2.5 text-sm font-medium disabled:opacity-50 ${
               currentStatus === status
                 ? active
                 : "border-border bg-surface-2 text-muted hover:text-foreground"
