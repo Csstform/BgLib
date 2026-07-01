@@ -44,28 +44,30 @@ export async function createGroup(name: string, description?: string) {
   } = await supabase.auth.getUser();
   if (!user) return { error: "Not authenticated" };
 
-  const code = crypto.randomUUID().replace(/-/g, "").slice(0, 8).toUpperCase();
-
-  const { data: group, error } = await supabase
-    .from("groups")
-    .insert({
-      name: name.trim(),
-      description: description?.trim() || null,
-      invite_code: code,
-      created_by: user.id,
-    })
-    .select()
-    .single();
+  const { data, error } = await supabase.rpc("create_group", {
+    group_name: name.trim(),
+    group_description: description?.trim() || null,
+  });
 
   if (error) return { error: error.message };
 
-  await supabase.from("group_members").insert({
-    group_id: group.id,
-    user_id: user.id,
-    role: "owner",
+  const group = data as {
+    id: string;
+    name: string;
+    description: string | null;
+    invite_code: string;
+    created_by: string;
+    created_at: string;
+  };
+
+  const cookieStore = await cookies();
+  cookieStore.set(GROUP_COOKIE, group.id, {
+    path: "/",
+    maxAge: 60 * 60 * 24 * 365,
+    sameSite: "lax",
   });
 
-  await setActiveGroup(group.id);
+  revalidatePath("/", "layout");
   return { group };
 }
 

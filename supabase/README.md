@@ -24,6 +24,7 @@ Run these files **in order** if you prefer step-by-step:
 | 4 | `migrations/004_tier1_features.sql` | Want-to-play, email prefs, edit policies |
 | 5 | `migrations/005_rls_hardening.sql` | Tighter RLS for nights and ownership |
 | 6 | `migrations/006_fix_group_members_rls.sql` | Fix infinite recursion on group_members |
+| 7 | `migrations/007_fix_group_create_rls.sql` | Fix group creation RLS + create_group RPC |
 
 ## Enable Realtime
 
