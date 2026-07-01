@@ -1,9 +1,9 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { BrowserMultiFormatReader } from "@zxing/browser";
 import { Camera, Loader2, X } from "lucide-react";
 import { normalizeBarcode } from "@/lib/barcode";
+import { BARCODE_FORMATS, getBarcodeDetector } from "@/lib/barcode-detector";
 
 type Props = {
   open: boolean;
@@ -13,11 +13,25 @@ type Props = {
 
 export function BarcodeScanner({ open, onClose, onScan }: Props) {
   const videoRef = useRef<HTMLVideoElement>(null);
-  const controlsRef = useRef<{ stop: () => void } | null>(null);
+  const streamRef = useRef<MediaStream | null>(null);
+  const scanFrameRef = useRef<number | null>(null);
   const handledRef = useRef(false);
   const [manualUpc, setManualUpc] = useState("");
   const [cameraError, setCameraError] = useState("");
   const [starting, setStarting] = useState(false);
+  const [scannerReady, setScannerReady] = useState(false);
+
+  const stopCamera = useCallback(() => {
+    if (scanFrameRef.current !== null) {
+      cancelAnimationFrame(scanFrameRef.current);
+      scanFrameRef.current = null;
+    }
+    streamRef.current?.getTracks().forEach((track) => track.stop());
+    streamRef.current = null;
+    if (videoRef.current) {
+      videoRef.current.srcObject = null;
+    }
+  }, []);
 
   const submitUpc = useCallback(
     (raw: string) => {
@@ -27,10 +41,10 @@ export function BarcodeScanner({ open, onClose, onScan }: Props) {
         return;
       }
       handledRef.current = true;
-      controlsRef.current?.stop();
+      stopCamera();
       onScan(upc);
     },
-    [onScan]
+    [onScan, stopCamera]
   );
 
   useEffect(() => {
@@ -38,55 +52,88 @@ export function BarcodeScanner({ open, onClose, onScan }: Props) {
       handledRef.current = false;
       setManualUpc("");
       setCameraError("");
-      controlsRef.current?.stop();
-      controlsRef.current = null;
+      setScannerReady(false);
+      stopCamera();
       return;
     }
 
     let cancelled = false;
-    const reader = new BrowserMultiFormatReader();
+    const BarcodeDetector = getBarcodeDetector();
 
     async function startCamera() {
       setStarting(true);
       setCameraError("");
+      setScannerReady(false);
+
+      if (!BarcodeDetector) {
+        setCameraError(
+          "Live scanning is not supported in this browser. Type the barcode below (works on all devices)."
+        );
+        setStarting(false);
+        return;
+      }
 
       try {
-        const devices = await BrowserMultiFormatReader.listVideoInputDevices();
-        if (cancelled || !videoRef.current) return;
-
-        const preferred =
-          devices.find((d) => /back|rear|environment/i.test(d.label)) ??
-          devices[devices.length - 1] ??
-          devices[0];
-
-        const controls = await reader.decodeFromVideoDevice(
-          preferred?.deviceId,
-          videoRef.current,
-          (result, err) => {
-            if (handledRef.current) return;
-            if (result) {
-              submitUpc(result.getText());
-            }
-            if (err && err.name !== "NotFoundException") {
-              // Continuous scanning throws NotFoundException when no code in frame.
-            }
-          }
-        );
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: {
+            facingMode: { ideal: "environment" },
+            width: { ideal: 1280 },
+            height: { ideal: 720 },
+          },
+          audio: false,
+        });
 
         if (cancelled) {
-          controls.stop();
+          stream.getTracks().forEach((track) => track.stop());
           return;
         }
 
-        controlsRef.current = controls;
+        const video = videoRef.current;
+        if (!video) {
+          stream.getTracks().forEach((track) => track.stop());
+          return;
+        }
+
+        streamRef.current = stream;
+        video.srcObject = stream;
+        await video.play();
+
+        const detector = new BarcodeDetector({ formats: BARCODE_FORMATS });
+        setScannerReady(true);
+        setStarting(false);
+
+        const tick = async () => {
+          if (cancelled || handledRef.current || video.readyState < HTMLMediaElement.HAVE_ENOUGH_DATA) {
+            if (!cancelled && !handledRef.current) {
+              scanFrameRef.current = requestAnimationFrame(tick);
+            }
+            return;
+          }
+
+          try {
+            const codes = await detector.detect(video);
+            const match = codes.find((code) => normalizeBarcode(code.rawValue));
+            if (match) {
+              submitUpc(match.rawValue);
+              return;
+            }
+          } catch {
+            // detect() can fail transiently while the camera adjusts.
+          }
+
+          if (!cancelled && !handledRef.current) {
+            scanFrameRef.current = requestAnimationFrame(tick);
+          }
+        };
+
+        scanFrameRef.current = requestAnimationFrame(tick);
       } catch {
         if (!cancelled) {
           setCameraError(
             "Camera unavailable. Enter the barcode number from the box instead."
           );
+          setStarting(false);
         }
-      } finally {
-        if (!cancelled) setStarting(false);
       }
     }
 
@@ -94,10 +141,9 @@ export function BarcodeScanner({ open, onClose, onScan }: Props) {
 
     return () => {
       cancelled = true;
-      controlsRef.current?.stop();
-      controlsRef.current = null;
+      stopCamera();
     };
-  }, [open, submitUpc]);
+  }, [open, stopCamera, submitUpc]);
 
   if (!open) return null;
 
@@ -130,7 +176,7 @@ export function BarcodeScanner({ open, onClose, onScan }: Props) {
               muted
               playsInline
             />
-            {(starting || !cameraError) && (
+            {(starting || scannerReady) && (
               <div className="pointer-events-none absolute inset-6 rounded-xl border-2 border-primary/60" />
             )}
             {starting && (
