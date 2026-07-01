@@ -5,10 +5,11 @@ A mobile-first PWA for iOS and Android: a shared board game catalogue, ownership
 ## Features
 
 - **Gaming groups** — Separate libraries per group with invite codes
-- **Shared catalogue** — Title, players, play time, cover image; BGG search on add
+- **Shared catalogue** — Title, players, play time, cover image; BGG search on add, filters, offline cache
 - **Ownership tracking** — See who owns what in your active group
-- **Game picker** — Filter by players, time, and attendees; prioritizes least-recently played
-- **Play logging** — Session history for your group
+- **Game picker** — Filter by players, time, and attendees; scores never-played, underplayed, and wanted games
+- **Play logging** — Session history with expansions, winners, scores, and first-play flags
+- **Group stats** — Most-played games, monthly play count, and winner summaries
 - **Game nights** — Schedule, RSVP, suggest games from attendees marked Going
 - **Loans** — Request, approve, return; due-date reminders via cron
 - **Want to play** — Mark interest on game detail pages
@@ -28,6 +29,12 @@ A mobile-first PWA for iOS and Android: a shared board game catalogue, ownership
 - [Web Push](https://developer.mozilla.org/en-US/docs/Web/API/Push_API) + [Resend](https://resend.com) (email)
 - [Tailwind CSS 4](https://tailwindcss.com/)
 - Progressive Web App (`manifest.json` + service worker)
+
+## Feature documentation
+
+| Guide | Covers |
+|-------|--------|
+| [`docs/features/library-plays-picker.md`](docs/features/library-plays-picker.md) | Library grouping and filters, expansion linking, play logging, stats, offline cache, picker scoring |
 
 ## Quick Start
 
@@ -137,9 +144,10 @@ npm run start:prod   # smoke test, then set up systemd + nginx per deploy/README
 | `ownership` | User ↔ game ownership |
 | `game_nights` / `game_night_rsvps` / `game_night_games` | Events and planning |
 | `loans` | Borrow/lend tracking |
-| `plays` / `play_participants` | Session history |
+| `plays` / `play_participants` / `play_expansions` | Session history, winners, scores, and expansions used |
 | `want_to_play` | Interest markers |
 | `push_subscriptions` | Web push endpoints |
+| `upc_bgg_mappings` | UPC-to-BGG cache for barcode lookups |
 
 Row Level Security scopes data by group membership.
 
@@ -157,6 +165,7 @@ Row Level Security scopes data by group membership.
 | `/collection` | Games you own |
 | `/users` / `/users/[id]` | Group members |
 | `/plays` / `/plays/new` | Play history and logging |
+| `/stats` | Group play and winner summaries |
 | `/add-game` | Add to catalogue (BGG search) |
 | `/profile` | Invite code, notifications, BGG import |
 | `/onboarding` | First-run setup |
@@ -176,8 +185,10 @@ src/
 supabase/
 ├── install.sql           # Single-file install (generated)
 ├── schema.sql            # Base schema
-├── migrations/           # Ordered migrations 002–005
+├── migrations/           # Ordered migrations 002–010
 └── README.md             # Database setup guide
+docs/
+└── features/             # Feature architecture and workflow docs
 scripts/
 ├── build-install-sql.sh  # Builds install.sql
 └── start-production.sh   # Standalone server for self-hosting
