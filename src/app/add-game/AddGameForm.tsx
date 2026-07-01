@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { BggSearch } from "@/components/BggSearch";
+import { BarcodeLookupPanel } from "@/components/BarcodeLookupPanel";
 import { DuplicateWarning } from "@/components/DuplicateWarning";
 import { HandCoins, Puzzle } from "lucide-react";
 import { resolveBaseGameId } from "@/lib/resolve-base-game";
@@ -39,6 +40,7 @@ export function AddGameForm({
   const [playTime, setPlayTime] = useState("");
   const [imageUrl, setImageUrl] = useState("");
   const [bggId, setBggId] = useState<number | null>(null);
+  const [upc, setUpc] = useState<string | null>(null);
   const [bggType, setBggType] = useState<"boardgame" | "boardgameexpansion" | null>(
     baseGameId ? "boardgameexpansion" : null
   );
@@ -49,7 +51,7 @@ export function AddGameForm({
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
-  async function handleBggSelect(details: BggDetails) {
+  async function applyBggDetails(details: BggDetails, scannedUpc?: string | null) {
     setTitle(details.name);
     setDescription(details.description);
     setMinPlayers(String(details.minPlayers));
@@ -58,6 +60,7 @@ export function AddGameForm({
     setImageUrl(details.imageUrl ?? "");
     setBggId(details.id);
     setBggType(details.bggType ?? "boardgame");
+    if (scannedUpc) setUpc(scannedUpc);
 
     if (baseGameId) {
       setResolvedBaseGameId(baseGameId);
@@ -75,6 +78,19 @@ export function AddGameForm({
     } else {
       setResolvedBaseGameId(null);
     }
+  }
+
+  async function handleBggSelect(details: BggDetails) {
+    await applyBggDetails(details);
+  }
+
+  async function handleBarcodeBggId(bggIdFromScan: number, scannedUpc: string) {
+    const res = await fetch(`/api/bgg/thing?id=${bggIdFromScan}`);
+    const data = await res.json();
+    if (!res.ok) {
+      throw new Error(data.error ?? "Failed to load game from BGG");
+    }
+    await applyBggDetails(data as BggDetails, scannedUpc);
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -113,6 +129,7 @@ export function AddGameForm({
         bgg_id: bggId,
         bgg_type: bggType ?? (baseGameId ? "boardgameexpansion" : "boardgame"),
         base_game_id: linkedBaseId,
+        upc: upc,
         created_by: userId,
         group_id: groupId,
       })
@@ -159,9 +176,24 @@ export function AddGameForm({
         </div>
       )}
 
+      <BarcodeLookupPanel onBggId={handleBarcodeBggId} disabled={loading} />
+
+      <div className="relative">
+        <div className="absolute inset-x-0 top-1/2 -translate-y-1/2 border-t border-border" />
+        <p className="relative mx-auto w-fit bg-surface px-3 text-xs text-muted">
+          or search BGG
+        </p>
+      </div>
+
       <BggSearch onSelect={handleBggSelect} />
 
-      <DuplicateWarning title={title} bggId={bggId} />
+      <DuplicateWarning title={title} bggId={bggId} upc={upc} />
+
+      {upc && (
+        <p className="text-xs text-muted">
+          Scanned UPC: {upc}
+        </p>
+      )}
 
       {bggId && (
         <p className="text-xs text-muted flex items-center gap-1">

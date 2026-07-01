@@ -29,6 +29,7 @@ export type Game = {
   bgg_id: number | null;
   bgg_type?: "boardgame" | "boardgameexpansion" | null;
   base_game_id?: string | null;
+  upc?: string | null;
   created_by: string | null;
   created_at: string;
   group_id?: string | null;
@@ -124,6 +125,12 @@ export type BggSearchResult = {
   type: "boardgame" | "boardgameexpansion";
 };
 
+export type GameUpcCandidate = {
+  bggId: number;
+  name?: string;
+  status?: string;
+};
+
 export type Play = {
   id: string;
   group_id: string;
@@ -151,7 +158,7 @@ export type DuplicateMatch = {
   id: string;
   title: string;
   bgg_id: number | null;
-  match_type: "bgg_id" | "title";
+  match_type: "bgg_id" | "title" | "upc";
 };
 
 export type WantToPlay = {
