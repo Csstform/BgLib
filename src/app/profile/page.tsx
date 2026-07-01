@@ -7,6 +7,7 @@ import { ProfileForm } from "./ProfileForm";
 import { PushNotificationToggle } from "@/components/PushNotificationToggle";
 import { EmailNotificationToggle } from "@/components/EmailNotificationToggle";
 import { GroupInviteCard } from "@/components/GroupInviteCard";
+import { JoinGroupCard } from "@/components/JoinGroupCard";
 import { BggCollectionImport } from "@/components/BggCollectionImport";
 import { isEmailConfigured } from "@/lib/email";
 
@@ -53,6 +54,7 @@ export default async function ProfilePage() {
         {activeGroup && (
           <GroupInviteCard name={activeGroup.name} inviteCode={activeGroup.invite_code} />
         )}
+        <JoinGroupCard />
         <BggCollectionImport />
         <PushNotificationToggle />
         {isEmailConfigured() && (
