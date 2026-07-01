@@ -23,6 +23,7 @@ Run these files **in order** if you prefer step-by-step:
 | 3 | `migrations/003_priority_features.sql` | Groups, plays, group scoping |
 | 4 | `migrations/004_tier1_features.sql` | Want-to-play, email prefs, edit policies |
 | 5 | `migrations/005_rls_hardening.sql` | Tighter RLS for nights and ownership |
+| 6 | `migrations/006_fix_group_members_rls.sql` | Fix infinite recursion on group_members |
 
 ## Enable Realtime
 
