@@ -26,18 +26,49 @@ const parser = new XMLParser({
     ["item", "name", "link", "poll", "result", "item"].includes(name),
 });
 
+function getBggToken(): string {
+  const token = process.env.BGG_API_TOKEN?.trim();
+  if (!token) {
+    throw new Error(
+      "BGG API token is not configured. Register at https://boardgamegeek.com/applications, create a token, and set BGG_API_TOKEN in .env.local"
+    );
+  }
+  return token;
+}
+
+function assertXmlResponse(body: string, status: number): void {
+  const trimmed = body.trimStart();
+
+  if (trimmed.startsWith("<!") || trimmed.startsWith("<html")) {
+    throw new Error(
+      "BGG returned an HTML error page. Check that BGG_API_TOKEN is valid."
+    );
+  }
+
+  if (status === 401 || status === 403 || trimmed.includes("Unauthorized")) {
+    throw new Error(
+      "BGG API unauthorized. Register at https://boardgamegeek.com/applications and set a valid BGG_API_TOKEN in .env.local"
+    );
+  }
+
+  if (!trimmed.startsWith("<?xml") && !trimmed.startsWith("<")) {
+    throw new Error(
+      trimmed.slice(0, 120) || "Unexpected response from BGG API"
+    );
+  }
+}
+
 async function fetchBgg(path: string): Promise<string> {
   const headers: Record<string, string> = {
     Accept: "application/xml",
+    Authorization: `Bearer ${getBggToken()}`,
+    "User-Agent": "BgLib/1.0 (board game library app)",
   };
-  if (process.env.BGG_API_TOKEN) {
-    headers.Authorization = `Bearer ${process.env.BGG_API_TOKEN}`;
-  }
 
   for (let attempt = 0; attempt < 6; attempt++) {
     const res = await fetch(`${BGG_BASE}${path}`, {
       headers,
-      next: { revalidate: 3600 },
+      cache: "no-store",
     });
 
     if (res.status === 202) {
@@ -45,11 +76,15 @@ async function fetchBgg(path: string): Promise<string> {
       continue;
     }
 
+    const text = await res.text();
+
     if (!res.ok) {
+      assertXmlResponse(text, res.status);
       throw new Error(`BGG API error: ${res.status}`);
     }
 
-    return res.text();
+    assertXmlResponse(text, res.status);
+    return text;
   }
 
   throw new Error("BGG API timed out — try again in a moment");
@@ -172,4 +207,8 @@ export async function getBggCollection(
         : undefined,
     })
   );
+}
+
+export function isBggConfigured(): boolean {
+  return !!process.env.BGG_API_TOKEN?.trim();
 }

@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { Search, Loader2 } from "lucide-react";
 import type { BggSearchResult } from "@/lib/types";
+import { parseJsonResponse } from "@/lib/parse-json-response";
 
 type BggDetails = {
   id: number;
@@ -37,9 +38,12 @@ export function BggSearch({ onSelect }: Props) {
     setError("");
     try {
       const res = await fetch(`/api/bgg/search?q=${encodeURIComponent(q)}`);
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error ?? "Search failed");
-      setResults(data);
+      const data = await parseJsonResponse<BggSearchResult[] | { error?: string }>(res);
+      if (!res.ok) {
+        const err = data as { error?: string };
+        throw new Error(err.error ?? "Search failed");
+      }
+      setResults(data as BggSearchResult[]);
       setOpen(true);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Search failed");
@@ -73,7 +77,7 @@ export function BggSearch({ onSelect }: Props) {
     setError("");
     try {
       const res = await fetch(`/api/bgg/thing?id=${result.id}`);
-      const data = await res.json();
+      const data = await parseJsonResponse<BggDetails & { error?: string }>(res);
       if (!res.ok) throw new Error(data.error ?? "Failed to load game");
       onSelect(data);
       setQuery(data.name);

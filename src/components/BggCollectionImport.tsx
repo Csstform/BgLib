@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Download, Loader2 } from "lucide-react";
+import { parseJsonResponse } from "@/lib/parse-json-response";
 
 export function BggCollectionImport() {
   const router = useRouter();
@@ -23,7 +24,12 @@ export function BggCollectionImport() {
       body: JSON.stringify({ username: username.trim() }),
     });
 
-    const data = await res.json();
+    const data = await parseJsonResponse<{
+      error?: string;
+      imported?: number;
+      skipped?: number;
+      truncated?: boolean;
+    }>(res);
     if (!res.ok) {
       setError(data.error ?? "Import failed");
     } else {
