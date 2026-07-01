@@ -9,7 +9,7 @@ Group=bglib
 WorkingDirectory=/opt/bglib
 EnvironmentFile=/opt/bglib/.env.local
 Environment=NODE_ENV=production
-Environment=HOSTNAME=0.0.0.0
+Environment=BIND_HOST=0.0.0.0
 Environment=PORT=3000
 ExecStart=/usr/bin/npm run start:prod
 Restart=on-failure
