@@ -8,25 +8,28 @@ import type { DuplicateMatch } from "@/lib/types";
 export function DuplicateWarning({
   title,
   bggId,
+  upc,
 }: {
   title: string;
   bggId: number | null;
+  upc?: string | null;
 }) {
   const [duplicates, setDuplicates] = useState<DuplicateMatch[]>([]);
 
   const check = useCallback(async () => {
-    if (!title.trim() && !bggId) {
+    if (!title.trim() && !bggId && !upc) {
       setDuplicates([]);
       return;
     }
     const params = new URLSearchParams();
     if (bggId) params.set("bgg_id", String(bggId));
+    if (upc) params.set("upc", upc);
     if (title.trim().length >= 3) params.set("title", title.trim());
 
     const res = await fetch(`/api/games/check-duplicate?${params}`);
     const data = await res.json();
     setDuplicates(data.duplicates ?? []);
-  }, [title, bggId]);
+  }, [title, bggId, upc]);
 
   useEffect(() => {
     const t = setTimeout(check, 400);
@@ -51,7 +54,11 @@ export function DuplicateWarning({
                   className="text-xs text-primary hover:underline"
                 >
                   {d.title}
-                  {d.match_type === "bgg_id" ? " (same BGG ID)" : " (same title)"}
+                  {d.match_type === "bgg_id"
+                    ? " (same BGG ID)"
+                    : d.match_type === "upc"
+                      ? " (same barcode)"
+                      : " (same title)"}
                 </Link>
               </li>
             ))}

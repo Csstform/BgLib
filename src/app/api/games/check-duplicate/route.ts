@@ -10,8 +10,9 @@ export async function GET(request: NextRequest) {
 
   const bggId = request.nextUrl.searchParams.get("bgg_id");
   const title = request.nextUrl.searchParams.get("title");
+  const upc = request.nextUrl.searchParams.get("upc");
 
-  if (!bggId && !title) {
+  if (!bggId && !title && !upc) {
     return NextResponse.json({ duplicates: [] });
   }
 
@@ -28,6 +29,20 @@ export async function GET(request: NextRequest) {
     (data ?? []).forEach((g) =>
       duplicates.push({ ...g, match_type: "bgg_id" })
     );
+  }
+
+  if (upc) {
+    const { data } = await supabase
+      .from("games")
+      .select("id, title, bgg_id")
+      .eq("group_id", groupId)
+      .eq("upc", upc);
+
+    (data ?? []).forEach((g) => {
+      if (!duplicates.some((d) => d.id === g.id)) {
+        duplicates.push({ ...g, match_type: "upc" });
+      }
+    });
   }
 
   if (title && title.trim().length >= 3) {
