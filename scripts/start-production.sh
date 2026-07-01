@@ -17,6 +17,8 @@ load_env_file() {
     [[ "$line" =~ ^[[:space:]]*$ ]] && continue
     if [[ "$line" =~ ^([A-Za-z_][A-Za-z0-9_]*)=(.*)$ ]]; then
       key="${BASH_REMATCH[1]}"
+      # Never load HOSTNAME from file — collides with OS hostname and breaks binding
+      [[ "$key" == "HOSTNAME" ]] && continue
       val="${BASH_REMATCH[2]}"
       val="${val#"${val%%[![:space:]]*}"}"
       val="${val%"${val##*[![:space:]]}"}"
@@ -43,6 +45,8 @@ cp -r public .next/standalone/public
 mkdir -p .next/standalone/.next
 cp -r .next/static .next/standalone/.next/static
 
+# Next.js uses HOSTNAME for the listen address — ignore the OS hostname (often the droplet name)
+unset HOSTNAME
 export HOSTNAME="${BIND_HOST:-0.0.0.0}"
 export PORT="${PORT:-3000}"
 
