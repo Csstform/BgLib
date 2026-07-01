@@ -41,7 +41,7 @@ const links = [
   {
     href: "/profile",
     label: "Profile & Settings",
-    desc: "Invite code, notifications, BGG import",
+    desc: "Invite code, join groups, notifications, BGG import",
     icon: User,
   },
 ];
