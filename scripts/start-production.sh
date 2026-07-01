@@ -43,7 +43,7 @@ cp -r public .next/standalone/public
 mkdir -p .next/standalone/.next
 cp -r .next/static .next/standalone/.next/static
 
-export HOSTNAME="${HOSTNAME:-0.0.0.0}"
+export HOSTNAME="${BIND_HOST:-0.0.0.0}"
 export PORT="${PORT:-3000}"
 
 echo "Starting BgLib on http://${HOSTNAME}:${PORT}"
