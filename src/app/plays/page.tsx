@@ -28,6 +28,9 @@ export default async function PlaysPage() {
       game:games (id, title, image_url),
       logger:profiles!plays_logged_by_fkey (display_name),
       play_participants (
+        user_id,
+        is_winner,
+        score,
         profile:profiles (display_name)
       ),
       play_expansions (
@@ -75,6 +78,19 @@ export default async function PlaysPage() {
             const participants = (play.play_participants ?? [])
               .map((pp) => {
                 const prof = Array.isArray(pp.profile) ? pp.profile[0] : pp.profile;
+                const name = prof?.display_name as string | undefined;
+                if (!name) return undefined;
+                const parts = [name];
+                if (pp.is_winner) parts.push("🏆");
+                if (pp.score != null) parts.push(`(${pp.score} pts)`);
+                return parts.join(" ");
+              })
+              .filter(Boolean);
+
+            const winnerNames = (play.play_participants ?? [])
+              .filter((pp) => pp.is_winner)
+              .map((pp) => {
+                const prof = Array.isArray(pp.profile) ? pp.profile[0] : pp.profile;
                 return prof?.display_name as string | undefined;
               })
               .filter(Boolean);
@@ -102,6 +118,11 @@ export default async function PlaysPage() {
                 {participants.length > 0 && (
                   <p className="text-xs text-muted mt-1">
                     With: {participants.join(", ")}
+                  </p>
+                )}
+                {winnerNames.length > 0 && participants.length === 0 && (
+                  <p className="text-xs text-amber-400/90 mt-1">
+                    Winner: {winnerNames.join(", ")}
                   </p>
                 )}
                 {expansionTitles.length > 0 && (

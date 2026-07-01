@@ -8,6 +8,7 @@ import {
   User,
   PlusCircle,
   Library,
+  BarChart3,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/utils";
@@ -31,6 +32,12 @@ const links = [
     label: "Play History",
     desc: "Sessions your group has logged",
     icon: History,
+  },
+  {
+    href: "/stats",
+    label: "Group Stats",
+    desc: "Top games, winners, and play counts",
+    icon: BarChart3,
   },
   {
     href: "/add-game",

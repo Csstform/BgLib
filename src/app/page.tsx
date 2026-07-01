@@ -9,6 +9,7 @@ import {
   ArrowLeftRight,
   Sparkles,
   LayoutGrid,
+  BarChart3,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/utils";
@@ -35,6 +36,7 @@ export default async function HomePage() {
           {[
             { href: "/library", icon: Library, title: "Browse Library", desc: "See all games and who owns them", featured: false },
             { href: "/picker", icon: Sparkles, title: "What can we play?", desc: "Pick a game for tonight", featured: true },
+            { href: "/stats", icon: BarChart3, title: "Group Stats", desc: "Plays, top games, and winners", featured: false },
             { href: "/game-nights", icon: CalendarDays, title: "Game Nights", desc: "Plan and RSVP to sessions", featured: false },
             { href: "/loans", icon: ArrowLeftRight, title: "Loans", desc: "Track borrowed and lent games", featured: false },
             { href: "/more", icon: LayoutGrid, title: "More", desc: "Collection, players, plays, profile, and settings", featured: false },

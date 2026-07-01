@@ -139,17 +139,36 @@ export type Play = {
   duration_minutes: number | null;
   notes: string | null;
   logged_by: string;
+  first_time_played?: boolean;
   created_at: string;
+};
+
+export type PlayParticipant = {
+  user_id: string;
+  is_winner?: boolean;
+  score?: number | null;
 };
 
 export type PlayWithDetails = Play & {
   game: Game;
-  participants: Profile[];
+  participants: (Profile & { is_winner?: boolean; score?: number | null })[];
   logger: Profile;
+};
+
+export type GroupStats = {
+  totalPlays: number;
+  uniqueGamesPlayed: number;
+  playsThisMonth: number;
+  topGames: { game_id: string; title: string; play_count: number }[];
+  topWinners: { user_id: string; display_name: string; wins: number }[];
 };
 
 export type PickerGame = GameWithOwners & {
   last_played_at: string | null;
+  play_count?: number;
+  never_played?: boolean;
+  want_count?: number;
+  picker_score?: number;
   owner_names: string[];
   owned_expansions?: OwnedExpansion[];
 };
