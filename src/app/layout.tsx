@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import { NavBar } from "@/components/NavBar";
 import { RealtimeProvider } from "@/components/RealtimeProvider";
 import { PageEnter } from "@/components/PageEnter";
+import { ServiceWorkerRegister } from "@/components/ServiceWorkerRegister";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -26,8 +27,14 @@ export const metadata: Metadata = {
     title: "BgLib",
   },
   icons: {
-    icon: "/icon.svg",
-    apple: "/icon.svg",
+    icon: [
+      { url: "/icons/icon-192.png", sizes: "192x192", type: "image/png" },
+      { url: "/icons/icon-512.png", sizes: "512x512", type: "image/png" },
+    ],
+    apple: [{ url: "/icons/apple-touch-icon.png", sizes: "180x180", type: "image/png" }],
+  },
+  other: {
+    "mobile-web-app-capable": "yes",
   },
 };
 
@@ -55,6 +62,7 @@ export default function RootLayout({
           <PageEnter>{children}</PageEnter>
         </main>
         <RealtimeProvider />
+        <ServiceWorkerRegister />
       </body>
     </html>
   );

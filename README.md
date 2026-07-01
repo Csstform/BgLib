@@ -85,8 +85,10 @@ Open [http://localhost:3000](http://localhost:3000).
 
 ### 5. Install on mobile
 
-- **iOS**: Safari → Share → Add to Home Screen
-- **Android**: Chrome → Install app / Add to Home Screen
+- **iOS (Safari)**: Share → **Add to Home Screen** (not “Add to Dock” — that creates a widget)
+- **Android (Chrome)**: Menu → **Install app** or the install banner
+
+If it installed as a shortcut/widget before, delete the old icon and reinstall after deploying the latest version. The app needs PNG icons and a registered service worker to install as a full standalone app.
 
 ## Deploy (Vercel)
 
