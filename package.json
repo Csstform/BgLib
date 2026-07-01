@@ -10,7 +10,8 @@
     "lint": "eslint",
     "lint:fix": "eslint --fix",
     "typecheck": "tsc --noEmit",
-    "db:build": "bash scripts/build-install-sql.sh"
+    "db:build": "bash scripts/build-install-sql.sh",
+    "icons:generate": "node scripts/generate-pwa-icons.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.0",
