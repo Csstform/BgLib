@@ -5,7 +5,8 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { BggSearch } from "@/components/BggSearch";
 import { DuplicateWarning } from "@/components/DuplicateWarning";
-import { HandCoins } from "lucide-react";
+import { HandCoins, Puzzle } from "lucide-react";
+import { resolveBaseGameId } from "@/lib/resolve-base-game";
 
 type BggDetails = {
   id: number;
@@ -15,14 +16,20 @@ type BggDetails = {
   maxPlayers: number | null;
   playTimeMinutes: number | null;
   imageUrl: string | null;
+  bggType?: "boardgame" | "boardgameexpansion";
+  baseGameBggId?: number | null;
 };
 
 export function AddGameForm({
   userId,
   groupId,
+  baseGameId,
+  baseGameTitle,
 }: {
   userId: string;
   groupId: string;
+  baseGameId?: string;
+  baseGameTitle?: string;
 }) {
   const router = useRouter();
   const [title, setTitle] = useState("");
@@ -32,11 +39,17 @@ export function AddGameForm({
   const [playTime, setPlayTime] = useState("");
   const [imageUrl, setImageUrl] = useState("");
   const [bggId, setBggId] = useState<number | null>(null);
+  const [bggType, setBggType] = useState<"boardgame" | "boardgameexpansion" | null>(
+    baseGameId ? "boardgameexpansion" : null
+  );
+  const [resolvedBaseGameId, setResolvedBaseGameId] = useState<string | null>(
+    baseGameId ?? null
+  );
   const [addToCollection, setAddToCollection] = useState(true);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
-  function handleBggSelect(details: BggDetails) {
+  async function handleBggSelect(details: BggDetails) {
     setTitle(details.name);
     setDescription(details.description);
     setMinPlayers(String(details.minPlayers));
@@ -44,6 +57,24 @@ export function AddGameForm({
     setPlayTime(details.playTimeMinutes ? String(details.playTimeMinutes) : "");
     setImageUrl(details.imageUrl ?? "");
     setBggId(details.id);
+    setBggType(details.bggType ?? "boardgame");
+
+    if (baseGameId) {
+      setResolvedBaseGameId(baseGameId);
+      return;
+    }
+
+    if (details.bggType === "boardgameexpansion" && details.baseGameBggId) {
+      const supabase = createClient();
+      const localBaseId = await resolveBaseGameId(
+        supabase,
+        groupId,
+        details.baseGameBggId
+      );
+      setResolvedBaseGameId(localBaseId);
+    } else {
+      setResolvedBaseGameId(null);
+    }
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -52,6 +83,24 @@ export function AddGameForm({
     setLoading(true);
 
     const supabase = createClient();
+    let linkedBaseId = resolvedBaseGameId;
+
+    if (
+      !linkedBaseId &&
+      bggType === "boardgameexpansion" &&
+      bggId
+    ) {
+      const detailsRes = await fetch(`/api/bgg/thing?id=${bggId}`);
+      if (detailsRes.ok) {
+        const details = (await detailsRes.json()) as BggDetails;
+        linkedBaseId = await resolveBaseGameId(
+          supabase,
+          groupId,
+          details.baseGameBggId
+        );
+      }
+    }
+
     const { data: game, error: gameError } = await supabase
       .from("games")
       .insert({
@@ -62,6 +111,8 @@ export function AddGameForm({
         play_time_minutes: playTime ? parseInt(playTime) : null,
         image_url: imageUrl.trim() || null,
         bgg_id: bggId,
+        bgg_type: bggType ?? (baseGameId ? "boardgameexpansion" : "boardgame"),
+        base_game_id: linkedBaseId,
         created_by: userId,
         group_id: groupId,
       })
@@ -88,11 +139,23 @@ export function AddGameForm({
   const inputClass =
     "w-full rounded-xl border border-border bg-surface px-4 py-2.5 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20";
 
+  const isExpansion =
+    !!baseGameId || bggType === "boardgameexpansion" || !!resolvedBaseGameId;
+
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       {error && (
         <div className="rounded-lg bg-red-500/10 border border-red-500/30 px-4 py-3 text-sm text-red-400">
           {error}
+        </div>
+      )}
+
+      {baseGameTitle && (
+        <div className="rounded-xl border border-primary/20 bg-primary/5 px-4 py-3 text-sm">
+          <p className="flex items-center gap-2 font-medium">
+            <Puzzle className="h-4 w-4 text-primary" />
+            Adding expansion for {baseGameTitle}
+          </p>
         </div>
       )}
 
@@ -104,6 +167,14 @@ export function AddGameForm({
         <p className="text-xs text-muted flex items-center gap-1">
           <HandCoins className="h-3 w-3" />
           Imported from BoardGameGeek (ID: {bggId})
+          {isExpansion ? " · Expansion" : ""}
+        </p>
+      )}
+
+      {isExpansion && !resolvedBaseGameId && !baseGameId && (
+        <p className="text-xs text-amber-400">
+          Base game not in library yet — expansion will be listed separately until
+          the base game is added.
         </p>
       )}
 
@@ -118,7 +189,7 @@ export function AddGameForm({
           onChange={(e) => setTitle(e.target.value)}
           required
           className={inputClass}
-          placeholder="Catan"
+          placeholder={baseGameTitle ? "Cities & Knights" : "Catan"}
         />
       </div>
 
@@ -209,7 +280,11 @@ export function AddGameForm({
         disabled={loading}
         className="btn-primary w-full rounded-xl bg-primary py-3 font-medium text-primary-fg hover:bg-primary-hover disabled:opacity-50"
       >
-        {loading ? "Adding game..." : "Add to library"}
+        {loading
+          ? "Adding..."
+          : isExpansion
+            ? "Add expansion"
+            : "Add to library"}
       </button>
     </form>
   );

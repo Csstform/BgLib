@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
@@ -9,21 +9,30 @@ import type { Game, Profile } from "@/lib/types";
 
 type Member = { user_id: string; profile: Profile };
 
+type ExpansionOption = {
+  id: string;
+  title: string;
+  owner_names: string[];
+};
+
 export function LogPlayForm({
   groupId,
   games,
+  expansionsByBase,
   members,
   userId,
   preselectedGameId,
 }: {
   groupId: string;
   games: Game[];
+  expansionsByBase: Record<string, ExpansionOption[]>;
   members: Member[];
   userId: string;
   preselectedGameId?: string;
 }) {
   const router = useRouter();
   const [gameId, setGameId] = useState(preselectedGameId ?? "");
+  const [selectedExpansions, setSelectedExpansions] = useState<string[]>([]);
   const [playedAt, setPlayedAt] = useState(
     new Date().toISOString().slice(0, 16)
   );
@@ -33,8 +42,32 @@ export function LogPlayForm({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
+  const playableGames = useMemo(
+    () =>
+      games.filter(
+        (g) => g.bgg_type !== "boardgameexpansion" && !g.base_game_id
+      ),
+    [games]
+  );
+
+  const availableExpansions = useMemo(
+    () => (gameId ? expansionsByBase[gameId] ?? [] : []),
+    [gameId, expansionsByBase]
+  );
+
+  function handleGameChange(nextGameId: string) {
+    setGameId(nextGameId);
+    setSelectedExpansions([]);
+  }
+
   function toggleParticipant(id: string) {
     setParticipants((prev) =>
+      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
+    );
+  }
+
+  function toggleExpansion(id: string) {
+    setSelectedExpansions((prev) =>
       prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
     );
   }
@@ -71,6 +104,15 @@ export function LogPlayForm({
       );
     }
 
+    if (selectedExpansions.length > 0) {
+      await supabase.from("play_expansions").insert(
+        selectedExpansions.map((expId) => ({
+          play_id: play!.id,
+          game_id: expId,
+        }))
+      );
+    }
+
     router.push("/plays");
     router.refresh();
   }
@@ -98,18 +140,47 @@ export function LogPlayForm({
         <label className="block text-sm font-medium mb-1.5">Game *</label>
         <select
           value={gameId}
-          onChange={(e) => setGameId(e.target.value)}
+          onChange={(e) => handleGameChange(e.target.value)}
           required
           className={inputClass}
         >
           <option value="">Select a game</option>
-          {games.map((g) => (
+          {playableGames.map((g) => (
             <option key={g.id} value={g.id}>
               {g.title}
             </option>
           ))}
         </select>
       </div>
+
+      {availableExpansions.length > 0 && (
+        <div>
+          <label className="block text-sm font-medium mb-1.5">
+            Expansions used
+          </label>
+          <div className="flex flex-wrap gap-2">
+            {availableExpansions.map((exp) => (
+              <button
+                key={exp.id}
+                type="button"
+                onClick={() => toggleExpansion(exp.id)}
+                className={`rounded-full px-3 py-1.5 text-sm border text-left ${
+                  selectedExpansions.includes(exp.id)
+                    ? "border-primary bg-primary/20 text-primary"
+                    : "border-border bg-surface-2 text-muted"
+                }`}
+              >
+                {exp.title}
+                {exp.owner_names.length > 0 && (
+                  <span className="block text-[10px] opacity-75">
+                    {exp.owner_names.join(", ")}
+                  </span>
+                )}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
 
       <div>
         <label className="block text-sm font-medium mb-1.5">When</label>
@@ -163,7 +234,7 @@ export function LogPlayForm({
           onChange={(e) => setNotes(e.target.value)}
           rows={2}
           className={inputClass}
-          placeholder="Who won, expansions used..."
+          placeholder="Who won, house rules..."
         />
       </div>
 

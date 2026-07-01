@@ -4,15 +4,29 @@ import type { GameWithOwners } from "@/lib/types";
 import { formatPlayTime, formatPlayers } from "@/lib/utils";
 import { OwnerAvatars } from "./OwnerAvatars";
 
-export function GameCard({ game }: { game: GameWithOwners }) {
+export function GameCard({
+  game,
+  badge,
+  compact,
+}: {
+  game: GameWithOwners;
+  badge?: string | null;
+  compact?: boolean;
+}) {
   const ownerCount = game.owners?.length ?? 0;
 
   return (
     <Link
       href={`/library/${game.id}`}
-      className="group touch-card flex gap-3 rounded-xl border border-border bg-surface p-3 shadow-sm"
+      className={`group touch-card flex gap-3 rounded-xl border border-border bg-surface shadow-sm ${
+        compact ? "p-2" : "p-3"
+      }`}
     >
-      <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-lg bg-surface-2 text-2xl overflow-hidden">
+      <div
+        className={`flex shrink-0 items-center justify-center rounded-lg bg-surface-2 overflow-hidden ${
+          compact ? "h-12 w-12 text-xl" : "h-16 w-16 text-2xl"
+        }`}
+      >
         {game.image_url ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img
@@ -25,10 +39,21 @@ export function GameCard({ game }: { game: GameWithOwners }) {
         )}
       </div>
       <div className="flex min-w-0 flex-1 flex-col justify-center">
-        <h3 className="font-semibold truncate group-hover:text-primary transition-colors">
-          {game.title}
-        </h3>
-        <p className="text-sm text-muted">
+        <div className="flex items-center gap-2 min-w-0">
+          <h3
+            className={`font-semibold truncate group-hover:text-primary transition-colors ${
+              compact ? "text-sm" : ""
+            }`}
+          >
+            {game.title}
+          </h3>
+          {badge && (
+            <span className="shrink-0 rounded-md bg-amber-500/15 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-amber-400">
+              {badge}
+            </span>
+          )}
+        </div>
+        <p className={`text-muted ${compact ? "text-xs" : "text-sm"}`}>
           {formatPlayers(game.min_players, game.max_players)} players
           {game.play_time_minutes
             ? ` · ${formatPlayTime(game.play_time_minutes)}`

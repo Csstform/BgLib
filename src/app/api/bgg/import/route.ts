@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { getActiveGroupId } from "@/lib/group";
 import { getBggCollection, getBggGameDetails } from "@/lib/bgg";
+import { resolveBaseGameId } from "@/lib/resolve-base-game";
 
 export async function POST(request: NextRequest) {
   const supabase = await createClient();
@@ -46,7 +47,12 @@ export async function POST(request: NextRequest) {
   let imported = 0;
   let skipped = 0;
 
-  for (const item of collection.slice(0, 100)) {
+  const sorted = [...collection.slice(0, 100)].sort((a, b) => {
+    if (a.subtype === b.subtype) return 0;
+    return a.subtype === "boardgame" ? -1 : 1;
+  });
+
+  for (const item of sorted) {
     if (existingBggIds.has(item.id)) {
       skipped++;
       continue;
@@ -59,6 +65,12 @@ export async function POST(request: NextRequest) {
         continue;
       }
 
+      const baseGameId = await resolveBaseGameId(
+        supabase,
+        groupId,
+        details.baseGameBggId
+      );
+
       const { data: game, error } = await supabase
         .from("games")
         .insert({
@@ -69,6 +81,8 @@ export async function POST(request: NextRequest) {
           play_time_minutes: details.playTimeMinutes,
           image_url: details.imageUrl,
           bgg_id: details.id,
+          bgg_type: details.bggType,
+          base_game_id: baseGameId,
           group_id: groupId,
           created_by: user.id,
         })
