@@ -6,6 +6,7 @@ import { isSupabaseConfigured } from "@/lib/utils";
 import { getActiveGroupId } from "@/lib/group";
 import { SetupBanner } from "@/components/SetupBanner";
 import { LibraryClient } from "./LibraryClient";
+import { groupLibraryGames } from "@/lib/game-expansions";
 import type { GameWithOwners } from "@/lib/types";
 
 export default async function LibraryPage() {
@@ -46,6 +47,8 @@ export default async function LibraryPage() {
     play_time_minutes: g.play_time_minutes,
     image_url: g.image_url,
     bgg_id: g.bgg_id,
+    bgg_type: g.bgg_type,
+    base_game_id: g.base_game_id,
     created_by: g.created_by,
     created_at: g.created_at,
     owners: (g.ownership ?? []).map(
@@ -69,13 +72,19 @@ export default async function LibraryPage() {
     ),
   }));
 
+  const grouped = groupLibraryGames(gamesWithOwners);
+
   return (
     <div className="px-4 py-6 pb-24">
       <div className="mb-6 flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold">Game Library</h1>
           <p className="text-sm text-muted mt-0.5">
-            {gamesWithOwners.length} game{gamesWithOwners.length !== 1 ? "s" : ""} in catalogue
+            {grouped.bases.length} base game
+            {grouped.bases.length !== 1 ? "s" : ""}
+            {gamesWithOwners.length !== grouped.bases.length
+              ? ` · ${gamesWithOwners.length} total entries`
+              : ""}
           </p>
         </div>
         <Link

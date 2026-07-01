@@ -13,6 +13,8 @@ type BggDetails = {
   maxPlayers: number | null;
   playTimeMinutes: number | null;
   imageUrl: string | null;
+  bggType?: "boardgame" | "boardgameexpansion";
+  baseGameBggId?: number | null;
 };
 
 type Props = {
@@ -121,11 +123,18 @@ export function BggSearch({ onSelect }: Props) {
                 disabled={fetchingId === r.id}
                 className="pressable w-full px-4 py-2.5 text-left text-sm hover:bg-surface-2 flex items-center justify-between disabled:opacity-50"
               >
-                <span>
-                  {r.name}
-                  {r.yearPublished ? (
-                    <span className="text-muted ml-1">({r.yearPublished})</span>
-                  ) : null}
+                <span className="flex items-center gap-2 min-w-0">
+                  <span className="truncate">
+                    {r.name}
+                    {r.yearPublished ? (
+                      <span className="text-muted ml-1">({r.yearPublished})</span>
+                    ) : null}
+                  </span>
+                  {r.type === "boardgameexpansion" && (
+                    <span className="shrink-0 rounded-md bg-amber-500/15 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-amber-400">
+                      Expansion
+                    </span>
+                  )}
                 </span>
                 {fetchingId === r.id && (
                   <Loader2 className="h-4 w-4 animate-spin text-muted" />

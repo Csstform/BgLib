@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { getActiveGroupId } from "@/lib/group";
+import type { OwnedExpansion } from "@/lib/types";
 
 export async function GET(request: NextRequest) {
   const groupId = await getActiveGroupId();
@@ -44,8 +45,43 @@ export async function GET(request: NextRequest) {
   });
 
   const maxTimeMin = maxTime ? parseInt(maxTime, 10) : null;
+  const allGames = games ?? [];
 
-  const results = (games ?? [])
+  const expansionsByBase = new Map<
+    string,
+    (OwnedExpansion & { owner_ids: string[] })[]
+  >();
+  for (const g of allGames) {
+    if (!g.base_game_id) continue;
+
+    const ownerRows = (g.ownership ?? []) as {
+      user_id: string;
+      profiles: { display_name: string } | { display_name: string }[];
+    }[];
+
+    if (ownerRows.length === 0) continue;
+
+    const ownerNames = ownerRows
+      .map((o) => {
+        const profile = Array.isArray(o.profiles) ? o.profiles[0] : o.profiles;
+        return profile?.display_name;
+      })
+      .filter(Boolean) as string[];
+
+    const ownerIds = ownerRows.map((o) => o.user_id);
+
+    const list = expansionsByBase.get(g.base_game_id) ?? [];
+    list.push({
+      id: g.id,
+      title: g.title,
+      owner_names: ownerNames,
+      owner_ids: ownerIds,
+    });
+    expansionsByBase.set(g.base_game_id, list);
+  }
+
+  const results = allGames
+    .filter((g) => !g.base_game_id && g.bgg_type !== "boardgameexpansion")
     .map((g) => {
       const owners = (g.ownership ?? []).map(
         (o: {
@@ -87,6 +123,14 @@ export async function GET(request: NextRequest) {
             )
           : owners;
 
+      const ownedExpansions = (expansionsByBase.get(g.id) ?? [])
+        .filter((exp) => {
+          if (attendeeIds.length === 0) return true;
+          return exp.owner_ids.some((id) => attendeeIds.includes(id));
+        })
+        .map(({ id, title, owner_names }) => ({ id, title, owner_names }))
+        .sort((a, b) => a.title.localeCompare(b.title));
+
       return {
         ...g,
         owners: matchingOwners.map(
@@ -107,6 +151,7 @@ export async function GET(request: NextRequest) {
         owner_names: matchingOwners.map(
           (o: { display_name: string }) => o.display_name
         ),
+        owned_expansions: ownedExpansions,
       };
     })
     .filter(Boolean)

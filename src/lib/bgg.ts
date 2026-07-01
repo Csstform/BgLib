@@ -2,10 +2,18 @@ import { XMLParser } from "fast-xml-parser";
 
 const BGG_BASE = "https://boardgamegeek.com/xmlapi2";
 
+export type BggItemType = "boardgame" | "boardgameexpansion";
+
 export type BggSearchResult = {
   id: number;
   name: string;
   yearPublished?: number;
+  type: BggItemType;
+};
+
+export type BggLinkRef = {
+  id: number;
+  name: string;
 };
 
 export type BggGameDetails = {
@@ -17,13 +25,16 @@ export type BggGameDetails = {
   playTimeMinutes: number | null;
   imageUrl: string | null;
   yearPublished?: number;
+  bggType: BggItemType;
+  baseGameBggId: number | null;
+  expansionBggIds: BggLinkRef[];
 };
 
 const parser = new XMLParser({
   ignoreAttributes: false,
   attributeNamePrefix: "@_",
   isArray: (name) =>
-    ["item", "name", "link", "poll", "result", "item"].includes(name),
+    ["item", "name", "link", "poll", "result"].includes(name),
 });
 
 function getBggToken(): string {
@@ -101,11 +112,78 @@ function getPrimaryName(names: unknown): string {
   return chosen?.["@_value"] ?? chosen?.["#text"] ?? "Unknown";
 }
 
+function parseBggLinks(
+  links: unknown,
+  type: string
+): BggLinkRef[] {
+  if (!links) return [];
+  const list = Array.isArray(links) ? links : [links];
+  return list
+    .filter((l: { "@_type"?: string }) => l["@_type"] === type)
+    .map((l: { "@_id"?: string; "@_value"?: string }) => ({
+      id: parseInt(l["@_id"] ?? "0", 10),
+      name: l["@_value"] ?? "Unknown",
+    }))
+    .filter((l) => l.id > 0);
+}
+
+function parseThingItem(game: Record<string, unknown>, id: number): BggGameDetails {
+  const desc = (game.description as string) ?? "";
+  const cleanDesc = desc
+    .replace(/<[^>]+>/g, "")
+    .replace(/&#10;/g, "\n")
+    .trim();
+
+  const minPlayers = parseInt(
+    (game.minplayers as { "@_value"?: string })?.["@_value"] ?? "1",
+    10
+  );
+  const maxPlayers = (game.maxplayers as { "@_value"?: string })?.["@_value"]
+    ? parseInt((game.maxplayers as { "@_value": string })["@_value"], 10)
+    : null;
+
+  const minTime = (game.minplaytime as { "@_value"?: string })?.["@_value"]
+    ? parseInt((game.minplaytime as { "@_value": string })["@_value"], 10)
+    : null;
+  const maxTime = (game.maxplaytime as { "@_value"?: string })?.["@_value"]
+    ? parseInt((game.maxplaytime as { "@_value": string })["@_value"], 10)
+    : null;
+
+  const imageUrl =
+    (game.image as { "@_value"?: string })?.["@_value"] ??
+    (game.thumbnail as { "@_value"?: string })?.["@_value"] ??
+    null;
+
+  const rawType = (game["@_type"] as string) ?? "boardgame";
+  const bggType: BggItemType =
+    rawType === "boardgameexpansion" ? "boardgameexpansion" : "boardgame";
+
+  const expansionLinks = parseBggLinks(game.link, "boardgameexpansion");
+  const baseLinks = parseBggLinks(game.link, "boardgame");
+
+  return {
+    id,
+    name: getPrimaryName(game.name),
+    description: cleanDesc,
+    minPlayers,
+    maxPlayers,
+    playTimeMinutes: maxTime ?? minTime,
+    imageUrl,
+    yearPublished: (game.yearpublished as { "@_value"?: string })?.["@_value"]
+      ? parseInt((game.yearpublished as { "@_value": string })["@_value"], 10)
+      : undefined,
+    bggType,
+    baseGameBggId:
+      bggType === "boardgameexpansion" && baseLinks[0] ? baseLinks[0].id : null,
+    expansionBggIds: bggType === "boardgame" ? expansionLinks : [],
+  };
+}
+
 export async function searchBggGames(query: string): Promise<BggSearchResult[]> {
   if (!query.trim()) return [];
 
   const xml = await fetchBgg(
-    `/search?query=${encodeURIComponent(query)}&type=boardgame`
+    `/search?query=${encodeURIComponent(query)}&type=boardgame,boardgameexpansion`
   );
   const parsed = parser.parse(xml);
   const items = parsed?.items?.item;
@@ -115,15 +193,31 @@ export async function searchBggGames(query: string): Promise<BggSearchResult[]> 
   const list = Array.isArray(items) ? items : [items];
 
   return list
-    .filter((item: { "@_type"?: string }) => item["@_type"] === "boardgame")
-    .slice(0, 15)
-    .map((item: { "@_id": string; name?: { "@_value": string }; yearpublished?: { "@_value": string } }) => ({
-      id: parseInt(item["@_id"], 10),
-      name: typeof item.name === "object" ? item.name["@_value"] : String(item.name ?? ""),
-      yearPublished: item.yearpublished
-        ? parseInt(item.yearpublished["@_value"], 10)
-        : undefined,
-    }));
+    .filter((item: { "@_type"?: string }) =>
+      ["boardgame", "boardgameexpansion"].includes(item["@_type"] ?? "")
+    )
+    .slice(0, 20)
+    .map(
+      (item: {
+        "@_id": string;
+        "@_type"?: string;
+        name?: { "@_value": string };
+        yearpublished?: { "@_value": string };
+      }) => ({
+        id: parseInt(item["@_id"], 10),
+        name:
+          typeof item.name === "object"
+            ? item.name["@_value"]
+            : String(item.name ?? ""),
+        yearPublished: item.yearpublished
+          ? parseInt(item.yearpublished["@_value"], 10)
+          : undefined,
+        type:
+          item["@_type"] === "boardgameexpansion"
+            ? "boardgameexpansion"
+            : "boardgame",
+      })
+    );
 }
 
 export async function getBggGameDetails(
@@ -136,40 +230,7 @@ export async function getBggGameDetails(
   if (!item) return null;
 
   const game = Array.isArray(item) ? item[0] : item;
-  const desc = game.description ?? "";
-  const cleanDesc = desc
-    .replace(/<[^>]+>/g, "")
-    .replace(/&#10;/g, "\n")
-    .trim();
-
-  const minPlayers = parseInt(game.minplayers?.["@_value"] ?? "1", 10);
-  const maxPlayers = game.maxplayers?.["@_value"]
-    ? parseInt(game.maxplayers["@_value"], 10)
-    : null;
-
-  const minTime = game.minplaytime?.["@_value"]
-    ? parseInt(game.minplaytime["@_value"], 10)
-    : null;
-  const maxTime = game.maxplaytime?.["@_value"]
-    ? parseInt(game.maxplaytime["@_value"], 10)
-    : null;
-  const playTimeMinutes = maxTime ?? minTime;
-
-  const imageUrl =
-    game.image?.["@_value"] ?? game.thumbnail?.["@_value"] ?? null;
-
-  return {
-    id,
-    name: getPrimaryName(game.name),
-    description: cleanDesc,
-    minPlayers,
-    maxPlayers,
-    playTimeMinutes,
-    imageUrl,
-    yearPublished: game.yearpublished?.["@_value"]
-      ? parseInt(game.yearpublished["@_value"], 10)
-      : undefined,
-  };
+  return parseThingItem(game as Record<string, unknown>, id);
 }
 
 export type BggCollectionItem = {
@@ -177,13 +238,15 @@ export type BggCollectionItem = {
   name: string;
   owned: boolean;
   yearPublished?: number;
+  subtype: BggItemType;
 };
 
-export async function getBggCollection(
-  username: string
+async function fetchBggCollectionSubtype(
+  username: string,
+  subtype: "boardgame" | "boardgameexpansion"
 ): Promise<BggCollectionItem[]> {
   const xml = await fetchBgg(
-    `/collection?username=${encodeURIComponent(username)}&own=1&stats=1&subtype=boardgame`
+    `/collection?username=${encodeURIComponent(username)}&own=1&stats=1&subtype=${subtype}`
   );
   const parsed = parser.parse(xml);
   const items = parsed?.items?.item;
@@ -200,13 +263,27 @@ export async function getBggCollection(
       status?: { "@_own": string };
     }) => ({
       id: parseInt(item["@_objectid"], 10),
-      name: typeof item.name === "object" ? item.name["@_value"] : String(item.name ?? ""),
+      name:
+        typeof item.name === "object"
+          ? item.name["@_value"]
+          : String(item.name ?? ""),
       owned: item.status?.["@_own"] === "1",
       yearPublished: item.yearpublished
         ? parseInt(item.yearpublished["@_value"], 10)
         : undefined,
+      subtype,
     })
   );
+}
+
+export async function getBggCollection(
+  username: string
+): Promise<BggCollectionItem[]> {
+  const [games, expansions] = await Promise.all([
+    fetchBggCollectionSubtype(username, "boardgame"),
+    fetchBggCollectionSubtype(username, "boardgameexpansion"),
+  ]);
+  return [...games, ...expansions];
 }
 
 export function isBggConfigured(): boolean {

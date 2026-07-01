@@ -27,6 +27,8 @@ export type Game = {
   play_time_minutes: number | null;
   image_url: string | null;
   bgg_id: number | null;
+  bgg_type?: "boardgame" | "boardgameexpansion" | null;
+  base_game_id?: string | null;
   created_by: string | null;
   created_at: string;
   group_id?: string | null;
@@ -53,6 +55,13 @@ export type OwnerInfo = {
 
 export type GameWithOwners = Game & {
   owners: OwnerInfo[];
+  base_game?: Pick<Game, "id" | "title"> | null;
+};
+
+export type OwnedExpansion = {
+  id: string;
+  title: string;
+  owner_names: string[];
 };
 
 export type OwnershipWithGame = Ownership & {
@@ -112,6 +121,7 @@ export type BggSearchResult = {
   id: number;
   name: string;
   yearPublished?: number;
+  type: "boardgame" | "boardgameexpansion";
 };
 
 export type Play = {
@@ -134,6 +144,7 @@ export type PlayWithDetails = Play & {
 export type PickerGame = GameWithOwners & {
   last_played_at: string | null;
   owner_names: string[];
+  owned_expansions?: OwnedExpansion[];
 };
 
 export type DuplicateMatch = {

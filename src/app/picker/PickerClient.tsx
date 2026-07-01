@@ -142,6 +142,14 @@ export function PickerClient({ members }: { members: Member[] }) {
                     ? ` · Last played ${formatDate(game.last_played_at)}`
                     : " · Never played in this group"}
                 </p>
+                {(game.owned_expansions?.length ?? 0) > 0 && (
+                  <p className="text-xs text-amber-400/90 px-1 mt-0.5">
+                    Expansions:{" "}
+                    {game.owned_expansions!
+                      .map((e) => e.title)
+                      .join(", ")}
+                  </p>
+                )}
               </div>
             ))
           )}

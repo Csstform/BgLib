@@ -29,6 +29,9 @@ export default async function PlaysPage() {
       logger:profiles!plays_logged_by_fkey (display_name),
       play_participants (
         profile:profiles (display_name)
+      ),
+      play_expansions (
+        game:games (title)
       )
     `
     )
@@ -76,6 +79,13 @@ export default async function PlaysPage() {
               })
               .filter(Boolean);
 
+            const expansionTitles = (play.play_expansions ?? [])
+              .map((pe) => {
+                const g = Array.isArray(pe.game) ? pe.game[0] : pe.game;
+                return g?.title as string | undefined;
+              })
+              .filter(Boolean);
+
             return (
               <Link
                 key={play.id}
@@ -92,6 +102,11 @@ export default async function PlaysPage() {
                 {participants.length > 0 && (
                   <p className="text-xs text-muted mt-1">
                     With: {participants.join(", ")}
+                  </p>
+                )}
+                {expansionTitles.length > 0 && (
+                  <p className="text-xs text-muted mt-1">
+                    Expansions: {expansionTitles.join(", ")}
                   </p>
                 )}
                 {play.notes && (
