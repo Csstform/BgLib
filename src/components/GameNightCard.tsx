@@ -11,7 +11,7 @@ export function GameNightCard({ night }: { night: GameNightWithDetails }) {
   return (
     <Link
       href={`/game-nights/${night.id}`}
-      className="block rounded-xl border border-border bg-surface p-4 hover:border-primary/30 hover:shadow-md transition-all active:scale-[0.98]"
+      className="touch-card block rounded-xl border border-border bg-surface p-4 shadow-sm"
     >
       <h3 className="font-semibold text-lg">{night.title}</h3>
       <p className="text-sm text-muted mt-1 flex items-center gap-1.5">

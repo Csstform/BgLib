@@ -40,7 +40,7 @@ export function GroupSwitcher({
         type="button"
         onClick={() => setOpen(!open)}
         disabled={pending}
-        className="flex items-center gap-1 rounded-lg px-2 py-1 text-xs text-muted hover:bg-surface-2 hover:text-foreground max-w-[160px]"
+        className="pressable flex items-center gap-1 rounded-lg px-2 py-1 text-xs text-muted hover:bg-surface-2 hover:text-foreground max-w-[160px]"
       >
         <Users className="h-3.5 w-3.5 shrink-0" />
         <span className="truncate">{active?.name ?? "Select group"}</span>
@@ -49,16 +49,16 @@ export function GroupSwitcher({
       {open && (
         <>
           <div
-            className="fixed inset-0 z-40"
+            className="fixed inset-0 z-40 animate-fade-in bg-black/20"
             onClick={() => setOpen(false)}
           />
-          <ul className="absolute right-0 top-full z-50 mt-1 w-48 rounded-xl border border-border bg-surface shadow-lg py-1">
+          <ul className="animate-dropdown absolute right-0 top-full z-50 mt-1 w-48 rounded-xl border border-border bg-surface shadow-lg py-1">
             {groups.map((g) => (
               <li key={g.id}>
                 <button
                   type="button"
                   onClick={() => switchGroup(g.id)}
-                  className={`w-full px-3 py-2 text-left text-sm hover:bg-surface-2 ${
+                  className={`pressable w-full px-3 py-2 text-left text-sm hover:bg-surface-2 ${
                     g.id === activeGroupId ? "text-primary font-medium" : ""
                   }`}
                 >

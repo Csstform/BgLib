@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, type CSSProperties } from "react";
 import { GameCard } from "@/components/GameCard";
 import { SearchBar } from "@/components/SearchBar";
 import type { GameWithOwners } from "@/lib/types";
@@ -27,8 +27,14 @@ export function LibraryClient({ games }: { games: GameWithOwners[] }) {
         </p>
       ) : (
         <div className="space-y-2">
-          {filtered.map((game) => (
-            <GameCard key={game.id} game={game} />
+          {filtered.map((game, i) => (
+            <div
+              key={game.id}
+              className="stagger-item"
+              style={{ "--stagger": i } as CSSProperties}
+            >
+              <GameCard game={game} />
+            </div>
           ))}
         </div>
       )}

@@ -10,6 +10,10 @@
   --primary-hover: #f0bc5a;
   --primary-fg: #1a1207;
   --muted: #8b9cb3;
+
+  --ease-spring: cubic-bezier(0.34, 1.4, 0.64, 1);
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --press-scale: 0.97;
 }
 
 @theme inline {
@@ -40,17 +44,220 @@ body {
   padding-bottom: env(safe-area-inset-bottom);
 }
 
-/* Mobile tap highlight */
 * {
   -webkit-tap-highlight-color: transparent;
 }
 
-/* Smooth scrolling */
 html {
   scroll-behavior: smooth;
 }
 
-/* Search input clear button */
 input[type="search"]::-webkit-search-cancel-button {
   -webkit-appearance: none;
+}
+
+/* ── Keyframes ── */
+
+@keyframes fade-in-up {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes scale-in {
+  from {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes slide-down {
+  from {
+    opacity: 0;
+    transform: translateY(-6px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes nav-indicator-in {
+  from {
+    opacity: 0;
+    transform: scaleX(0.5);
+  }
+  to {
+    opacity: 1;
+    transform: scaleX(1);
+  }
+}
+
+/* ── Page enter ── */
+
+.animate-page {
+  animation: fade-in-up 0.35s var(--ease-out) both;
+}
+
+.animate-header {
+  animation: fade-in-up 0.4s var(--ease-out) both;
+}
+
+/* Stagger children: set style={{ "--stagger": index }} on each child */
+.stagger-item {
+  animation: fade-in-up 0.4s var(--ease-out) both;
+  animation-delay: calc(var(--stagger, 0) * 45ms + 50ms);
+}
+
+/* ── Touch / press feedback ── */
+
+.pressable {
+  touch-action: manipulation;
+  transition:
+    transform 0.18s var(--ease-spring),
+    background-color 0.15s ease,
+    border-color 0.15s ease,
+    box-shadow 0.15s ease,
+    color 0.15s ease,
+    opacity 0.15s ease;
+  will-change: transform;
+}
+
+.pressable:active:not(:disabled) {
+  transform: scale(var(--press-scale));
+  opacity: 0.92;
+}
+
+@media (hover: hover) {
+  .pressable:hover:not(:disabled) {
+    transition-duration: 0.12s;
+  }
+}
+
+.touch-card {
+  touch-action: manipulation;
+  transition:
+    transform 0.2s var(--ease-spring),
+    border-color 0.2s ease,
+    box-shadow 0.2s ease,
+    background-color 0.2s ease;
+  will-change: transform;
+}
+
+.touch-card:active {
+  transform: scale(0.98);
+}
+
+@media (hover: hover) {
+  .touch-card:hover {
+    border-color: color-mix(in srgb, var(--primary) 30%, var(--border));
+    box-shadow: 0 4px 20px rgb(0 0 0 / 0.2);
+  }
+}
+
+.btn-primary {
+  touch-action: manipulation;
+  transition:
+    transform 0.18s var(--ease-spring),
+    background-color 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+.btn-primary:active:not(:disabled) {
+  transform: scale(0.96);
+  box-shadow: 0 1px 4px rgb(0 0 0 / 0.2);
+}
+
+.btn-secondary {
+  touch-action: manipulation;
+  transition:
+    transform 0.18s var(--ease-spring),
+    background-color 0.15s ease,
+    border-color 0.15s ease;
+}
+
+.btn-secondary:active:not(:disabled) {
+  transform: scale(0.97);
+}
+
+/* ── Bottom nav ── */
+
+.nav-tab {
+  position: relative;
+  touch-action: manipulation;
+  transition:
+    transform 0.2s var(--ease-spring),
+    color 0.2s ease;
+}
+
+.nav-tab:active {
+  transform: scale(0.9);
+}
+
+.nav-tab-active {
+  color: var(--primary);
+}
+
+.nav-tab-active::after {
+  content: "";
+  position: absolute;
+  bottom: 2px;
+  left: 50%;
+  width: 4px;
+  height: 4px;
+  border-radius: 9999px;
+  background: var(--primary);
+  transform: translateX(-50%);
+  animation: nav-indicator-in 0.25s var(--ease-spring) both;
+}
+
+/* ── Dropdowns / overlays ── */
+
+.animate-dropdown {
+  animation: slide-down 0.2s var(--ease-out) both;
+  transform-origin: top center;
+}
+
+.animate-fade-in {
+  animation: fade-in 0.2s ease both;
+}
+
+/* ── Reduced motion ── */
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+
+  .pressable:active:not(:disabled),
+  .touch-card:active,
+  .btn-primary:active:not(:disabled),
+  .btn-secondary:active:not(:disabled),
+  .nav-tab:active {
+    transform: none;
+    opacity: 1;
+  }
 }

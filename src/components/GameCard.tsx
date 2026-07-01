@@ -10,7 +10,7 @@ export function GameCard({ game }: { game: GameWithOwners }) {
   return (
     <Link
       href={`/library/${game.id}`}
-      className="group flex gap-3 rounded-xl border border-border bg-surface p-3 shadow-sm hover:border-primary/30 hover:shadow-md transition-all active:scale-[0.98]"
+      className="group touch-card flex gap-3 rounded-xl border border-border bg-surface p-3 shadow-sm"
     >
       <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-lg bg-surface-2 text-2xl overflow-hidden">
         {game.image_url ? (

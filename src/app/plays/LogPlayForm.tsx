@@ -170,7 +170,7 @@ export function LogPlayForm({
       <button
         type="submit"
         disabled={loading}
-        className="w-full rounded-xl bg-primary py-3 font-medium text-primary-fg disabled:opacity-50"
+        className="btn-primary w-full rounded-xl bg-primary py-3 font-medium text-primary-fg disabled:opacity-50"
       >
         {loading ? "Saving..." : "Log play"}
       </button>

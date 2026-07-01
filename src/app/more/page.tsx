@@ -1,4 +1,5 @@
 import Link from "next/link";
+import type { CSSProperties } from "react";
 import { redirect } from "next/navigation";
 import {
   Dices,
@@ -62,13 +63,14 @@ export default async function MorePage() {
 
   return (
     <div className="px-4 py-6 pb-24">
-      <h1 className="text-2xl font-bold mb-6">More</h1>
+      <h1 className="animate-header text-2xl font-bold mb-6">More</h1>
       <div className="grid gap-2">
-        {links.map(({ href, label, desc, icon: Icon }) => (
+        {links.map(({ href, label, desc, icon: Icon }, i) => (
           <Link
             key={href}
             href={href}
-            className="flex items-center gap-4 rounded-xl border border-border bg-surface p-4 hover:border-primary/30 transition-colors"
+            className="touch-card stagger-item flex items-center gap-4 rounded-xl border border-border bg-surface p-4"
+            style={{ "--stagger": i } as CSSProperties}
           >
             <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/20 text-primary shrink-0">
               <Icon className="h-5 w-5" />
@@ -81,7 +83,8 @@ export default async function MorePage() {
         ))}
         <Link
           href="/library"
-          className="flex items-center gap-4 rounded-xl border border-border bg-surface p-4 hover:border-primary/30 transition-colors"
+          className="touch-card stagger-item flex items-center gap-4 rounded-xl border border-border bg-surface p-4"
+          style={{ "--stagger": links.length } as CSSProperties}
         >
           <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/20 text-primary shrink-0">
             <Library className="h-5 w-5" />
