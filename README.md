@@ -69,7 +69,7 @@ cp .env.local.example .env.local
 | `NEXT_PUBLIC_VAPID_PUBLIC_KEY` / `VAPID_PRIVATE_KEY` | Web push |
 | `VAPID_SUBJECT` | Push contact (`mailto:you@example.com`) |
 | `RESEND_API_KEY` / `EMAIL_FROM` | Email notifications |
-| `BGG_API_TOKEN` | BGG API (if required) |
+| `BGG_API_TOKEN` | **Required** for BGG search/import ([register here](https://boardgamegeek.com/applications)) |
 | `NEXT_PUBLIC_APP_URL` | Email links and cron base URL |
 | `CRON_SECRET` | Bearer token for `/api/cron/loan-reminders` |
 

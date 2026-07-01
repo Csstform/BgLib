@@ -279,6 +279,7 @@ To block direct access to the droplet IP (bypassing Cloudflare), allow nginx onl
 | Push not working | VAPID keys set, `SUPABASE_SERVICE_ROLE_KEY` set, HTTPS works |
 | Cron 401 | `CRON_SECRET` in env file matches the `Authorization` header |
 | SSL error in browser | Origin cert installed, Cloudflare mode is Full (strict) |
+| BGG search fails / HTML JSON error | Set `BGG_API_TOKEN` in `.env.local` ([register app](https://boardgamegeek.com/applications)), rebuild, restart |
 
 ### curl returns 000
 
