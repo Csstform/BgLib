@@ -77,7 +77,7 @@ cp .env.local.example .env.local
 | `VAPID_SUBJECT` | Push contact (`mailto:you@example.com`) |
 | `RESEND_API_KEY` / `EMAIL_FROM` | Email notifications |
 | `BGG_API_TOKEN` | **Required** for BGG search/import ([register here](https://boardgamegeek.com/applications)) |
-| `GAMEUPC_API_TOKEN` | Optional — barcode scan on Add Game ([GameUPC](https://gameupc.com)) |
+| `GAMEUPC_API_TOKEN` | Optional — improves barcode hit rate ([GameUPC](https://gameupc.com)); not required |
 | `NEXT_PUBLIC_APP_URL` | Email links and cron base URL |
 | `CRON_SECRET` | Bearer token for `/api/cron/loan-reminders` |
 

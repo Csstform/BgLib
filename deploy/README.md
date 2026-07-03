@@ -280,7 +280,7 @@ To block direct access to the droplet IP (bypassing Cloudflare), allow nginx onl
 | Cron 401 | `CRON_SECRET` in env file matches the `Authorization` header |
 | SSL error in browser | Origin cert installed, Cloudflare mode is Full (strict) |
 | BGG search fails / HTML JSON error | Set `BGG_API_TOKEN` in `.env.local` ([register app](https://boardgamegeek.com/applications)), rebuild, restart |
-| Barcode scan says not configured | Set `GAMEUPC_API_TOKEN` in `.env.local` ([GameUPC](https://gameupc.com)); camera still works for manual UPC entry after lookup is configured |
+| Barcode scan can't find game | Ensure `BGG_API_TOKEN` is set; search BGG manually after scan — the barcode is saved for next time. Optional: `GAMEUPC_API_TOKEN` for better auto-match |
 
 ### curl returns 000
 
