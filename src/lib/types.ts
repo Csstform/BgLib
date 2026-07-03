@@ -161,6 +161,26 @@ export type GroupStats = {
   playsThisMonth: number;
   topGames: { game_id: string; title: string; play_count: number }[];
   topWinners: { user_id: string; display_name: string; wins: number }[];
+  neverPlayed: NeverPlayedGame[];
+};
+
+export type PlayerStats = {
+  totalPlays: number;
+  wins: number;
+  mostPlayedGames: { game_id: string; title: string; play_count: number }[];
+  recentPlays: {
+    play_id: string;
+    game_id: string;
+    title: string;
+    played_at: string;
+    is_winner: boolean;
+  }[];
+};
+
+export type NeverPlayedGame = {
+  game_id: string;
+  title: string;
+  image_url: string | null;
 };
 
 export type PickerGame = GameWithOwners & {

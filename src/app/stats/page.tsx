@@ -1,10 +1,22 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { BarChart3, Trophy, Dices, Calendar } from "lucide-react";
+import {
+  BarChart3,
+  Trophy,
+  Dices,
+  Calendar,
+  PackageOpen,
+} from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { getActiveGroupId } from "@/lib/group";
 import { isSupabaseConfigured } from "@/lib/utils";
 import { SetupBanner } from "@/components/SetupBanner";
+import {
+  computeNeverPlayedGames,
+  computeTopGames,
+  computeTopWinners,
+  countPlaysThisMonth,
+} from "@/lib/play-stats";
 
 export default async function StatsPage() {
   if (!isSupabaseConfigured()) {
@@ -20,11 +32,12 @@ export default async function StatsPage() {
 
   const supabase = await createClient();
 
-  const monthStart = new Date();
-  monthStart.setDate(1);
-  monthStart.setHours(0, 0, 0, 0);
-
-  const [{ data: plays }, { data: participantRows }] = await Promise.all([
+  const [
+    { data: plays },
+    { data: participantRows },
+    { data: games },
+    { data: ownerships },
+  ] = await Promise.all([
     supabase
       .from("plays")
       .select("id, game_id, played_at, game:games (id, title)")
@@ -40,6 +53,11 @@ export default async function StatsPage() {
       `
       )
       .eq("is_winner", true),
+    supabase
+      .from("games")
+      .select("id, title, image_url")
+      .eq("group_id", groupId),
+    supabase.from("ownership").select("game_id"),
   ]);
 
   const playIds = new Set((plays ?? []).map((p) => p.id));
@@ -50,49 +68,23 @@ export default async function StatsPage() {
   const allPlays = plays ?? [];
   const totalPlays = allPlays.length;
   const uniqueGames = new Set(allPlays.map((p) => p.game_id)).size;
-  const playsThisMonth = allPlays.filter(
-    (p) => new Date(p.played_at) >= monthStart
-  ).length;
+  const playsThisMonth = countPlaysThisMonth(allPlays);
 
-  const gameCounts = new Map<string, { title: string; count: number }>();
-  for (const play of allPlays) {
-    const game = Array.isArray(play.game) ? play.game[0] : play.game;
-    if (!game) continue;
-    const entry = gameCounts.get(game.id) ?? { title: game.title, count: 0 };
-    entry.count += 1;
-    gameCounts.set(game.id, entry);
-  }
+  const topGames = computeTopGames(allPlays);
+  const topWinners = computeTopWinners(winners);
 
-  const topGames = [...gameCounts.entries()]
-    .map(([game_id, { title, count }]) => ({
-      game_id,
-      title,
-      play_count: count,
-    }))
-    .sort((a, b) => b.play_count - a.play_count)
-    .slice(0, 8);
-
-  const winnerCounts = new Map<string, { display_name: string; wins: number }>();
-  for (const row of winners) {
-    const profile = Array.isArray(row.profile) ? row.profile[0] : row.profile;
-    const userId = profile?.id ?? row.user_id;
-    const name = profile?.display_name ?? "Someone";
-    const entry = winnerCounts.get(userId) ?? {
-      display_name: name,
-      wins: 0,
-    };
-    entry.wins += 1;
-    winnerCounts.set(userId, entry);
-  }
-
-  const topWinners = [...winnerCounts.entries()]
-    .map(([user_id, { display_name, wins }]) => ({
-      user_id,
-      display_name,
-      wins,
-    }))
-    .sort((a, b) => b.wins - a.wins)
-    .slice(0, 8);
+  const playedGameIds = new Set(allPlays.map((p) => p.game_id));
+  const groupGameIds = new Set((games ?? []).map((g) => g.id));
+  const ownedGameIds = new Set(
+    (ownerships ?? [])
+      .map((o) => o.game_id)
+      .filter((id) => groupGameIds.has(id))
+  );
+  const neverPlayed = computeNeverPlayedGames(
+    games ?? [],
+    playedGameIds,
+    ownedGameIds
+  );
 
   return (
     <div className="px-4 py-6 pb-24">
@@ -140,7 +132,7 @@ export default async function StatsPage() {
         )}
       </section>
 
-      <section>
+      <section className="mb-6">
         <h2 className="font-semibold mb-2 flex items-center gap-2">
           <Trophy className="h-4 w-4 text-amber-400" />
           Top winners
@@ -164,6 +156,51 @@ export default async function StatsPage() {
               </Link>
             ))}
           </div>
+        )}
+      </section>
+
+      <section>
+        <h2 className="font-semibold mb-2 flex items-center gap-2">
+          <PackageOpen className="h-4 w-4 text-primary" />
+          Never played
+        </h2>
+        {neverPlayed.length === 0 ? (
+          <p className="text-sm text-muted">
+            Every owned game in this group has at least one play logged.
+          </p>
+        ) : (
+          <>
+            <p className="text-sm text-muted mb-2">
+              {neverPlayed.length} owned game
+              {neverPlayed.length !== 1 ? "s" : ""} waiting for a first play
+            </p>
+            <div className="rounded-xl border border-border bg-surface divide-y divide-border">
+              {neverPlayed.slice(0, 12).map((g) => (
+                <Link
+                  key={g.game_id}
+                  href={`/library/${g.game_id}`}
+                  className="flex items-center gap-3 px-4 py-3 text-sm hover:bg-surface-2"
+                >
+                  {g.image_url ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={g.image_url}
+                      alt=""
+                      className="h-10 w-10 rounded object-cover shrink-0"
+                    />
+                  ) : (
+                    <div className="h-10 w-10 rounded bg-surface-2 shrink-0" />
+                  )}
+                  <span className="font-medium truncate">{g.title}</span>
+                </Link>
+              ))}
+            </div>
+            {neverPlayed.length > 12 && (
+              <p className="text-xs text-muted mt-2">
+                +{neverPlayed.length - 12} more — check the library &quot;Unplayed&quot; filter
+              </p>
+            )}
+          </>
         )}
       </section>
 

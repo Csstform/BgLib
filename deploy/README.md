@@ -238,6 +238,60 @@ Push requires HTTPS (Cloudflare provides this) and VAPID keys in `.env.local`.
 
 ## 10. Deploying updates
 
+### Recommended: GitHub Actions (build off-droplet)
+
+Pushes to `main` run [`.github/workflows/deploy.yml`](../.github/workflows/deploy.yml), which builds on GitHub’s runners and rsyncs the standalone bundle to the droplet. **The droplet never runs `npm run build`**, which avoids OOM on 1 GB RAM.
+
+#### One-time setup
+
+1. **GitHub repository secrets** (Settings → Secrets and variables → Actions):
+
+   | Secret | Value |
+   |--------|-------|
+   | `DROPLET_HOST` | Droplet public IP or hostname |
+   | `DROPLET_USER` | SSH user (`root`, or a deploy user with write access to `/opt/bglib`) |
+   | `DROPLET_SSH_KEY` | Private SSH key (full PEM, including `-----BEGIN…`) |
+   | `NEXT_PUBLIC_SUPABASE_URL` | Same as production `.env.local` |
+   | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Same as production `.env.local` |
+   | `NEXT_PUBLIC_APP_URL` | e.g. `https://bglib.csst.rocks` |
+
+2. **Droplet directories** (first deploy only — CI does not create these):
+
+   ```bash
+   sudo mkdir -p /opt/bglib/.next/standalone /opt/bglib/scripts
+   sudo chown -R bglib:bglib /opt/bglib
+   ```
+
+3. **Passwordless restart** for the deploy user (if not deploying as root):
+
+   ```bash
+   # /etc/sudoers.d/bglib-deploy
+   deployuser ALL=(ALL) NOPASSWD: /bin/systemctl restart bglib
+   ```
+
+4. **Runtime secrets stay on the droplet** in `/opt/bglib/.env.local` (`SUPABASE_SERVICE_ROLE_KEY`, `BGG_API_TOKEN`, `CRON_SECRET`, VAPID, etc.). CI only bakes in `NEXT_PUBLIC_*` vars at build time.
+
+5. **Update systemd** after pulling this change (uses `start-production.sh` directly, no `npm` needed at runtime):
+
+   ```bash
+   sudo cp /opt/bglib/deploy/bglib.service /etc/systemd/system/bglib.service
+   sudo systemctl daemon-reload
+   sudo systemctl restart bglib
+   ```
+
+#### How it works
+
+1. `npm ci` + `npm run build` on GitHub Actions
+2. `scripts/prepare-standalone.sh` copies `public/` and `.next/static/` into the standalone output
+3. `rsync` deploys `.next/standalone/` and `scripts/start-production.sh` to `/opt/bglib`
+4. `sudo systemctl restart bglib`
+
+Trigger a manual deploy: **Actions → Build and deploy → Run workflow**.
+
+### Manual deploy (fallback)
+
+If CI is not set up yet, build on the droplet (use 2 GB RAM or add swap if builds OOM):
+
 ```bash
 sudo -u bglib -i
 cd /opt/bglib
@@ -342,3 +396,5 @@ Any subdomain works — e.g. `games.csst.rocks`, `boardgames.csst.rocks`. Update
 | `bglib.service` | systemd app service |
 | `bglib-cron.service` / `.timer` | Daily loan reminders |
 | `README.md` | This guide |
+
+CI deploy workflow: [`.github/workflows/deploy.yml`](../.github/workflows/deploy.yml)
