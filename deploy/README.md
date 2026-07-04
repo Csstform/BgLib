@@ -251,9 +251,27 @@ Pushes to `main` run [`.github/workflows/deploy.yml`](../.github/workflows/deplo
    | `DROPLET_HOST` | Droplet public IP or hostname |
    | `DROPLET_USER` | SSH user (`root`, or a deploy user with write access to `/opt/bglib`) |
    | `DROPLET_SSH_KEY` | Private SSH key (full PEM, including `-----BEGIN…`) |
+   | `DROPLET_SSH_HOST_KEY` | Pinned SSH host public key as a `known_hosts` line (see below) |
    | `NEXT_PUBLIC_SUPABASE_URL` | Same as production `.env.local` |
    | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Same as production `.env.local` |
    | `NEXT_PUBLIC_APP_URL` | e.g. `https://bglib.csst.rocks` |
+
+   **Pin the droplet SSH host key** (do this once from a trusted network, not in CI):
+
+   ```bash
+   # From your laptop after you have logged into the droplet at least once via SSH:
+   ssh-keyscan -H YOUR_DROPLET_HOST 2>/dev/null
+   ```
+
+   Copy the full line (starts with `|1|` for hashed hostnames, or with the hostname/IP) into the `DROPLET_SSH_HOST_KEY` secret. If the droplet exposes multiple host key types, paste one line per type. Verify the fingerprint out-of-band before saving:
+
+   ```bash
+   ssh-keygen -lf <(ssh-keyscan -H YOUR_DROPLET_HOST 2>/dev/null)
+   # Compare with the server's /etc/ssh/ssh_host_*_key.pub fingerprints when SSH'd in:
+   ssh-keygen -lf /etc/ssh/ssh_host_ed25519_key.pub
+   ```
+
+   Re-run `ssh-keyscan` and update the secret if you rebuild the droplet or rotate SSH host keys.
 
 2. **Droplet directories** (first deploy only — CI does not create these):
 

@@ -40,7 +40,9 @@ jobs:
           mkdir -p ~/.ssh
           printf '%s\n' "${{ secrets.DROPLET_SSH_KEY }}" > ~/.ssh/deploy_key
           chmod 600 ~/.ssh/deploy_key
-          ssh-keyscan -H "${{ secrets.DROPLET_HOST }}" >> ~/.ssh/known_hosts 2>/dev/null
+          # Use a pinned host key from secrets — never ssh-keyscan at deploy time (MITM risk).
+          printf '%s\n' "${{ secrets.DROPLET_SSH_HOST_KEY }}" > ~/.ssh/known_hosts
+          chmod 644 ~/.ssh/known_hosts
 
       - name: Deploy standalone bundle
         env:
