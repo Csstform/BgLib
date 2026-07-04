@@ -238,6 +238,78 @@ Push requires HTTPS (Cloudflare provides this) and VAPID keys in `.env.local`.
 
 ## 10. Deploying updates
 
+### Recommended: GitHub Actions (build off-droplet)
+
+Pushes to `main` run [`.github/workflows/deploy.yml`](../.github/workflows/deploy.yml), which builds on GitHub’s runners and rsyncs the standalone bundle to the droplet. **The droplet never runs `npm run build`**, which avoids OOM on 1 GB RAM.
+
+#### One-time setup
+
+1. **GitHub repository secrets** (Settings → Secrets and variables → Actions):
+
+   | Secret | Value |
+   |--------|-------|
+   | `DROPLET_HOST` | Droplet public IP or hostname |
+   | `DROPLET_USER` | SSH user (`root`, or a deploy user with write access to `/opt/bglib`) |
+   | `DROPLET_SSH_KEY` | Private SSH key (full PEM, including `-----BEGIN…`) |
+   | `DROPLET_SSH_HOST_KEY` | Pinned SSH host public key as a `known_hosts` line (see below) |
+   | `NEXT_PUBLIC_SUPABASE_URL` | Same as production `.env.local` |
+   | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Same as production `.env.local` |
+   | `NEXT_PUBLIC_APP_URL` | e.g. `https://bglib.csst.rocks` |
+
+   **Pin the droplet SSH host key** (do this once from a trusted network, not in CI):
+
+   ```bash
+   # From your laptop after you have logged into the droplet at least once via SSH:
+   ssh-keyscan -H YOUR_DROPLET_HOST 2>/dev/null
+   ```
+
+   Copy the full line (starts with `|1|` for hashed hostnames, or with the hostname/IP) into the `DROPLET_SSH_HOST_KEY` secret. If the droplet exposes multiple host key types, paste one line per type. Verify the fingerprint out-of-band before saving:
+
+   ```bash
+   ssh-keygen -lf <(ssh-keyscan -H YOUR_DROPLET_HOST 2>/dev/null)
+   # Compare with the server's /etc/ssh/ssh_host_*_key.pub fingerprints when SSH'd in:
+   ssh-keygen -lf /etc/ssh/ssh_host_ed25519_key.pub
+   ```
+
+   Re-run `ssh-keyscan` and update the secret if you rebuild the droplet or rotate SSH host keys.
+
+2. **Droplet directories** (first deploy only — CI does not create these):
+
+   ```bash
+   sudo mkdir -p /opt/bglib/.next/standalone /opt/bglib/scripts
+   sudo chown -R bglib:bglib /opt/bglib
+   ```
+
+3. **Passwordless restart** for the deploy user (if not deploying as root):
+
+   ```bash
+   # /etc/sudoers.d/bglib-deploy
+   deployuser ALL=(ALL) NOPASSWD: /bin/systemctl restart bglib
+   ```
+
+4. **Runtime secrets stay on the droplet** in `/opt/bglib/.env.local` (`SUPABASE_SERVICE_ROLE_KEY`, `BGG_API_TOKEN`, `CRON_SECRET`, VAPID, etc.). CI only bakes in `NEXT_PUBLIC_*` vars at build time.
+
+5. **Update systemd** after pulling this change (uses `start-production.sh` directly, no `npm` needed at runtime):
+
+   ```bash
+   sudo cp /opt/bglib/deploy/bglib.service /etc/systemd/system/bglib.service
+   sudo systemctl daemon-reload
+   sudo systemctl restart bglib
+   ```
+
+#### How it works
+
+1. `npm ci` + `npm run build` on GitHub Actions
+2. `scripts/prepare-standalone.sh` copies `public/` and `.next/static/` into the standalone output
+3. `rsync` deploys `.next/standalone/` and `scripts/start-production.sh` to `/opt/bglib`
+4. `sudo systemctl restart bglib`
+
+Trigger a manual deploy: **Actions → Build and deploy → Run workflow**.
+
+### Manual deploy (fallback)
+
+If CI is not set up yet, build on the droplet (use 2 GB RAM or add swap if builds OOM):
+
 ```bash
 sudo -u bglib -i
 cd /opt/bglib
@@ -342,3 +414,5 @@ Any subdomain works — e.g. `games.csst.rocks`, `boardgames.csst.rocks`. Update
 | `bglib.service` | systemd app service |
 | `bglib-cron.service` / `.timer` | Daily loan reminders |
 | `README.md` | This guide |
+
+CI deploy workflow: [`.github/workflows/deploy.yml`](../.github/workflows/deploy.yml)

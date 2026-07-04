@@ -11,7 +11,7 @@ EnvironmentFile=/opt/bglib/.env.local
 Environment=NODE_ENV=production
 Environment=BIND_HOST=0.0.0.0
 Environment=PORT=3000
-ExecStart=/usr/bin/npm run start:prod
+ExecStart=/bin/bash /opt/bglib/scripts/start-production.sh
 Restart=on-failure
 RestartSec=5
 
