@@ -4,6 +4,7 @@ import { NavBar } from "@/components/NavBar";
 import { RealtimeProvider } from "@/components/RealtimeProvider";
 import { PageEnter } from "@/components/PageEnter";
 import { ServiceWorkerRegister } from "@/components/ServiceWorkerRegister";
+import { InstallPrompt } from "@/components/InstallPrompt";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -63,6 +64,7 @@ export default function RootLayout({
         </main>
         <RealtimeProvider />
         <ServiceWorkerRegister />
+        <InstallPrompt />
       </body>
     </html>
   );

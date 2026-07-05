@@ -6,15 +6,21 @@ import {
   Dices,
   Calendar,
   PackageOpen,
+  Users,
+  History,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { getActiveGroupId } from "@/lib/group";
 import { isSupabaseConfigured } from "@/lib/utils";
 import { SetupBanner } from "@/components/SetupBanner";
+import { PlaysTrendChart } from "@/components/PlaysTrendChart";
+import { StatsExportButton } from "@/components/StatsExportButton";
 import {
   computeNeverPlayedGames,
+  computePlaysByMonth,
   computeTopGames,
   computeTopWinners,
+  computeUniquePlayers,
   countPlaysThisMonth,
 } from "@/lib/play-stats";
 
@@ -41,18 +47,16 @@ export default async function StatsPage() {
     supabase
       .from("plays")
       .select("id, game_id, played_at, game:games (id, title)")
-      .eq("group_id", groupId),
-    supabase
-      .from("play_participants")
-      .select(
-        `
-        is_winner,
-        user_id,
-        profile:profiles!play_participants_user_id_fkey (id, display_name),
-        play_id
+      .eq("group_id", groupId)
+      .order("played_at", { ascending: false }),
+    supabase.from("play_participants").select(
       `
-      )
-      .eq("is_winner", true),
+        play_id,
+        user_id,
+        is_winner,
+        profile:profiles!play_participants_user_id_fkey (display_name)
+      `
+    ),
     supabase
       .from("games")
       .select("id, title, image_url")
@@ -61,17 +65,61 @@ export default async function StatsPage() {
   ]);
 
   const playIds = new Set((plays ?? []).map((p) => p.id));
-  const winners = (participantRows ?? []).filter((row) =>
+  const groupParticipants = (participantRows ?? []).filter((row) =>
     playIds.has(row.play_id)
   );
+
+  const participantsByPlay = new Map<
+    string,
+    { names: string[]; winners: string[] }
+  >();
+  for (const row of groupParticipants) {
+    const profile = Array.isArray(row.profile) ? row.profile[0] : row.profile;
+    const name = profile?.display_name ?? "Someone";
+    const entry = participantsByPlay.get(row.play_id) ?? {
+      names: [],
+      winners: [],
+    };
+    entry.names.push(name);
+    if (row.is_winner) entry.winners.push(name);
+    participantsByPlay.set(row.play_id, entry);
+  }
 
   const allPlays = plays ?? [];
   const totalPlays = allPlays.length;
   const uniqueGames = new Set(allPlays.map((p) => p.game_id)).size;
   const playsThisMonth = countPlaysThisMonth(allPlays);
+  const uniquePlayers = computeUniquePlayers(groupParticipants, playIds);
+  const playsByMonth = computePlaysByMonth(allPlays);
 
   const topGames = computeTopGames(allPlays);
-  const topWinners = computeTopWinners(winners);
+  const topWinners = computeTopWinners(
+    groupParticipants.filter((r) => r.is_winner === true)
+  );
+
+  const recentActivity = allPlays.slice(0, 15).map((play) => {
+    const game = Array.isArray(play.game) ? play.game[0] : play.game;
+    const part = participantsByPlay.get(play.id);
+    return {
+      play_id: play.id,
+      game_id: play.game_id,
+      played_at: play.played_at,
+      title: game?.title ?? "Unknown game",
+      winner_names: part?.winners ?? [],
+      participant_count: part?.names.length ?? 0,
+    };
+  });
+
+  const exportRows = allPlays.map((play) => {
+    const game = Array.isArray(play.game) ? play.game[0] : play.game;
+    const part = participantsByPlay.get(play.id);
+    return {
+      played_at: play.played_at,
+      title: game?.title ?? "Unknown game",
+      winner_names: part?.winners ?? [],
+      participant_count: part?.names.length ?? 0,
+    };
+  });
 
   const playedGameIds = new Set(allPlays.map((p) => p.game_id));
   const groupGameIds = new Set((games ?? []).map((g) => g.id));
@@ -88,10 +136,15 @@ export default async function StatsPage() {
 
   return (
     <div className="px-4 py-6 pb-24">
-      <h1 className="text-2xl font-bold mb-1">Group Stats</h1>
-      <p className="text-sm text-muted mb-6">Play history at a glance</p>
+      <div className="flex items-start justify-between gap-3 mb-6">
+        <div>
+          <h1 className="text-2xl font-bold mb-1">Group Stats</h1>
+          <p className="text-sm text-muted">Play history at a glance</p>
+        </div>
+        <StatsExportButton rows={exportRows} />
+      </div>
 
-      <div className="grid grid-cols-3 gap-3 mb-6">
+      <div className="grid grid-cols-2 gap-3 mb-6">
         <StatCard
           icon={BarChart3}
           label="Total plays"
@@ -107,7 +160,57 @@ export default async function StatsPage() {
           label="This month"
           value={String(playsThisMonth)}
         />
+        <StatCard
+          icon={Users}
+          label="Players"
+          value={String(uniquePlayers)}
+        />
       </div>
+
+      {totalPlays > 0 && (
+        <section className="mb-6 rounded-xl border border-border bg-surface p-4">
+          <h2 className="font-semibold mb-3 text-sm">Plays per month</h2>
+          <PlaysTrendChart data={playsByMonth} />
+        </section>
+      )}
+
+      <section className="mb-6">
+        <h2 className="font-semibold mb-2 flex items-center gap-2">
+          <History className="h-4 w-4 text-primary" />
+          Recent activity
+        </h2>
+        {recentActivity.length === 0 ? (
+          <p className="text-sm text-muted">No plays logged yet.</p>
+        ) : (
+          <div className="rounded-xl border border-border bg-surface divide-y divide-border">
+            {recentActivity.map((p) => (
+              <Link
+                key={p.play_id}
+                href={`/library/${p.game_id}`}
+                className="block px-4 py-3 text-sm hover:bg-surface-2"
+              >
+                <div className="flex items-center justify-between gap-2">
+                  <span className="font-medium truncate">{p.title}</span>
+                  <span className="text-xs text-muted shrink-0">
+                    {new Date(p.played_at).toLocaleDateString()}
+                  </span>
+                </div>
+                <p className="text-xs text-muted mt-0.5">
+                  {p.participant_count} player
+                  {p.participant_count !== 1 ? "s" : ""}
+                  {p.winner_names.length > 0 && (
+                    <>
+                      {" · "}
+                      <Trophy className="inline h-3 w-3 text-amber-400 -mt-0.5" />{" "}
+                      {p.winner_names.join(", ")}
+                    </>
+                  )}
+                </p>
+              </Link>
+            ))}
+          </div>
+        )}
+      </section>
 
       <section className="mb-6">
         <h2 className="font-semibold mb-2 flex items-center gap-2">
