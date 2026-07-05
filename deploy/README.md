@@ -256,22 +256,39 @@ Pushes to `main` run [`.github/workflows/deploy.yml`](../.github/workflows/deplo
    | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Same as production `.env.local` |
    | `NEXT_PUBLIC_APP_URL` | e.g. `https://bglib.csst.rocks` |
 
-   **Pin the droplet SSH host key** (do this once from a trusted network, not in CI):
+   **Pin the droplet SSH host key** (required — do this once from your laptop):
 
    ```bash
-   # From your laptop after you have logged into the droplet at least once via SSH:
-   ssh-keyscan -H YOUR_DROPLET_HOST 2>/dev/null
+   # Replace with your droplet IP (same value as DROPLET_HOST)
+   ssh-keyscan -t ed25519,ecdsa,rsa -H YOUR_DROPLET_IP
    ```
 
-   Copy the full line (starts with `|1|` for hashed hostnames, or with the hostname/IP) into the `DROPLET_SSH_HOST_KEY` secret. If the droplet exposes multiple host key types, paste one line per type. Verify the fingerprint out-of-band before saving:
+   Example output (paste **all lines** into the `DROPLET_SSH_HOST_KEY` secret):
+
+   ```
+   |1|AbCdEf...=|XyZ123...= ssh-ed25519 AAAAC3NzaC1lZDI1NTE5...
+   |1|GhIjKl...=|MnOpQr...= ecdsa-sha2-nistp256 AAAAE2VjZHNh...
+   ```
+
+   GitHub → **Settings → Secrets and variables → Actions → New repository secret** → name `DROPLET_SSH_HOST_KEY`, paste the lines.
+
+   Optional: verify the fingerprint matches your droplet before saving:
 
    ```bash
-   ssh-keygen -lf <(ssh-keyscan -H YOUR_DROPLET_HOST 2>/dev/null)
-   # Compare with the server's /etc/ssh/ssh_host_*_key.pub fingerprints when SSH'd in:
+   ssh-keygen -lf <(ssh-keyscan -t ed25519 -H YOUR_DROPLET_IP 2>/dev/null)
+   # On the droplet:
    ssh-keygen -lf /etc/ssh/ssh_host_ed25519_key.pub
    ```
 
    Re-run `ssh-keyscan` and update the secret if you rebuild the droplet or rotate SSH host keys.
+
+   If `ssh-keyscan` fails on your laptop (e.g. `unsupported KEX method`), use the **DigitalOcean droplet console** instead:
+
+   ```bash
+   echo "YOUR_DROPLET_IP $(awk '{print $1,$2}' /etc/ssh/ssh_host_ed25519_key.pub)"
+   ```
+
+   Paste that single line into `DROPLET_SSH_HOST_KEY`.
 
 2. **Droplet directories** (first deploy only — CI recreates `.next/standalone` each run):
 
