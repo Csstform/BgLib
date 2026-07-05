@@ -75,13 +75,27 @@ jobs:
           SSH_OPTS="-i ~/.ssh/deploy_key -o BatchMode=yes -o StrictHostKeyChecking=yes -o UserKnownHostsFile=$HOME/.ssh/known_hosts"
           ssh $SSH_OPTS "${DROPLET_USER}@${DROPLET_HOST}" "echo SSH connection OK"
 
+      - name: Prepare deploy directory
+        env:
+          DROPLET_HOST: ${{ secrets.DROPLET_HOST }}
+          DROPLET_USER: ${{ secrets.DROPLET_USER }}
+        run: |
+          SSH_OPTS="-i ~/.ssh/deploy_key -o BatchMode=yes -o StrictHostKeyChecking=yes -o UserKnownHostsFile=$HOME/.ssh/known_hosts"
+          ssh $SSH_OPTS "${DROPLET_USER}@${DROPLET_HOST}" 'bash -s' <<'REMOTE'
+          set -euo pipefail
+          if [ "$(id -u)" -eq 0 ]; then SUDO=""; else SUDO="sudo"; fi
+          $SUDO rm -rf /opt/bglib/.next/standalone
+          $SUDO mkdir -p /opt/bglib/.next/standalone /opt/bglib/scripts
+          $SUDO chown -R "$(whoami):$(whoami)" /opt/bglib/.next/standalone /opt/bglib/scripts
+          REMOTE
+
       - name: Deploy standalone bundle
         env:
           DROPLET_HOST: ${{ secrets.DROPLET_HOST }}
           DROPLET_USER: ${{ secrets.DROPLET_USER }}
         run: |
           RSYNC_SSH="ssh -i ~/.ssh/deploy_key -o BatchMode=yes -o StrictHostKeyChecking=yes -o UserKnownHostsFile=$HOME/.ssh/known_hosts"
-          rsync -avz --delete \
+          rsync -avz --delete --no-times --omit-dir-times \
             -e "$RSYNC_SSH" \
             .next/standalone/ \
             "${DROPLET_USER}@${DROPLET_HOST}:/opt/bglib/.next/standalone/"
@@ -92,10 +106,23 @@ jobs:
           DROPLET_USER: ${{ secrets.DROPLET_USER }}
         run: |
           RSYNC_SSH="ssh -i ~/.ssh/deploy_key -o BatchMode=yes -o StrictHostKeyChecking=yes -o UserKnownHostsFile=$HOME/.ssh/known_hosts"
-          rsync -avz \
+          rsync -avz --no-times --omit-dir-times \
             -e "$RSYNC_SSH" \
             scripts/start-production.sh \
             "${DROPLET_USER}@${DROPLET_HOST}:/opt/bglib/scripts/start-production.sh"
+
+      - name: Fix ownership for bglib service
+        env:
+          DROPLET_HOST: ${{ secrets.DROPLET_HOST }}
+          DROPLET_USER: ${{ secrets.DROPLET_USER }}
+        run: |
+          SSH_OPTS="-i ~/.ssh/deploy_key -o BatchMode=yes -o StrictHostKeyChecking=yes -o UserKnownHostsFile=$HOME/.ssh/known_hosts"
+          ssh $SSH_OPTS "${DROPLET_USER}@${DROPLET_HOST}" 'bash -s' <<'REMOTE'
+          set -euo pipefail
+          if [ "$(id -u)" -eq 0 ]; then SUDO=""; else SUDO="sudo"; fi
+          $SUDO chown -R bglib:bglib /opt/bglib/.next/standalone /opt/bglib/scripts
+          $SUDO chmod +x /opt/bglib/scripts/start-production.sh
+          REMOTE
 
       - name: Restart app
         env:
@@ -103,4 +130,11 @@ jobs:
           DROPLET_USER: ${{ secrets.DROPLET_USER }}
         run: |
           SSH_OPTS="-i ~/.ssh/deploy_key -o BatchMode=yes -o StrictHostKeyChecking=yes -o UserKnownHostsFile=$HOME/.ssh/known_hosts"
-          ssh $SSH_OPTS "${DROPLET_USER}@${DROPLET_HOST}" "sudo systemctl restart bglib"
+          ssh $SSH_OPTS "${DROPLET_USER}@${DROPLET_HOST}" 'bash -s' <<'REMOTE'
+          set -euo pipefail
+          if [ "$(id -u)" -eq 0 ]; then
+            systemctl restart bglib
+          else
+            sudo systemctl restart bglib
+          fi
+          REMOTE
