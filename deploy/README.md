@@ -273,19 +273,21 @@ Pushes to `main` run [`.github/workflows/deploy.yml`](../.github/workflows/deplo
 
    Re-run `ssh-keyscan` and update the secret if you rebuild the droplet or rotate SSH host keys.
 
-2. **Droplet directories** (first deploy only — CI does not create these):
+2. **Droplet directories** (first deploy only — CI recreates `.next/standalone` each run):
 
    ```bash
    sudo mkdir -p /opt/bglib/.next/standalone /opt/bglib/scripts
    sudo chown -R bglib:bglib /opt/bglib
    ```
 
-3. **Passwordless restart** for the deploy user (if not deploying as root):
+3. **Deploy user and sudo** — recommended: `DROPLET_USER=root` (simplest). If you use a non-root deploy user, allow passwordless deploy commands:
 
    ```bash
-   # /etc/sudoers.d/bglib-deploy
-   deployuser ALL=(ALL) NOPASSWD: /bin/systemctl restart bglib
+   # /etc/sudoers.d/bglib-deploy  (replace deployuser)
+   deployuser ALL=(ALL) NOPASSWD: /bin/rm, /bin/mkdir, /bin/chown, /bin/chmod, /bin/systemctl restart bglib
    ```
+
+   CI wipes `/opt/bglib/.next/standalone` before each rsync (files were owned by `bglib` from the running app — without this, rsync gets *Permission denied*).
 
 4. **Runtime secrets stay on the droplet** in `/opt/bglib/.env.local` (`SUPABASE_SERVICE_ROLE_KEY`, `BGG_API_TOKEN`, `CRON_SECRET`, VAPID, etc.). CI only bakes in `NEXT_PUBLIC_*` vars at build time.
 
@@ -301,8 +303,8 @@ Pushes to `main` run [`.github/workflows/deploy.yml`](../.github/workflows/deplo
 
 1. `npm ci` + `npm run build` on GitHub Actions
 2. `scripts/prepare-standalone.sh` copies `public/` and `.next/static/` into the standalone output
-3. `rsync` deploys `.next/standalone/` and `scripts/start-production.sh` to `/opt/bglib`
-4. `sudo systemctl restart bglib`
+3. SSH clears `/opt/bglib/.next/standalone`, rsyncs the new bundle, `chown`s back to `bglib`
+4. `systemctl restart bglib`
 
 Trigger a manual deploy: **Actions → Build and deploy → Run workflow**.
 

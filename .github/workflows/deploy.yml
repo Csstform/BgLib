@@ -36,21 +36,66 @@ jobs:
         run: bash scripts/prepare-standalone.sh
 
       - name: Configure SSH
+        env:
+          DROPLET_SSH_KEY: ${{ secrets.DROPLET_SSH_KEY }}
+          DROPLET_SSH_HOST_KEY: ${{ secrets.DROPLET_SSH_HOST_KEY }}
         run: |
           mkdir -p ~/.ssh
-          printf '%s\n' "${{ secrets.DROPLET_SSH_KEY }}" > ~/.ssh/deploy_key
+          chmod 700 ~/.ssh
+
+          if [ -z "${DROPLET_SSH_KEY//[[:space:]]/}" ]; then
+            echo "::error::DROPLET_SSH_KEY secret is missing"
+            exit 1
+          fi
+
+          printf '%s\n' "$DROPLET_SSH_KEY" > ~/.ssh/deploy_key
           chmod 600 ~/.ssh/deploy_key
-          # Use a pinned host key from secrets — never ssh-keyscan at deploy time (MITM risk).
-          printf '%s\n' "${{ secrets.DROPLET_SSH_HOST_KEY }}" > ~/.ssh/known_hosts
+
+          if [ -z "${DROPLET_SSH_HOST_KEY//[[:space:]]/}" ]; then
+            echo "::error::DROPLET_SSH_HOST_KEY secret is missing."
+            echo "From your laptop, run:"
+            echo "  ssh-keyscan -t ed25519,ecdsa,rsa -H YOUR_DROPLET_IP"
+            echo "Paste the full output into GitHub → Settings → Secrets → DROPLET_SSH_HOST_KEY"
+            exit 1
+          fi
+
+          printf '%s\n' "$DROPLET_SSH_HOST_KEY" > ~/.ssh/known_hosts
           chmod 644 ~/.ssh/known_hosts
+
+          if ! grep -qE 'ssh-(ed25519|rsa|ecdsa)' ~/.ssh/known_hosts; then
+            echo "::error::DROPLET_SSH_HOST_KEY does not contain a valid ssh host key line"
+            exit 1
+          fi
+
+      - name: Test SSH connection
+        env:
+          DROPLET_HOST: ${{ secrets.DROPLET_HOST }}
+          DROPLET_USER: ${{ secrets.DROPLET_USER }}
+        run: |
+          SSH_OPTS="-i ~/.ssh/deploy_key -o BatchMode=yes -o StrictHostKeyChecking=yes -o UserKnownHostsFile=$HOME/.ssh/known_hosts"
+          ssh $SSH_OPTS "${DROPLET_USER}@${DROPLET_HOST}" "echo SSH connection OK"
+
+      - name: Prepare deploy directory
+        env:
+          DROPLET_HOST: ${{ secrets.DROPLET_HOST }}
+          DROPLET_USER: ${{ secrets.DROPLET_USER }}
+        run: |
+          SSH_OPTS="-i ~/.ssh/deploy_key -o BatchMode=yes -o StrictHostKeyChecking=yes -o UserKnownHostsFile=$HOME/.ssh/known_hosts"
+          ssh $SSH_OPTS "${DROPLET_USER}@${DROPLET_HOST}" 'bash -s' <<'REMOTE'
+          set -euo pipefail
+          if [ "$(id -u)" -eq 0 ]; then SUDO=""; else SUDO="sudo"; fi
+          $SUDO rm -rf /opt/bglib/.next/standalone
+          $SUDO mkdir -p /opt/bglib/.next/standalone /opt/bglib/scripts
+          $SUDO chown -R "$(whoami):$(whoami)" /opt/bglib/.next/standalone /opt/bglib/scripts
+          REMOTE
 
       - name: Deploy standalone bundle
         env:
           DROPLET_HOST: ${{ secrets.DROPLET_HOST }}
           DROPLET_USER: ${{ secrets.DROPLET_USER }}
         run: |
-          RSYNC_SSH="ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=yes"
-          rsync -avz --delete \
+          RSYNC_SSH="ssh -i ~/.ssh/deploy_key -o BatchMode=yes -o StrictHostKeyChecking=yes -o UserKnownHostsFile=$HOME/.ssh/known_hosts"
+          rsync -avz --delete --no-times --omit-dir-times \
             -e "$RSYNC_SSH" \
             .next/standalone/ \
             "${DROPLET_USER}@${DROPLET_HOST}:/opt/bglib/.next/standalone/"
@@ -60,17 +105,36 @@ jobs:
           DROPLET_HOST: ${{ secrets.DROPLET_HOST }}
           DROPLET_USER: ${{ secrets.DROPLET_USER }}
         run: |
-          RSYNC_SSH="ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=yes"
-          rsync -avz \
+          RSYNC_SSH="ssh -i ~/.ssh/deploy_key -o BatchMode=yes -o StrictHostKeyChecking=yes -o UserKnownHostsFile=$HOME/.ssh/known_hosts"
+          rsync -avz --no-times --omit-dir-times \
             -e "$RSYNC_SSH" \
             scripts/start-production.sh \
             "${DROPLET_USER}@${DROPLET_HOST}:/opt/bglib/scripts/start-production.sh"
+
+      - name: Fix ownership for bglib service
+        env:
+          DROPLET_HOST: ${{ secrets.DROPLET_HOST }}
+          DROPLET_USER: ${{ secrets.DROPLET_USER }}
+        run: |
+          SSH_OPTS="-i ~/.ssh/deploy_key -o BatchMode=yes -o StrictHostKeyChecking=yes -o UserKnownHostsFile=$HOME/.ssh/known_hosts"
+          ssh $SSH_OPTS "${DROPLET_USER}@${DROPLET_HOST}" 'bash -s' <<'REMOTE'
+          set -euo pipefail
+          if [ "$(id -u)" -eq 0 ]; then SUDO=""; else SUDO="sudo"; fi
+          $SUDO chown -R bglib:bglib /opt/bglib/.next/standalone /opt/bglib/scripts
+          $SUDO chmod +x /opt/bglib/scripts/start-production.sh
+          REMOTE
 
       - name: Restart app
         env:
           DROPLET_HOST: ${{ secrets.DROPLET_HOST }}
           DROPLET_USER: ${{ secrets.DROPLET_USER }}
         run: |
-          ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=yes \
-            "${DROPLET_USER}@${DROPLET_HOST}" \
-            "sudo systemctl restart bglib"
+          SSH_OPTS="-i ~/.ssh/deploy_key -o BatchMode=yes -o StrictHostKeyChecking=yes -o UserKnownHostsFile=$HOME/.ssh/known_hosts"
+          ssh $SSH_OPTS "${DROPLET_USER}@${DROPLET_HOST}" 'bash -s' <<'REMOTE'
+          set -euo pipefail
+          if [ "$(id -u)" -eq 0 ]; then
+            systemctl restart bglib
+          else
+            sudo systemctl restart bglib
+          fi
+          REMOTE
