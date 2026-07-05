@@ -1,11 +1,13 @@
 "use client";
 
-import { useState, useMemo, useEffect, type CSSProperties } from "react";
+import { useState, useMemo, useEffect, useCallback, type CSSProperties } from "react";
 import { Layers, List, WifiOff } from "lucide-react";
 import { GameCard } from "@/components/GameCard";
 import { SearchBar } from "@/components/SearchBar";
 import { LibraryFiltersPanel } from "@/components/LibraryFiltersPanel";
+import { LibraryDuplicatesPanel } from "@/components/LibraryDuplicatesPanel";
 import { groupLibraryGames } from "@/lib/game-expansions";
+import { findDuplicateClusters } from "@/lib/duplicate-detection";
 import {
   applyLibraryFilters,
   DEFAULT_LIBRARY_FILTERS,
@@ -17,6 +19,8 @@ import {
   getCachedLibrary,
   isOffline,
 } from "@/lib/offline-library";
+import { REALTIME_CHANGED_EVENT } from "@/lib/realtime-scope";
+import { parseJsonResponse } from "@/lib/parse-json-response";
 import { formatDateTime } from "@/lib/utils";
 import type { GameWithOwners } from "@/lib/types";
 
@@ -41,11 +45,37 @@ export function LibraryClient({
   const [offline, setOffline] = useState(false);
   const [cachedAt, setCachedAt] = useState<string | null>(null);
 
+  const refreshFromApi = useCallback(async () => {
+    if (offline) return;
+    try {
+      const res = await fetch("/api/library");
+      const data = await parseJsonResponse<{
+        games: GameWithOwners[];
+        lastPlayedByGameId: Record<string, string>;
+      }>(res);
+      if (!res.ok) return;
+      setGames(data.games);
+      setLastPlayedByGameId(data.lastPlayedByGameId);
+      cacheLibrary(groupId, data.games).catch(() => {});
+    } catch {
+      // Network error — keep current list
+    }
+  }, [groupId, offline]);
+
   useEffect(() => {
     setGames(initialGames);
     setLastPlayedByGameId(initialLastPlayed);
     cacheLibrary(groupId, initialGames).catch(() => {});
   }, [groupId, initialGames, initialLastPlayed]);
+
+  useEffect(() => {
+    function onRealtimeChange() {
+      refreshFromApi();
+    }
+    window.addEventListener(REALTIME_CHANGED_EVENT, onRealtimeChange);
+    return () =>
+      window.removeEventListener(REALTIME_CHANGED_EVENT, onRealtimeChange);
+  }, [refreshFromApi]);
 
   useEffect(() => {
     function handleOnline() {
@@ -94,6 +124,11 @@ export function LibraryClient({
     [filteredGames]
   );
 
+  const duplicateClusters = useMemo(
+    () => findDuplicateClusters(games),
+    [games]
+  );
+
   const displayCount =
     viewMode === "flat"
       ? filteredGames.length
@@ -117,6 +152,8 @@ export function LibraryClient({
           </span>
         </div>
       )}
+
+      <LibraryDuplicatesPanel clusters={duplicateClusters} />
 
       <div className="flex items-start gap-2">
         <SearchBar value={search} onChange={setSearch} className="flex-1" />

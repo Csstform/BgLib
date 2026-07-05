@@ -141,7 +141,10 @@ export function computeTopGames(
 export function computeTopWinners(
   winners: {
     user_id: string;
-    profile: { id: string; display_name: string } | { id: string; display_name: string }[] | null;
+    profile:
+      | { id?: string; display_name: string }
+      | { id?: string; display_name: string }[]
+      | null;
   }[],
   limit = 8
 ): { user_id: string; display_name: string; wins: number }[] {
@@ -172,4 +175,71 @@ export function computeTopWinners(
     }))
     .sort((a, b) => b.wins - a.wins)
     .slice(0, limit);
+}
+
+export function computePlaysByMonth(
+  plays: { played_at: string }[],
+  months = 6
+): { label: string; year: number; month: number; count: number }[] {
+  const now = new Date();
+  const buckets: { label: string; year: number; month: number; count: number }[] =
+    [];
+
+  for (let i = months - 1; i >= 0; i--) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    buckets.push({
+      label: d.toLocaleDateString(undefined, { month: "short" }),
+      year: d.getFullYear(),
+      month: d.getMonth(),
+      count: 0,
+    });
+  }
+
+  for (const play of plays) {
+    const d = new Date(play.played_at);
+    const bucket = buckets.find(
+      (b) => b.year === d.getFullYear() && b.month === d.getMonth()
+    );
+    if (bucket) bucket.count += 1;
+  }
+
+  return buckets;
+}
+
+export type RecentPlayRow = {
+  play_id: string;
+  game_id: string;
+  title: string;
+  played_at: string;
+  winner_names: string[];
+  participant_count: number;
+};
+
+export function computeUniquePlayers(
+  participations: { user_id: string; play_id: string }[],
+  playIds: Set<string>
+): number {
+  const users = new Set<string>();
+  for (const row of participations) {
+    if (playIds.has(row.play_id)) users.add(row.user_id);
+  }
+  return users.size;
+}
+
+export function playsToCsv(
+  rows: {
+    played_at: string;
+    title: string;
+    winner_names: string[];
+    participant_count: number;
+  }[]
+): string {
+  const header = "date,game,winners,participants";
+  const lines = rows.map((r) => {
+    const date = new Date(r.played_at).toISOString().slice(0, 10);
+    const game = `"${r.title.replace(/"/g, '""')}"`;
+    const winners = `"${r.winner_names.join("; ").replace(/"/g, '""')}"`;
+    return `${date},${game},${winners},${r.participant_count}`;
+  });
+  return [header, ...lines].join("\n");
 }
