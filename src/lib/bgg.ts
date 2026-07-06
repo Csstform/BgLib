@@ -101,6 +101,34 @@ async function fetchBgg(path: string): Promise<string> {
   throw new Error("BGG API timed out — try again in a moment");
 }
 
+function getAttrValue(node: unknown): string | undefined {
+  if (node == null) return undefined;
+  if (typeof node === "string" || typeof node === "number") {
+    const s = String(node).trim();
+    return s || undefined;
+  }
+  if (Array.isArray(node)) {
+    for (const entry of node) {
+      const val = getAttrValue(entry);
+      if (val) return val;
+    }
+    return undefined;
+  }
+  if (typeof node === "object") {
+    const obj = node as Record<string, unknown>;
+    if (typeof obj["@_value"] === "string") return obj["@_value"];
+    if (typeof obj["#text"] === "string") return obj["#text"];
+  }
+  return undefined;
+}
+
+function parseYearPublished(node: unknown): number | undefined {
+  const raw = getAttrValue(node);
+  if (!raw) return undefined;
+  const year = parseInt(raw, 10);
+  return Number.isFinite(year) ? year : undefined;
+}
+
 function getPrimaryName(names: unknown): string {
   if (!names) return "Unknown";
   const list = Array.isArray(names) ? names : [names];
@@ -134,25 +162,17 @@ function parseThingItem(game: Record<string, unknown>, id: number): BggGameDetai
     .replace(/&#10;/g, "\n")
     .trim();
 
-  const minPlayers = parseInt(
-    (game.minplayers as { "@_value"?: string })?.["@_value"] ?? "1",
-    10
-  );
-  const maxPlayers = (game.maxplayers as { "@_value"?: string })?.["@_value"]
-    ? parseInt((game.maxplayers as { "@_value": string })["@_value"], 10)
-    : null;
+  const minPlayers = parseInt(getAttrValue(game.minplayers) ?? "1", 10);
+  const maxPlayersRaw = getAttrValue(game.maxplayers);
+  const maxPlayers = maxPlayersRaw ? parseInt(maxPlayersRaw, 10) : null;
 
-  const minTime = (game.minplaytime as { "@_value"?: string })?.["@_value"]
-    ? parseInt((game.minplaytime as { "@_value": string })["@_value"], 10)
-    : null;
-  const maxTime = (game.maxplaytime as { "@_value"?: string })?.["@_value"]
-    ? parseInt((game.maxplaytime as { "@_value": string })["@_value"], 10)
-    : null;
+  const minTimeRaw = getAttrValue(game.minplaytime);
+  const maxTimeRaw = getAttrValue(game.maxplaytime);
+  const minTime = minTimeRaw ? parseInt(minTimeRaw, 10) : null;
+  const maxTime = maxTimeRaw ? parseInt(maxTimeRaw, 10) : null;
 
   const imageUrl =
-    (game.image as { "@_value"?: string })?.["@_value"] ??
-    (game.thumbnail as { "@_value"?: string })?.["@_value"] ??
-    null;
+    getAttrValue(game.image) ?? getAttrValue(game.thumbnail) ?? null;
 
   const rawType = (game["@_type"] as string) ?? "boardgame";
   const bggType: BggItemType =
@@ -169,9 +189,7 @@ function parseThingItem(game: Record<string, unknown>, id: number): BggGameDetai
     maxPlayers,
     playTimeMinutes: maxTime ?? minTime,
     imageUrl,
-    yearPublished: (game.yearpublished as { "@_value"?: string })?.["@_value"]
-      ? parseInt((game.yearpublished as { "@_value": string })["@_value"], 10)
-      : undefined,
+    yearPublished: parseYearPublished(game.yearpublished),
     bggType,
     baseGameBggId:
       bggType === "boardgameexpansion" && baseLinks[0] ? baseLinks[0].id : null,
@@ -201,17 +219,12 @@ export async function searchBggGames(query: string): Promise<BggSearchResult[]> 
       (item: {
         "@_id": string;
         "@_type"?: string;
-        name?: { "@_value": string };
-        yearpublished?: { "@_value": string };
+        name?: unknown;
+        yearpublished?: unknown;
       }) => ({
         id: parseInt(item["@_id"], 10),
-        name:
-          typeof item.name === "object"
-            ? item.name["@_value"]
-            : String(item.name ?? ""),
-        yearPublished: item.yearpublished
-          ? parseInt(item.yearpublished["@_value"], 10)
-          : undefined,
+        name: getPrimaryName(item.name),
+        yearPublished: parseYearPublished(item.yearpublished),
         type:
           item["@_type"] === "boardgameexpansion"
             ? "boardgameexpansion"
@@ -258,19 +271,14 @@ async function fetchBggCollectionSubtype(
   return list.map(
     (item: {
       "@_objectid": string;
-      name?: { "@_value": string };
-      yearpublished?: { "@_value": string };
+      name?: unknown;
+      yearpublished?: unknown;
       status?: { "@_own": string };
     }) => ({
       id: parseInt(item["@_objectid"], 10),
-      name:
-        typeof item.name === "object"
-          ? item.name["@_value"]
-          : String(item.name ?? ""),
+      name: getPrimaryName(item.name),
       owned: item.status?.["@_own"] === "1",
-      yearPublished: item.yearpublished
-        ? parseInt(item.yearpublished["@_value"], 10)
-        : undefined,
+      yearPublished: parseYearPublished(item.yearpublished),
       subtype,
     })
   );
