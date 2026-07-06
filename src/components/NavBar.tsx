@@ -38,9 +38,10 @@ export async function NavBar() {
             <form action="/auth/signout" method="post" className="shrink-0">
               <button
                 type="submit"
-                className="pressable flex items-center gap-1.5 rounded-lg px-2 py-1.5 text-sm text-muted hover:bg-surface-2"
+                aria-label="Sign out"
+                className="pressable touch-target flex items-center justify-center rounded-lg text-muted hover:bg-surface-2"
               >
-                <LogOut className="h-4 w-4" />
+                <LogOut className="h-5 w-5" />
               </button>
             </form>
           ) : (

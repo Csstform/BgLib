@@ -10,6 +10,12 @@
   --primary-hover: #f0bc5a;
   --primary-fg: #1a1207;
   --muted: #8b9cb3;
+  --success: #4ade80;
+  --danger: #f87171;
+
+  --header-height: 3.5rem;
+  --bottom-nav-height: 4.25rem;
+  --page-bottom: calc(var(--bottom-nav-height) + env(safe-area-inset-bottom, 0px) + 1rem);
 
   --ease-spring: cubic-bezier(0.34, 1.4, 0.64, 1);
   --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
@@ -42,6 +48,43 @@ body {
 
 .safe-bottom {
   padding-bottom: env(safe-area-inset-bottom);
+}
+
+/* ── Page layout ── */
+
+.page-shell {
+  padding: 1.5rem 1rem var(--page-bottom);
+}
+
+.section-card {
+  border-radius: 0.75rem;
+  border: 1px solid var(--border);
+  background: var(--surface);
+}
+
+.input-field {
+  width: 100%;
+  border-radius: 0.75rem;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  padding: 0.625rem 1rem;
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+}
+
+.input-field::placeholder {
+  color: var(--muted);
+}
+
+.input-field:focus {
+  border-color: var(--primary);
+  outline: none;
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--primary) 20%, transparent);
+}
+
+.touch-target {
+  min-height: 2.75rem;
+  min-width: 2.75rem;
 }
 
 * {

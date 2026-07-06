@@ -67,7 +67,10 @@ export function InstallPrompt() {
   if (hidden) return null;
 
   return (
-    <div className="fixed bottom-20 left-0 right-0 z-40 px-4 safe-bottom pointer-events-none">
+    <div
+      className="fixed left-0 right-0 z-40 px-4 safe-bottom pointer-events-none"
+      style={{ bottom: "calc(var(--bottom-nav-height) + 0.5rem)" }}
+    >
       <div className="pointer-events-auto mx-auto max-w-lg rounded-xl border border-primary/30 bg-surface shadow-lg p-4">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">

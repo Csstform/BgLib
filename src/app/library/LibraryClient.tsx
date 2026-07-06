@@ -1,11 +1,12 @@
 "use client";
 
 import { useState, useMemo, useEffect, useCallback, type CSSProperties } from "react";
-import { Layers, List, WifiOff } from "lucide-react";
+import { Layers, List, Library, WifiOff } from "lucide-react";
 import { GameCard } from "@/components/GameCard";
 import { SearchBar } from "@/components/SearchBar";
 import { LibraryFiltersPanel } from "@/components/LibraryFiltersPanel";
 import { LibraryDuplicatesPanel } from "@/components/LibraryDuplicatesPanel";
+import { EmptyState } from "@/components/ui/EmptyState";
 import { groupLibraryGames } from "@/lib/game-expansions";
 import { findDuplicateClusters } from "@/lib/duplicate-detection";
 import {
@@ -163,30 +164,32 @@ export function LibraryClient({
           owners={owners}
           userId={userId}
         />
-        <div className="flex rounded-xl border border-border bg-surface p-0.5 shrink-0">
+        <div className="flex shrink-0 rounded-xl border border-border bg-surface p-0.5">
           <button
             type="button"
             onClick={() => setViewMode("nested")}
-            className={`rounded-lg p-2 ${
+            className={`touch-target pressable rounded-lg p-2.5 ${
               viewMode === "nested"
                 ? "bg-primary/20 text-primary"
                 : "text-muted hover:text-foreground"
             }`}
             title="Grouped view"
             aria-label="Grouped view"
+            aria-pressed={viewMode === "nested"}
           >
             <Layers className="h-4 w-4" />
           </button>
           <button
             type="button"
             onClick={() => setViewMode("flat")}
-            className={`rounded-lg p-2 ${
+            className={`touch-target pressable rounded-lg p-2.5 ${
               viewMode === "flat"
                 ? "bg-primary/20 text-primary"
                 : "text-muted hover:text-foreground"
             }`}
             title="Flat list"
             aria-label="Flat list"
+            aria-pressed={viewMode === "flat"}
           >
             <List className="h-4 w-4" />
           </button>
@@ -194,11 +197,24 @@ export function LibraryClient({
       </div>
 
       {isEmpty ? (
-        <p className="text-center text-muted py-8">
-          {search || filters.ownerId
-            ? "No games match your filters."
-            : "No games in the library yet."}
-        </p>
+        <EmptyState
+          icon={Library}
+          title={
+            search || filters.ownerId
+              ? "No games match your filters"
+              : "Your library is empty"
+          }
+          description={
+            search || filters.ownerId
+              ? "Try a different search or clear your filters."
+              : "Add your group's first game to get started."
+          }
+          action={
+            !search && !filters.ownerId
+              ? { href: "/add-game", label: "Add a game" }
+              : undefined
+          }
+        />
       ) : viewMode === "flat" ? (
         <div className="space-y-2">
           {filteredGames.map((game, i) => (
@@ -207,7 +223,11 @@ export function LibraryClient({
               className="stagger-item"
               style={{ "--stagger": i } as CSSProperties}
             >
-              <GameCard game={game} badge={expansionBadge(game)} />
+              <GameCard
+                game={game}
+                badge={expansionBadge(game)}
+                lastPlayed={lastPlayedByGameId[game.id]}
+              />
             </div>
           ))}
         </div>
@@ -219,7 +239,10 @@ export function LibraryClient({
               className="stagger-item space-y-1"
               style={{ "--stagger": i } as CSSProperties}
             >
-              <GameCard game={base} />
+              <GameCard
+                game={base}
+                lastPlayed={lastPlayedByGameId[base.id]}
+              />
               {(base.expansions ?? []).length > 0 && (
                 <div className="ml-4 space-y-1 border-l-2 border-border pl-3">
                   {base.expansions!.map((exp) => (
@@ -228,6 +251,7 @@ export function LibraryClient({
                       game={exp}
                       badge="Expansion"
                       compact
+                      lastPlayed={lastPlayedByGameId[exp.id]}
                     />
                   ))}
                 </div>
@@ -246,7 +270,11 @@ export function LibraryClient({
                   className="stagger-item"
                   style={{ "--stagger": i } as CSSProperties}
                 >
-                  <GameCard game={game} badge="Expansion" />
+                  <GameCard
+                    game={game}
+                    badge="Expansion"
+                    lastPlayed={lastPlayedByGameId[game.id]}
+                  />
                 </div>
               ))}
             </div>

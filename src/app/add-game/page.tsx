@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/utils";
 import { getActiveGroupId } from "@/lib/group";
 import { SetupBanner } from "@/components/SetupBanner";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { AddGameForm } from "./AddGameForm";
 
 export default async function AddGamePage({
@@ -12,7 +13,7 @@ export default async function AddGamePage({
 }) {
   if (!isSupabaseConfigured()) {
     return (
-      <div className="px-4 py-6">
+      <div className="page-shell">
         <SetupBanner />
       </div>
     );
@@ -45,15 +46,15 @@ export default async function AddGamePage({
   }
 
   return (
-    <div className="px-4 py-6 pb-24">
-      <h1 className="text-2xl font-bold mb-1">
-        {baseGameTitle ? "Add Expansion" : "Add a Game"}
-      </h1>
-      <p className="text-sm text-muted mb-6">
-        {baseGameTitle
-          ? `Add an expansion for ${baseGameTitle}`
-          : "Add a new board game to your group's catalogue"}
-      </p>
+    <div className="page-shell">
+      <PageHeader
+        title={baseGameTitle ? "Add Expansion" : "Add a Game"}
+        subtitle={
+          baseGameTitle
+            ? `Add an expansion for ${baseGameTitle}`
+            : "Add a new board game to your group's catalogue"
+        }
+      />
       <AddGameForm
         userId={user.id}
         groupId={groupId}

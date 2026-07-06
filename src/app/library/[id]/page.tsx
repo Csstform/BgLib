@@ -6,12 +6,13 @@ import { isSupabaseConfigured, formatPlayTime, formatPlayers } from "@/lib/utils
 import { getActiveGroupId } from "@/lib/group";
 import { SetupBanner } from "@/components/SetupBanner";
 import { OwnerRow } from "@/components/OwnerRow";
-import { OwnGameButton } from "./OwnGameButton";
-import { WantToPlayButton } from "@/components/WantToPlayButton";
 import { EditGameForm } from "@/components/EditGameForm";
 import { MergeGamesPanel } from "@/components/MergeGamesPanel";
 import { AddExpansionLink } from "@/components/AddExpansionLink";
 import { GameCard } from "@/components/GameCard";
+import { GameCover } from "@/components/ui/GameCover";
+import { SectionHeading } from "@/components/ui/SectionHeading";
+import { GameDetailActions } from "@/components/GameDetailActions";
 import type { DuplicateMatch, GameWithOwners } from "@/lib/types";
 
 export default async function GameDetailPage({
@@ -23,7 +24,7 @@ export default async function GameDetailPage({
 
   if (!isSupabaseConfigured()) {
     return (
-      <div className="px-4 py-6">
+      <div className="page-shell">
         <SetupBanner />
       </div>
     );
@@ -122,10 +123,6 @@ export default async function GameDetailPage({
 
   const duplicates: DuplicateMatch[] = [];
   if (groupId) {
-    const params = new URLSearchParams();
-    if (game.bgg_id) params.set("bgg_id", String(game.bgg_id));
-    params.set("title", game.title);
-    // Server-side duplicate check
     const { data: byBgg } = game.bgg_id
       ? await supabase
           .from("games")
@@ -209,33 +206,27 @@ export default async function GameDetailPage({
   }
 
   return (
-    <div className="px-4 py-6 pb-24">
+    <div className="page-shell pb-48">
       <Link
         href="/library"
-        className="inline-flex items-center gap-1 text-sm text-muted hover:text-foreground mb-4"
+        className="mb-4 inline-flex items-center gap-1 text-sm text-muted hover:text-foreground"
       >
         <ArrowLeft className="h-4 w-4" />
         Back to library
       </Link>
 
-      <div className="rounded-2xl border border-border bg-surface overflow-hidden">
-        <div className="flex h-40 items-center justify-center bg-surface-2 text-6xl">
-          {game.image_url ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={game.image_url}
-              alt={game.title}
-              className="h-full w-full object-cover"
-            />
-          ) : (
-            "🎲"
-          )}
-        </div>
+      <div className="overflow-hidden rounded-2xl border border-border bg-surface">
+        <GameCover
+          src={game.image_url}
+          alt={game.title}
+          size="lg"
+          className="!h-44 w-full !rounded-none"
+        />
         <div className="p-4">
           <div className="flex items-start gap-2">
             <h1 className="text-2xl font-bold">{game.title}</h1>
             {(game.bgg_type === "boardgameexpansion" || game.base_game_id) && (
-              <span className="shrink-0 rounded-md bg-amber-500/15 px-2 py-0.5 text-xs font-medium uppercase tracking-wide text-amber-400 mt-1">
+              <span className="mt-1 shrink-0 rounded-md bg-amber-500/15 px-2 py-0.5 text-xs font-medium uppercase tracking-wide text-amber-400">
                 Expansion
               </span>
             )}
@@ -261,61 +252,35 @@ export default async function GameDetailPage({
         </div>
       </div>
 
-      {user && (
-        <div className="mt-4">
-          <OwnGameButton
-            gameId={game.id}
-            userOwns={userOwns}
-            ownershipId={userOwnership?.ownership_id}
-          />
-        </div>
-      )}
-
       {user && groupId && (
-        <div className="mt-3">
-          <WantToPlayButton
-            gameId={game.id}
-            groupId={groupId}
-            userId={user.id}
-            wantsToPlay={userWantsToPlay}
-          />
-        </div>
+        <GameDetailActions
+          gameId={game.id}
+          groupId={groupId}
+          userId={user.id}
+          userOwns={userOwns}
+          ownershipId={userOwnership?.ownership_id}
+          wantsToPlay={userWantsToPlay}
+        />
       )}
 
-      {user && (
-        <Link
-          href={`/plays/new?game=${game.id}`}
-          className="mt-3 block text-center text-sm text-primary hover:underline"
-        >
-          Log a play of this game
-        </Link>
-      )}
-
-      {user && (
-        <div className="mt-4">
-          <EditGameForm game={game} />
-        </div>
-      )}
-
-      {duplicates.length > 1 && (
-        <div className="mt-4">
-          <MergeGamesPanel gameId={game.id} duplicates={duplicates} />
+      {wantToPlayUsers.length > 0 && (
+        <div className="section-card mt-6 p-3">
+          <SectionHeading icon={Heart} title={`Want to play (${wantToPlayUsers.length})`} />
+          <p className="text-sm text-muted">
+            {wantToPlayUsers.map((u) => u.display_name).join(", ")}
+          </p>
         </div>
       )}
 
       {!game.base_game_id && (
         <div className="mt-6">
-          <div className="flex items-center justify-between mb-2">
-            <h2 className="flex items-center gap-2 font-semibold">
-              <Puzzle className="h-5 w-5" />
-              Expansions ({expansions.length})
-            </h2>
-            <AddExpansionLink baseGameId={game.id} />
-          </div>
+          <SectionHeading
+            icon={Puzzle}
+            title={`Expansions (${expansions.length})`}
+            action={<AddExpansionLink baseGameId={game.id} />}
+          />
           {expansions.length === 0 ? (
-            <p className="text-sm text-muted py-2">
-              No expansions linked yet.
-            </p>
+            <p className="py-2 text-sm text-muted">No expansions linked yet.</p>
           ) : (
             <div className="space-y-2">
               {expansions.map((exp) => (
@@ -326,29 +291,14 @@ export default async function GameDetailPage({
         </div>
       )}
 
-      {wantToPlayUsers.length > 0 && (
-        <div className="mt-4 rounded-xl border border-border bg-surface p-3">
-          <h2 className="flex items-center gap-2 text-sm font-semibold mb-2">
-            <Heart className="h-4 w-4 text-red-400" />
-            Want to play ({wantToPlayUsers.length})
-          </h2>
-          <p className="text-sm text-muted">
-            {wantToPlayUsers.map((u) => u.display_name).join(", ")}
-          </p>
-        </div>
-      )}
-
       <div className="mt-6">
-        <h2 className="flex items-center gap-2 font-semibold mb-2">
-          <Users className="h-5 w-5" />
-          Owners ({owners.length})
-        </h2>
+        <SectionHeading icon={Users} title={`Owners (${owners.length})`} />
         {owners.length === 0 ? (
-          <p className="text-sm text-muted py-4 text-center">
+          <p className="py-4 text-center text-sm text-muted">
             Nobody owns this game yet. Be the first!
           </p>
         ) : (
-          <div className="rounded-xl border border-border bg-surface divide-y divide-border">
+          <div className="section-card divide-y divide-border">
             {owners.map(
               (owner: {
                 user_id: string;
@@ -370,6 +320,22 @@ export default async function GameDetailPage({
           </div>
         )}
       </div>
+
+      {user && (
+        <details className="section-card mt-6 group">
+          <summary className="cursor-pointer list-none p-4 font-medium marker:content-none [&::-webkit-details-marker]:hidden">
+            <span className="text-sm text-muted group-open:mb-0">
+              Manage game details
+            </span>
+          </summary>
+          <div className="border-t border-border p-4 space-y-4">
+            <EditGameForm game={game} />
+            {duplicates.length > 1 && (
+              <MergeGamesPanel gameId={game.id} duplicates={duplicates} />
+            )}
+          </div>
+        </details>
+      )}
     </div>
   );
 }

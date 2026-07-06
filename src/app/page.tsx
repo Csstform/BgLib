@@ -6,10 +6,9 @@ import {
   Users,
   Share2,
   CalendarDays,
-  ArrowLeftRight,
   Sparkles,
-  LayoutGrid,
   BarChart3,
+  History,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/utils";
@@ -26,20 +25,22 @@ export default async function HomePage() {
 
   if (user) {
     return (
-      <div className="px-4 py-6 pb-24">
-        <h1 className="animate-header text-2xl font-bold mb-1">Welcome back!</h1>
-        <p className="text-muted mb-8 animate-header" style={{ animationDelay: "60ms" }}>
-          Your shared board game library
+      <div className="page-shell">
+        <h1 className="animate-header mb-1 text-2xl font-bold">Welcome back!</h1>
+        <p
+          className="mb-6 animate-header text-muted"
+          style={{ animationDelay: "60ms" }}
+        >
+          Quick links for your group
         </p>
 
         <div className="grid gap-3">
           {[
-            { href: "/library", icon: Library, title: "Browse Library", desc: "See all games and who owns them", featured: false },
             { href: "/picker", icon: Sparkles, title: "What can we play?", desc: "Pick a game for tonight", featured: true },
+            { href: "/library", icon: Library, title: "Browse Library", desc: "See all games and who owns them", featured: false },
             { href: "/stats", icon: BarChart3, title: "Group Stats", desc: "Plays, top games, and winners", featured: false },
             { href: "/game-nights", icon: CalendarDays, title: "Game Nights", desc: "Plan and RSVP to sessions", featured: false },
-            { href: "/loans", icon: ArrowLeftRight, title: "Loans", desc: "Track borrowed and lent games", featured: false },
-            { href: "/more", icon: LayoutGrid, title: "More", desc: "Collection, players, plays, profile, and settings", featured: false },
+            { href: "/plays", icon: History, title: "Play History", desc: "Recent sessions your group logged", featured: false },
           ].map(({ href, icon: Icon, title, desc, featured }, i) => (
             <Link
               key={href}
