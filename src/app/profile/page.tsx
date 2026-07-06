@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/utils";
 import { getActiveGroupId } from "@/lib/group";
 import { SetupBanner } from "@/components/SetupBanner";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { ProfileForm } from "./ProfileForm";
 import { PushNotificationToggle } from "@/components/PushNotificationToggle";
 import { EmailNotificationToggle } from "@/components/EmailNotificationToggle";
@@ -14,7 +15,7 @@ import { isEmailConfigured } from "@/lib/email";
 export default async function ProfilePage() {
   if (!isSupabaseConfigured()) {
     return (
-      <div className="px-4 py-6">
+      <div className="page-shell">
         <SetupBanner />
       </div>
     );
@@ -47,23 +48,47 @@ export default async function ProfilePage() {
   }
 
   return (
-    <div className="px-4 py-6 pb-24">
-      <h1 className="text-2xl font-bold mb-1">My Profile</h1>
-      <p className="text-sm text-muted mb-6">{user.email}</p>
+    <div className="page-shell">
+      <PageHeader title="My Profile" subtitle={user.email ?? undefined} />
+
       <div className="space-y-6">
-        {activeGroup && (
-          <GroupInviteCard name={activeGroup.name} inviteCode={activeGroup.invite_code} />
-        )}
-        <JoinGroupCard />
-        <BggCollectionImport />
-        <PushNotificationToggle />
-        {isEmailConfigured() && (
-          <EmailNotificationToggle
-            enabled={profile.email_notifications !== false}
-            userId={user.id}
-          />
-        )}
-        <ProfileForm profile={profile} />
+        <section>
+          <h2 className="mb-3 text-xs font-semibold uppercase tracking-wide text-muted">
+            About you
+          </h2>
+          <ProfileForm profile={profile} />
+        </section>
+
+        <section>
+          <h2 className="mb-3 text-xs font-semibold uppercase tracking-wide text-muted">
+            Your group
+          </h2>
+          <div className="space-y-4">
+            {activeGroup && (
+              <GroupInviteCard
+                name={activeGroup.name}
+                inviteCode={activeGroup.invite_code}
+              />
+            )}
+            <JoinGroupCard />
+          </div>
+        </section>
+
+        <section>
+          <h2 className="mb-3 text-xs font-semibold uppercase tracking-wide text-muted">
+            Import & notifications
+          </h2>
+          <div className="space-y-4">
+            <BggCollectionImport />
+            <PushNotificationToggle />
+            {isEmailConfigured() && (
+              <EmailNotificationToggle
+                enabled={profile.email_notifications !== false}
+                userId={user.id}
+              />
+            )}
+          </div>
+        </section>
       </div>
     </div>
   );

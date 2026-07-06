@@ -3,12 +3,10 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import {
-  formatDate,
-  formatLoanStatus,
-} from "@/lib/utils";
+import { Check, Loader2, RotateCcw, X } from "lucide-react";
+import { formatDate, formatLoanStatus } from "@/lib/utils";
 import type { LoanWithDetails } from "@/lib/types";
-import { Check, X, RotateCcw } from "lucide-react";
+import { GameCover } from "./ui/GameCover";
 
 export function LoanCard({
   loan,
@@ -46,32 +44,24 @@ export function LoanCard({
   return (
     <div className="rounded-xl border border-border bg-surface p-3">
       <div className="flex gap-3">
-        <Link
-          href={`/library/${loan.game.id}`}
-          className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-surface-2 text-xl overflow-hidden"
-        >
-          {loan.game.image_url ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={loan.game.image_url}
-              alt={loan.game.title}
-              className="h-full w-full object-cover"
-            />
-          ) : (
-            "🎲"
-          )}
+        <Link href={`/library/${loan.game.id}`} className="shrink-0">
+          <GameCover
+            src={loan.game.image_url}
+            alt={loan.game.title}
+            size="sm"
+          />
         </Link>
-        <div className="flex-1 min-w-0">
+        <div className="min-w-0 flex-1">
           <Link
             href={`/library/${loan.game.id}`}
-            className="font-semibold truncate block hover:text-primary"
+            className="block truncate font-semibold hover:text-primary"
           >
             {loan.game.title}
           </Link>
           <p className={`text-xs font-medium ${statusColor[loan.status]}`}>
             {formatLoanStatus(loan.status)}
           </p>
-          <p className="text-xs text-muted mt-0.5">
+          <p className="mt-0.5 text-xs text-muted">
             {isLender ? "Borrower" : "Lender"}:{" "}
             <Link
               href={`/users/${isLender ? loan.borrower.id : loan.lender.id}`}
@@ -86,33 +76,38 @@ export function LoanCard({
             <p className="text-xs text-muted">Due: {formatDate(loan.due_date)}</p>
           )}
           {loan.notes && (
-            <p className="text-xs text-muted mt-0.5 italic">{loan.notes}</p>
+            <p className="mt-0.5 text-xs italic text-muted">{loan.notes}</p>
           )}
         </div>
       </div>
 
-      {!loading && (
+      {loading ? (
+        <div className="mt-3 flex items-center gap-2 text-xs text-muted">
+          <Loader2 className="h-4 w-4 animate-spin" />
+          Updating...
+        </div>
+      ) : (
         <div className="mt-3 flex flex-wrap gap-2">
           {loan.status === "pending" && isLender && (
             <>
               <button
                 onClick={() => updateStatus("active")}
-                className="flex items-center gap-1 rounded-lg bg-green-500/20 px-3 py-1.5 text-xs font-medium text-green-400"
+                className="pressable flex min-h-9 items-center gap-1.5 rounded-lg bg-green-500/20 px-3 py-2 text-xs font-medium text-green-400"
               >
-                <Check className="h-3.5 w-3.5" /> Approve
+                <Check className="h-4 w-4" /> Approve
               </button>
               <button
                 onClick={() => updateStatus("declined")}
-                className="flex items-center gap-1 rounded-lg bg-red-500/20 px-3 py-1.5 text-xs font-medium text-red-400"
+                className="pressable flex min-h-9 items-center gap-1.5 rounded-lg bg-red-500/20 px-3 py-2 text-xs font-medium text-red-400"
               >
-                <X className="h-3.5 w-3.5" /> Decline
+                <X className="h-4 w-4" /> Decline
               </button>
             </>
           )}
           {loan.status === "pending" && isBorrower && (
             <button
               onClick={() => updateStatus("cancelled")}
-              className="flex items-center gap-1 rounded-lg bg-surface-2 px-3 py-1.5 text-xs text-muted"
+              className="pressable min-h-9 rounded-lg bg-surface-2 px-3 py-2 text-xs text-muted"
             >
               Cancel request
             </button>
@@ -120,9 +115,9 @@ export function LoanCard({
           {loan.status === "active" && (
             <button
               onClick={() => updateStatus("returned")}
-              className="flex items-center gap-1 rounded-lg bg-primary/20 px-3 py-1.5 text-xs font-medium text-primary"
+              className="pressable flex min-h-9 items-center gap-1.5 rounded-lg bg-primary/20 px-3 py-2 text-xs font-medium text-primary"
             >
-              <RotateCcw className="h-3.5 w-3.5" /> Mark returned
+              <RotateCcw className="h-4 w-4" /> Mark returned
             </button>
           )}
         </div>

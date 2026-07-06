@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { HandCoins } from "lucide-react";
+import { HandCoins, Loader2 } from "lucide-react";
 
 type Props = {
   gameId: string;
@@ -27,6 +27,14 @@ export function BorrowButton({
   const [error, setError] = useState("");
 
   if (lenderId === currentUserId) return null;
+
+  if (hasActiveLoan) {
+    return (
+      <span className="shrink-0 self-center text-xs text-muted">
+        Loan pending
+      </span>
+    );
+  }
 
   async function requestLoan() {
     setLoading(true);
@@ -53,41 +61,35 @@ export function BorrowButton({
     setLoading(false);
   }
 
-  if (hasActiveLoan) {
-    return (
-      <span className="text-xs text-muted">Loan pending or active</span>
-    );
-  }
-
   if (!showForm) {
     return (
       <button
         type="button"
         onClick={() => setShowForm(true)}
-        className="flex items-center gap-1 rounded-lg px-2.5 py-1 text-xs font-medium bg-primary/20 text-primary hover:bg-primary/30 transition-colors"
+        className="pressable touch-target flex shrink-0 items-center gap-1.5 self-center rounded-lg bg-primary/20 px-3 py-2 text-xs font-medium text-primary"
       >
-        <HandCoins className="h-3.5 w-3.5" />
+        <HandCoins className="h-4 w-4" />
         Borrow
       </button>
     );
   }
 
   return (
-    <div className="mt-2 rounded-lg border border-border bg-surface-2 p-3 space-y-2">
-      <p className="text-xs font-medium">Request to borrow from {lenderName}</p>
+    <div className="w-full basis-full rounded-lg border border-border bg-surface-2 p-3 space-y-2">
+      <p className="text-sm font-medium">Request to borrow from {lenderName}</p>
       {error && <p className="text-xs text-red-400">{error}</p>}
       <input
         type="date"
         value={dueDate}
         onChange={(e) => setDueDate(e.target.value)}
-        className="w-full rounded-lg border border-border bg-surface px-3 py-1.5 text-xs"
-        placeholder="Due date (optional)"
+        className="input-field py-2 text-sm"
+        aria-label="Due date (optional)"
       />
       <input
         type="text"
         value={notes}
         onChange={(e) => setNotes(e.target.value)}
-        className="w-full rounded-lg border border-border bg-surface px-3 py-1.5 text-xs"
+        className="input-field py-2 text-sm"
         placeholder="Notes (optional)"
       />
       <div className="flex gap-2">
@@ -95,14 +97,15 @@ export function BorrowButton({
           type="button"
           onClick={requestLoan}
           disabled={loading}
-          className="flex-1 rounded-lg bg-primary py-1.5 text-xs font-medium text-primary-fg disabled:opacity-50"
+          className="btn-primary flex flex-1 items-center justify-center gap-2 rounded-lg bg-primary py-2.5 text-sm font-medium text-primary-fg disabled:opacity-50"
         >
+          {loading && <Loader2 className="h-4 w-4 animate-spin" />}
           {loading ? "Sending..." : "Send request"}
         </button>
         <button
           type="button"
           onClick={() => setShowForm(false)}
-          className="rounded-lg px-3 py-1.5 text-xs text-muted hover:text-foreground"
+          className="touch-target rounded-lg px-4 py-2.5 text-sm text-muted hover:text-foreground"
         >
           Cancel
         </button>

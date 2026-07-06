@@ -153,16 +153,17 @@ export function AddGameForm({
     router.refresh();
   }
 
-  const inputClass =
-    "w-full rounded-xl border border-border bg-surface px-4 py-2.5 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20";
+  const inputClass = "input-field";
 
   const isExpansion =
     !!baseGameId || bggType === "boardgameexpansion" || !!resolvedBaseGameId;
 
+  const hasImportedData = !!(title || bggId || upc);
+
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       {error && (
-        <div className="rounded-lg bg-red-500/10 border border-red-500/30 px-4 py-3 text-sm text-red-400">
+        <div className="rounded-lg border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-400">
           {error}
         </div>
       )}
@@ -176,136 +177,154 @@ export function AddGameForm({
         </div>
       )}
 
-      <BarcodeLookupPanel onBggId={handleBarcodeBggId} disabled={loading} />
+      <details className="section-card group" open>
+        <summary className="cursor-pointer list-none p-4 font-medium marker:content-none [&::-webkit-details-marker]:hidden">
+          <span className="text-sm">Import from barcode or BGG</span>
+          <p className="mt-0.5 text-xs font-normal text-muted">
+            Scan a box or search BoardGameGeek to auto-fill
+          </p>
+        </summary>
+        <div className="space-y-4 border-t border-border p-4">
+          <BarcodeLookupPanel onBggId={handleBarcodeBggId} disabled={loading} />
 
-      <div className="relative">
-        <div className="absolute inset-x-0 top-1/2 -translate-y-1/2 border-t border-border" />
-        <p className="relative mx-auto w-fit bg-surface px-3 text-xs text-muted">
-          or search BGG
-        </p>
-      </div>
+          <div className="relative">
+            <div className="absolute inset-x-0 top-1/2 -translate-y-1/2 border-t border-border" />
+            <p className="relative mx-auto w-fit bg-surface px-3 text-xs text-muted">
+              or search BGG
+            </p>
+          </div>
 
-      <BggSearch onSelect={handleBggSelect} />
-
-      <DuplicateWarning title={title} bggId={bggId} upc={upc} />
-
-      {upc && (
-        <p className="text-xs text-muted">
-          Scanned UPC: {upc}
-        </p>
-      )}
-
-      {bggId && (
-        <p className="text-xs text-muted flex items-center gap-1">
-          <HandCoins className="h-3 w-3" />
-          Imported from BoardGameGeek (ID: {bggId})
-          {isExpansion ? " · Expansion" : ""}
-        </p>
-      )}
-
-      {isExpansion && !resolvedBaseGameId && !baseGameId && (
-        <p className="text-xs text-amber-400">
-          Base game not in library yet — expansion will be listed separately until
-          the base game is added.
-        </p>
-      )}
-
-      <div>
-        <label htmlFor="title" className="block text-sm font-medium mb-1.5">
-          Title <span className="text-red-400">*</span>
-        </label>
-        <input
-          id="title"
-          type="text"
-          value={title}
-          onChange={(e) => setTitle(e.target.value)}
-          required
-          className={inputClass}
-          placeholder={baseGameTitle ? "Cities & Knights" : "Catan"}
-        />
-      </div>
-
-      <div>
-        <label htmlFor="description" className="block text-sm font-medium mb-1.5">
-          Description
-        </label>
-        <textarea
-          id="description"
-          value={description}
-          onChange={(e) => setDescription(e.target.value)}
-          rows={3}
-          className={inputClass}
-          placeholder="Trade, build, and settle the island of Catan..."
-        />
-      </div>
-
-      <div className="grid grid-cols-3 gap-3">
-        <div>
-          <label htmlFor="minPlayers" className="block text-sm font-medium mb-1.5">
-            Min players
-          </label>
-          <input
-            id="minPlayers"
-            type="number"
-            min="1"
-            value={minPlayers}
-            onChange={(e) => setMinPlayers(e.target.value)}
-            className={inputClass}
-          />
+          <BggSearch onSelect={handleBggSelect} />
         </div>
-        <div>
-          <label htmlFor="maxPlayers" className="block text-sm font-medium mb-1.5">
-            Max players
-          </label>
-          <input
-            id="maxPlayers"
-            type="number"
-            min="1"
-            value={maxPlayers}
-            onChange={(e) => setMaxPlayers(e.target.value)}
-            className={inputClass}
-            placeholder="4"
-          />
-        </div>
-        <div>
-          <label htmlFor="playTime" className="block text-sm font-medium mb-1.5">
-            Play time (min)
-          </label>
-          <input
-            id="playTime"
-            type="number"
-            min="1"
-            value={playTime}
-            onChange={(e) => setPlayTime(e.target.value)}
-            className={inputClass}
-            placeholder="60"
-          />
-        </div>
-      </div>
+      </details>
 
-      <div>
-        <label htmlFor="imageUrl" className="block text-sm font-medium mb-1.5">
-          Cover image URL
-        </label>
-        <input
-          id="imageUrl"
-          type="url"
-          value={imageUrl}
-          onChange={(e) => setImageUrl(e.target.value)}
-          className={inputClass}
-          placeholder="https://..."
-        />
-      </div>
+      <details className="section-card group" open={hasImportedData}>
+        <summary className="cursor-pointer list-none p-4 font-medium marker:content-none [&::-webkit-details-marker]:hidden">
+          <span className="text-sm">Game details</span>
+          <p className="mt-0.5 text-xs font-normal text-muted">
+            {hasImportedData ? title || "Review imported details" : "Or enter manually"}
+          </p>
+        </summary>
+        <div className="space-y-4 border-t border-border p-4">
+          <DuplicateWarning title={title} bggId={bggId} upc={upc} />
 
-      <label className="flex items-center gap-2 cursor-pointer">
-        <input
-          type="checkbox"
-          checked={addToCollection}
-          onChange={(e) => setAddToCollection(e.target.checked)}
-          className="h-4 w-4 rounded border-border accent-primary"
-        />
-        <span className="text-sm">Add to my collection</span>
-      </label>
+          {upc && (
+            <p className="text-xs text-muted">Scanned UPC: {upc}</p>
+          )}
+
+          {bggId && (
+            <p className="flex items-center gap-1 text-xs text-muted">
+              <HandCoins className="h-3 w-3" />
+              Imported from BoardGameGeek (ID: {bggId})
+              {isExpansion ? " · Expansion" : ""}
+            </p>
+          )}
+
+          {isExpansion && !resolvedBaseGameId && !baseGameId && (
+            <p className="text-xs text-amber-400">
+              Base game not in library yet — expansion will be listed separately
+              until the base game is added.
+            </p>
+          )}
+
+          <div>
+            <label htmlFor="title" className="mb-1.5 block text-sm font-medium">
+              Title <span className="text-red-400">*</span>
+            </label>
+            <input
+              id="title"
+              type="text"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              required
+              className={inputClass}
+              placeholder={baseGameTitle ? "Cities & Knights" : "Catan"}
+            />
+          </div>
+
+          <div>
+            <label htmlFor="description" className="mb-1.5 block text-sm font-medium">
+              Description
+            </label>
+            <textarea
+              id="description"
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              rows={3}
+              className={inputClass}
+              placeholder="Trade, build, and settle the island of Catan..."
+            />
+          </div>
+
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+            <div>
+              <label htmlFor="minPlayers" className="mb-1.5 block text-sm font-medium">
+                Min players
+              </label>
+              <input
+                id="minPlayers"
+                type="number"
+                min="1"
+                value={minPlayers}
+                onChange={(e) => setMinPlayers(e.target.value)}
+                className={inputClass}
+              />
+            </div>
+            <div>
+              <label htmlFor="maxPlayers" className="mb-1.5 block text-sm font-medium">
+                Max players
+              </label>
+              <input
+                id="maxPlayers"
+                type="number"
+                min="1"
+                value={maxPlayers}
+                onChange={(e) => setMaxPlayers(e.target.value)}
+                className={inputClass}
+                placeholder="4"
+              />
+            </div>
+            <div>
+              <label htmlFor="playTime" className="mb-1.5 block text-sm font-medium">
+                Play time (min)
+              </label>
+              <input
+                id="playTime"
+                type="number"
+                min="1"
+                value={playTime}
+                onChange={(e) => setPlayTime(e.target.value)}
+                className={inputClass}
+                placeholder="60"
+              />
+            </div>
+          </div>
+
+          <div>
+            <label htmlFor="imageUrl" className="mb-1.5 block text-sm font-medium">
+              Cover image URL
+            </label>
+            <input
+              id="imageUrl"
+              type="url"
+              value={imageUrl}
+              onChange={(e) => setImageUrl(e.target.value)}
+              className={inputClass}
+              placeholder="https://..."
+            />
+          </div>
+
+          <label className="flex cursor-pointer items-center gap-3">
+            <input
+              type="checkbox"
+              checked={addToCollection}
+              onChange={(e) => setAddToCollection(e.target.checked)}
+              className="h-5 w-5 rounded border-border accent-primary"
+            />
+            <span className="text-sm">Add to my collection</span>
+          </label>
+        </div>
+      </details>
 
       <button
         type="submit"

@@ -13,6 +13,7 @@ import { createClient } from "@/lib/supabase/server";
 import { getActiveGroupId } from "@/lib/group";
 import { isSupabaseConfigured } from "@/lib/utils";
 import { SetupBanner } from "@/components/SetupBanner";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { PlaysTrendChart } from "@/components/PlaysTrendChart";
 import { StatsExportButton } from "@/components/StatsExportButton";
 import {
@@ -27,7 +28,7 @@ import {
 export default async function StatsPage() {
   if (!isSupabaseConfigured()) {
     return (
-      <div className="px-4 py-6">
+      <div className="page-shell">
         <SetupBanner />
       </div>
     );
@@ -135,14 +136,12 @@ export default async function StatsPage() {
   );
 
   return (
-    <div className="px-4 py-6 pb-24">
-      <div className="flex items-start justify-between gap-3 mb-6">
-        <div>
-          <h1 className="text-2xl font-bold mb-1">Group Stats</h1>
-          <p className="text-sm text-muted">Play history at a glance</p>
-        </div>
-        <StatsExportButton rows={exportRows} />
-      </div>
+    <div className="page-shell">
+      <PageHeader
+        title="Group Stats"
+        subtitle="Play history at a glance"
+        action={<StatsExportButton rows={exportRows} />}
+      />
 
       <div className="grid grid-cols-2 gap-3 mb-6">
         <StatCard

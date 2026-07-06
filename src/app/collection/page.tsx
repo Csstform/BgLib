@@ -1,16 +1,19 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { Dices } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/utils";
 import { getActiveGroupId, getGroupGameIds } from "@/lib/group";
 import { SetupBanner } from "@/components/SetupBanner";
+import { PageHeader } from "@/components/ui/PageHeader";
+import { EmptyState } from "@/components/ui/EmptyState";
 import { GameCard } from "@/components/GameCard";
 import type { GameWithOwners } from "@/lib/types";
 
 export default async function CollectionPage() {
   if (!isSupabaseConfigured()) {
     return (
-      <div className="px-4 py-6">
+      <div className="page-shell">
         <SetupBanner />
       </div>
     );
@@ -54,26 +57,23 @@ export default async function CollectionPage() {
     .filter((g): g is GameWithOwners => g !== null);
 
   return (
-    <div className="px-4 py-6 pb-24">
-      <h1 className="text-2xl font-bold mb-1">My Collection</h1>
-      <p className="text-sm text-muted mb-6">
-        {games.length} game{games.length !== 1 ? "s" : ""} you own in this group
-      </p>
+    <div className="page-shell">
+      <PageHeader
+        title="My Collection"
+        subtitle={`${games.length} game${games.length !== 1 ? "s" : ""} you own in this group`}
+      />
 
       {games.length === 0 ? (
-        <div className="text-center py-12">
-          <p className="text-muted mb-4">Your collection is empty in this group.</p>
-          <Link
-            href="/library"
-            className="inline-flex rounded-xl bg-primary px-4 py-2 text-sm font-medium text-primary-fg hover:bg-primary-hover transition-colors"
-          >
-            Browse the library
-          </Link>
-        </div>
+        <EmptyState
+          icon={Dices}
+          title="Your collection is empty"
+          description="Mark games you own from the library, or add new ones."
+          action={{ href: "/library", label: "Browse the library" }}
+        />
       ) : (
         <div className="space-y-2">
           {games.map((game) => (
-            <GameCard key={game.id} game={game} />
+            <GameCard key={game.id} game={game} hideOwners />
           ))}
         </div>
       )}

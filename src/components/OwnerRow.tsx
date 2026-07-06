@@ -21,12 +21,12 @@ export function OwnerRow({
     gameId && currentUserId && currentUserId !== owner.user_id;
 
   return (
-    <div className="flex items-start gap-3 rounded-lg p-2 hover:bg-surface-2 transition-colors">
+    <div className="flex flex-wrap items-start gap-3 rounded-lg p-2 transition-colors hover:bg-surface-2">
       <Link
         href={`/users/${owner.user_id}`}
-        className="flex items-center gap-3 flex-1 min-w-0"
+        className="flex min-w-0 flex-1 items-center gap-3"
       >
-        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/20 font-medium text-primary overflow-hidden shrink-0">
+        <div className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full bg-primary/20 font-medium text-primary">
           {owner.avatar_url ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img
@@ -38,8 +38,8 @@ export function OwnerRow({
             getInitials(owner.display_name)
           )}
         </div>
-        <div className="flex-1 min-w-0">
-          <p className="font-medium truncate">{owner.display_name}</p>
+        <div className="min-w-0 flex-1">
+          <p className="truncate font-medium">{owner.display_name}</p>
           <p className="text-sm text-muted">
             {formatCondition(owner.condition)}
             {owner.notes ? ` · ${owner.notes}` : ""}
