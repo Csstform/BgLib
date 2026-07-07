@@ -1,4 +1,8 @@
 import { XMLParser } from "fast-xml-parser";
+import {
+  cleanBggDescription,
+  decodeHtmlEntities,
+} from "@/lib/decode-html-entities";
 
 const BGG_BASE = "https://boardgamegeek.com/xmlapi2";
 
@@ -101,10 +105,14 @@ async function fetchBgg(path: string): Promise<string> {
   throw new Error("BGG API timed out — try again in a moment");
 }
 
+function decodeText(value: string): string {
+  return decodeHtmlEntities(value.trim());
+}
+
 function getAttrValue(node: unknown): string | undefined {
   if (node == null) return undefined;
   if (typeof node === "string" || typeof node === "number") {
-    const s = String(node).trim();
+    const s = decodeText(String(node));
     return s || undefined;
   }
   if (Array.isArray(node)) {
@@ -116,8 +124,8 @@ function getAttrValue(node: unknown): string | undefined {
   }
   if (typeof node === "object") {
     const obj = node as Record<string, unknown>;
-    if (typeof obj["@_value"] === "string") return obj["@_value"];
-    if (typeof obj["#text"] === "string") return obj["#text"];
+    if (typeof obj["@_value"] === "string") return decodeText(obj["@_value"]);
+    if (typeof obj["#text"] === "string") return decodeText(obj["#text"]);
   }
   return undefined;
 }
@@ -136,8 +144,9 @@ function getPrimaryName(names: unknown): string {
     (n: { "@_type"?: string }) => n["@_type"] === "primary"
   );
   const chosen = primary ?? list[0];
-  if (typeof chosen === "string") return chosen;
-  return chosen?.["@_value"] ?? chosen?.["#text"] ?? "Unknown";
+  if (typeof chosen === "string") return decodeText(chosen);
+  const raw = chosen?.["@_value"] ?? chosen?.["#text"];
+  return raw ? decodeText(String(raw)) : "Unknown";
 }
 
 function parseBggLinks(
@@ -150,17 +159,14 @@ function parseBggLinks(
     .filter((l: { "@_type"?: string }) => l["@_type"] === type)
     .map((l: { "@_id"?: string; "@_value"?: string }) => ({
       id: parseInt(l["@_id"] ?? "0", 10),
-      name: l["@_value"] ?? "Unknown",
+      name: l["@_value"] ? decodeText(l["@_value"]) : "Unknown",
     }))
     .filter((l) => l.id > 0);
 }
 
 function parseThingItem(game: Record<string, unknown>, id: number): BggGameDetails {
   const desc = (game.description as string) ?? "";
-  const cleanDesc = desc
-    .replace(/<[^>]+>/g, "")
-    .replace(/&#10;/g, "\n")
-    .trim();
+  const cleanDesc = cleanBggDescription(desc);
 
   const minPlayers = parseInt(getAttrValue(game.minplayers) ?? "1", 10);
   const maxPlayersRaw = getAttrValue(game.maxplayers);

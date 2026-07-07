@@ -1,4 +1,5 @@
 import { barcodeLookupVariants } from "@/lib/barcode";
+import { decodeHtmlEntities } from "@/lib/decode-html-entities";
 
 const USER_AGENT = "BgLib/1.0 (board game library; https://github.com/Csstform/BgLib)";
 
@@ -95,8 +96,10 @@ function cleanProductTitle(title: string, brand?: string): string {
       name = name.slice(b.length).replace(/^[\s:\-–]+/, "").trim();
     }
   }
-  return name
-    .replace(/\s+board\s*game\s*$/i, "")
-    .replace(/\s+expansion\s*$/i, "")
-    .trim();
+  return decodeHtmlEntities(
+    name
+      .replace(/\s+board\s*game\s*$/i, "")
+      .replace(/\s+expansion\s*$/i, "")
+      .trim()
+  );
 }
