@@ -34,7 +34,8 @@ A mobile-first PWA for iOS and Android: a shared board game catalogue, ownership
 
 | Guide | Covers |
 |-------|--------|
-| [`docs/features/library-plays-picker.md`](docs/features/library-plays-picker.md) | Library grouping and filters, expansion linking, play logging, stats, offline cache, picker scoring |
+| [`docs/features/barcode-upc-lookup.md`](docs/features/barcode-upc-lookup.md) | Barcode scanning/manual UPC entry, UPC-to-BGG cache, BGG/GameUPC fallback flow, troubleshooting |
+| [`docs/features/library-plays-picker.md`](docs/features/library-plays-picker.md) | Library grouping and filters, realtime refresh, duplicate clusters, expansion linking, play logging, stats, offline cache, picker scoring |
 
 ## Quick Start
 

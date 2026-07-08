@@ -34,8 +34,8 @@ Schema changes live in:
 - `supabase/migrations/010_play_winners_stats.sql`
 
 Migration `009_barcode_upc.sql` adds UPC lookup fields for the Add Game flow.
-Barcode scan uses the shared `upc_bgg_mappings` cache plus BGG search — `BGG_API_TOKEN`
-is required; `GAMEUPC_API_TOKEN` is optional.
+Barcode scan behavior is documented separately in
+[`barcode-upc-lookup.md`](barcode-upc-lookup.md).
 
 ## Library workflow
 
@@ -71,6 +71,55 @@ in IndexedDB database `bglib-offline`, store `libraries`, keyed by `groupId`.
 If the browser later reports offline status, the library page shows cached data
 with the cache timestamp. Offline cache is browsing-only; mutations still need
 the network.
+
+## Realtime and live library refresh
+
+Primary codepaths:
+
+- `src/components/RealtimeRefresh.tsx`
+- `src/lib/realtime-scope.ts`
+- `src/app/api/library/route.ts`
+- `src/app/library/LibraryClient.tsx`
+
+`RealtimeRefresh` subscribes to Supabase Realtime for the active group and
+debounces refresh work for 900 ms. Tables with `group_id` are subscribed with a
+group filter; `loans` and `game_night_rsvps` are unfiltered channel events, then
+screen refresh is scoped by route.
+
+| Table | Routes refreshed |
+|-------|------------------|
+| `loans` | `/loans` |
+| `game_night_rsvps` | `/game-nights` |
+| `games` | `/library`, `/collection`, `/picker`, `/add-game`, `/stats`, `/users`, `/plays`, `/` |
+| `plays` | `/library`, `/stats`, `/plays`, `/users/`, `/picker` |
+| `want_to_play` | `/library`, `/picker` |
+
+Most affected routes call `router.refresh()`. `/library` uses a lighter path
+when only `games`, `plays`, or `want_to_play` changed: it dispatches
+`bglib:data-changed`, and `LibraryClient` refetches `/api/library` to update the
+client list, last-played dates, and offline cache without a full page refresh.
+
+## Duplicate cluster detection
+
+Primary codepaths:
+
+- `src/lib/duplicate-detection.ts`
+- `src/components/LibraryDuplicatesPanel.tsx`
+- `src/app/library/LibraryClient.tsx`
+- `src/app/api/games/merge/route.ts`
+
+The library page checks the whole active group catalogue for likely duplicate
+clusters before applying search or filters. Matches are grouped in priority
+order:
+
+1. Same `bgg_id`.
+2. Same normalized `upc`, excluding games already used in a BGG-ID cluster.
+3. Same normalized title, excluding games already used in a higher-confidence
+   cluster.
+
+The duplicate panel is hidden when no clusters exist. When shown, users pick the
+game to keep and call `/api/games/merge`; ownership and play history are combined
+by the merge route before the library refreshes.
 
 ## Expansions workflow
 
@@ -117,8 +166,16 @@ The stats page currently reports:
 - Total plays.
 - Unique games played.
 - Plays since the first day of the current month.
+- Unique players who participated in group plays.
+- Plays per month for the last six months.
+- The 15 most recent plays, with winner names when present.
 - Top 8 most-played games.
 - Top 8 winners, based on `play_participants.is_winner`.
+- Owned games in the group that have never been played, showing the first 12.
+- CSV export with `date,game,winners,participants` columns.
+
+Player profile pages (`/users/[id]`) also summarize that member's total plays,
+wins, top 5 most-played games, and 5 most recent plays in the active group.
 
 Stats are read-only summaries and do not currently expose score leaderboards or
 first-time-played counts.
@@ -186,6 +243,8 @@ When deploying or debugging this feature cluster:
    `/stats`.
 4. Add ownership rows before testing the picker; unowned games are excluded.
 5. Visit `/library` once while online before expecting offline cached browsing.
+6. Create or scan duplicate catalogue entries only in a test group before
+   validating merge behavior; merging rewrites ownership/play references.
 
 ## Troubleshooting
 
@@ -197,3 +256,5 @@ When deploying or debugging this feature cluster:
 | Picker ignores an expansion | Expansions are shown as metadata for eligible base games, not standalone candidates. |
 | Stats show no winners | Winners are counted only from plays where participants were marked with `is_winner`. |
 | Offline library shows old data | The cache is updated only after a successful online `/library` load for that group. |
+| Library does not update after another device changes data | Confirm Supabase Realtime is enabled for the table and that the route appears in `tableAffectsPath`. |
+| Duplicate panel is empty | The active group needs 2+ games sharing BGG ID, UPC, or normalized title; filtered-out games still count because detection runs before filters. |
