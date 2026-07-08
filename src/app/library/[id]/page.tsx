@@ -8,6 +8,7 @@ import { SetupBanner } from "@/components/SetupBanner";
 import { OwnerRow } from "@/components/OwnerRow";
 import { EditGameForm } from "@/components/EditGameForm";
 import { MergeGamesPanel } from "@/components/MergeGamesPanel";
+import { DeleteGameButton } from "@/components/DeleteGameButton";
 import { AddExpansionLink } from "@/components/AddExpansionLink";
 import { GameCard } from "@/components/GameCard";
 import { GameCover } from "@/components/ui/GameCover";
@@ -333,6 +334,11 @@ export default async function GameDetailPage({
             {duplicates.length > 1 && (
               <MergeGamesPanel gameId={game.id} duplicates={duplicates} />
             )}
+            <DeleteGameButton
+              gameId={game.id}
+              title={game.title}
+              expansionCount={expansions.length}
+            />
           </div>
         </details>
       )}
