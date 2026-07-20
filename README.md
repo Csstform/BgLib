@@ -5,11 +5,11 @@ A mobile-first PWA for iOS and Android: a shared board game catalogue, ownership
 ## Features
 
 - **Gaming groups** — Separate libraries per group with invite codes
-- **Shared catalogue** — Title, players, play time, cover image; BGG search on add, filters, offline cache
+- **Shared catalogue** — BGG search/manual add, filters, offline cache, edit/merge/remove lifecycle
 - **Ownership tracking** — See who owns what in your active group
 - **Game picker** — Filter by players, time, and attendees; scores never-played, underplayed, and wanted games
 - **Play logging** — Session history with expansions, winners, scores, and first-play flags
-- **Group stats** — Most-played games, monthly play count, and winner summaries
+- **Group stats** — Monthly trend, recent plays, unplayed games, winners, and CSV export
 - **Game nights** — Schedule, RSVP, suggest games from attendees marked Going
 - **Loans** — Request, approve, return; due-date reminders via cron
 - **Want to play** — Mark interest on game detail pages
@@ -18,8 +18,8 @@ A mobile-first PWA for iOS and Android: a shared board game catalogue, ownership
 - **Push notifications** — Game night alerts (Web Push + service worker)
 - **Email notifications** — Fallback via Resend (loans, nights, reminders)
 - **Onboarding** — First-run wizard for new users
-- **Realtime** — Live refresh when games, loans, RSVPs, or plays change
-- **Duplicate detection** — Warns when adding a game that already exists
+- **Realtime** — Route-scoped refresh when games, loans, RSVPs, plays, or wants change
+- **Duplicate detection** — Warns on add and clusters existing library duplicates for merge
 
 ## Tech Stack
 
@@ -34,7 +34,7 @@ A mobile-first PWA for iOS and Android: a shared board game catalogue, ownership
 
 | Guide | Covers |
 |-------|--------|
-| [`docs/features/library-plays-picker.md`](docs/features/library-plays-picker.md) | Library grouping and filters, expansion linking, play logging, stats, offline cache, picker scoring |
+| [`docs/features/library-plays-picker.md`](docs/features/library-plays-picker.md) | Library grouping and filters, duplicate merge/remove flows, expansion linking, play logging, stats, realtime refresh, offline cache, picker scoring |
 
 ## Quick Start
 
@@ -156,7 +156,7 @@ Row Level Security scopes data by group membership.
 | Route | Purpose |
 |-------|---------|
 | `/library` | Browse group catalogue |
-| `/library/[id]` | Game detail, want-to-play, edit/merge |
+| `/library/[id]` | Game detail, want-to-play, edit/merge/remove |
 | `/picker` | What can we play? |
 | `/game-nights` | Upcoming sessions |
 | `/game-nights/[id]` | RSVP, suggest games |
@@ -165,7 +165,7 @@ Row Level Security scopes data by group membership.
 | `/collection` | Games you own |
 | `/users` / `/users/[id]` | Group members |
 | `/plays` / `/plays/new` | Play history and logging |
-| `/stats` | Group play and winner summaries |
+| `/stats` | Group play trends, winners, unplayed games, and CSV export |
 | `/add-game` | Add to catalogue (BGG search) |
 | `/profile` | Invite code, notifications, BGG import |
 | `/onboarding` | First-run setup |
