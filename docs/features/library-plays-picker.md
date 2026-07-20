@@ -46,6 +46,9 @@ Primary codepaths:
 - `src/lib/game-expansions.ts`
 - `src/lib/library-filters.ts`
 - `src/lib/offline-library.ts`
+- `src/lib/duplicate-detection.ts`
+- `src/app/api/library/route.ts`
+- `src/app/api/games/[id]/route.ts`
 
 The library page loads all games for the active group, ownership details, and the
 latest play date per game. The client can show:
@@ -71,6 +74,46 @@ in IndexedDB database `bglib-offline`, store `libraries`, keyed by `groupId`.
 If the browser later reports offline status, the library page shows cached data
 with the cache timestamp. Offline cache is browsing-only; mutations still need
 the network.
+
+Catalogue maintenance lives on each `/library/[id]` detail page under the
+collapsed **Manage game details** section. Members can edit metadata, merge
+duplicates, or remove a game from the group library. `DELETE /api/games/[id]`
+checks the signed-in user, active group, and target game group before deleting.
+Removal is permanent: `ownership`, `plays`, `play_expansions`, `loans`,
+`want_to_play`, and `game_night_games` rows cascade with the deleted game. When a
+base game is removed, linked expansions are kept and their `base_game_id` is set
+to `NULL`, so they appear as orphan expansions.
+
+## Duplicate detection
+
+Primary codepaths:
+
+- `src/lib/duplicate-detection.ts`
+- `src/components/LibraryDuplicatesPanel.tsx`
+- `src/components/DuplicateWarning.tsx`
+- `src/app/api/games/check-duplicate/route.ts`
+- `src/app/api/games/merge/route.ts`
+
+Duplicate checks happen in two places:
+
+1. **Add-time warning**: Add Game calls `/api/games/check-duplicate` and warns
+   before inserting a likely existing entry.
+2. **Library-wide cleanup**: `/library` computes duplicate clusters across the
+   current catalogue and shows an expandable merge panel.
+
+`findDuplicateClusters` groups entries by the strongest available signal:
+
+| Signal | Behavior |
+|--------|----------|
+| Same `bgg_id` | Highest priority; games in a BGG cluster are skipped by weaker checks. |
+| Same `upc` | Uses stored barcode values for entries not already clustered by BGG ID. |
+| Same normalized title | Lowercase, trimmed, whitespace-collapsed titles with at least 3 characters. |
+
+The library duplicate panel lets the user choose the entry to keep, then calls
+`POST /api/games/merge` with `{ keep_id, merge_ids }`. The merge flow copies
+non-conflicting ownership, retargets loans, plays, play expansions, linked bases,
+and wants to the kept game, drops duplicate game-night suggestions, then removes
+the duplicate game rows.
 
 ## Expansions workflow
 
@@ -99,6 +142,9 @@ Primary codepaths:
 - `src/app/plays/LogPlayForm.tsx`
 - `src/app/plays/page.tsx`
 - `src/app/stats/page.tsx`
+- `src/lib/play-stats.ts`
+- `src/components/PlaysTrendChart.tsx`
+- `src/components/StatsExportButton.tsx`
 
 The play logging form accepts:
 
@@ -112,16 +158,21 @@ The play logging form accepts:
 The play history page shows the 50 most recent plays for the group with
 participants, winner markers, scores, expansion titles, notes, and logger.
 
-The stats page currently reports:
+The stats page reports:
 
 - Total plays.
 - Unique games played.
 - Plays since the first day of the current month.
+- Unique players who participated in group plays.
+- Plays-per-month trend for the last 6 months.
+- The 15 most recent plays, including participant count and winners.
 - Top 8 most-played games.
 - Top 8 winners, based on `play_participants.is_winner`.
+- Owned games with no recorded plays, up to 12 entries.
 
-Stats are read-only summaries and do not currently expose score leaderboards or
-first-time-played counts.
+The **Export CSV** button downloads `bglib-plays-YYYY-MM-DD.csv` with
+`date,game,winners,participants` columns. Stats are read-only summaries and do
+not currently expose score leaderboards or first-time-played counts.
 
 ## Picker behavior
 
@@ -174,14 +225,39 @@ Example:
 This returns owned base games for 4 players, no longer than 90 minutes, owned by
 Alice or Bob, and wanted by at least one of them.
 
+## Realtime refresh
+
+Primary codepaths:
+
+- `src/components/RealtimeRefresh.tsx`
+- `src/lib/realtime-scope.ts`
+- `src/app/api/library/route.ts`
+- `src/app/library/LibraryClient.tsx`
+
+`RealtimeRefresh` subscribes to Supabase Realtime changes for `loans`,
+`game_night_rsvps`, `games`, `plays`, and `want_to_play`. The `games`, `plays`,
+and `want_to_play` subscriptions are filtered to the active `group_id`; loans
+and RSVPs rely on route scoping after the event arrives. Changes are batched with
+a 900 ms debounce before the client decides what to refresh.
+
+`tableAffectsPath` limits refreshes to routes that depend on the changed table.
+For example, `plays` changes refresh `/stats`, `/plays`, `/picker`, `/library`,
+and user detail routes, while `loans` changes refresh only `/loans`.
+
+On `/library`, changes limited to `games`, `plays`, or `want_to_play` avoid a
+full route refresh. Instead, the client dispatches `bglib:data-changed`, then
+`LibraryClient` refetches `GET /api/library` and updates both in-memory state and
+the offline cache. The library API returns `{ groupId, games,
+lastPlayedByGameId }` with `Cache-Control: private, max-age=60`.
+
 ## Operational checklist
 
 When deploying or debugging this feature cluster:
 
 1. Confirm the database has run migrations `008` through `010`; fresh installs
    via `supabase/install.sql` already include them.
-2. Enable Supabase Realtime for `games`, `plays`, and `want_to_play` as listed in
-   `supabase/README.md`.
+2. Enable Supabase Realtime for `games`, `loans`, `game_night_rsvps`, `plays`,
+   and `want_to_play` as listed in `supabase/README.md`.
 3. Log at least one play with participants and a winner before validating
    `/stats`.
 4. Add ownership rows before testing the picker; unowned games are excluded.
@@ -197,3 +273,6 @@ When deploying or debugging this feature cluster:
 | Picker ignores an expansion | Expansions are shown as metadata for eligible base games, not standalone candidates. |
 | Stats show no winners | Winners are counted only from plays where participants were marked with `is_winner`. |
 | Offline library shows old data | The cache is updated only after a successful online `/library` load for that group. |
+| Library does not update after another member edits data | Confirm Realtime is enabled for the table and that the current route is listed in `tableAffectsPath`. |
+| Duplicate panel does not show a suspected match | BGG ID matches win first; UPC/title checks skip entries already clustered by BGG ID, and title matches require a normalized title of at least 3 characters. |
+| Removed game disappeared from plays, loans, or game nights | Expected behavior; deleting a game cascades dependent rows. Linked expansions are the exception and are kept as orphan expansions. |
