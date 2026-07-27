@@ -35,6 +35,7 @@ A mobile-first PWA for iOS and Android: a shared board game catalogue, ownership
 | Guide | Covers |
 |-------|--------|
 | [`docs/features/library-plays-picker.md`](docs/features/library-plays-picker.md) | Library grouping and filters, expansion linking, play logging, stats, offline cache, picker scoring |
+| [`docs/features/add-game-imports.md`](docs/features/add-game-imports.md) | BGG search/details/import, barcode lookup, UPC mapping cache, import troubleshooting |
 
 ## Quick Start
 
@@ -77,7 +78,7 @@ cp .env.local.example .env.local
 | `VAPID_SUBJECT` | Push contact (`mailto:you@example.com`) |
 | `RESEND_API_KEY` / `EMAIL_FROM` | Email notifications |
 | `BGG_API_TOKEN` | **Required** for BGG search/import ([register here](https://boardgamegeek.com/applications)) |
-| `GAMEUPC_API_TOKEN` | Optional — improves barcode hit rate ([GameUPC](https://gameupc.com)); not required |
+| `GAMEUPC_API_TOKEN` | Optional — improves barcode hit rate ([GameUPC](https://gameupc.com)); barcode still uses BGG/product-name fallback without it |
 | `NEXT_PUBLIC_APP_URL` | Email links and cron base URL |
 | `CRON_SECRET` | Bearer token for `/api/cron/loan-reminders` |
 

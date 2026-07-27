@@ -34,8 +34,8 @@ Schema changes live in:
 - `supabase/migrations/010_play_winners_stats.sql`
 
 Migration `009_barcode_upc.sql` adds UPC lookup fields for the Add Game flow.
-Barcode scan uses the shared `upc_bgg_mappings` cache plus BGG search — `BGG_API_TOKEN`
-is required; `GAMEUPC_API_TOKEN` is optional.
+Barcode and BGG import behavior is documented in
+[`add-game-imports.md`](add-game-imports.md).
 
 ## Library workflow
 
