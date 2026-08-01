@@ -82,16 +82,18 @@ export default async function NewPlayPage({
   const members = await getGroupMembers(groupId);
 
   let preselectedGameId = gameId;
+  let preselectedExpansionId: string | undefined;
   if (gameId) {
     const selected = (games ?? []).find((g) => g.id === gameId);
     if (selected?.base_game_id) {
       preselectedGameId = selected.base_game_id;
+      preselectedExpansionId = selected.id;
     }
   }
 
   return (
-    <div className="px-4 py-6 pb-24">
-      <h1 className="text-2xl font-bold mb-6">Log a Play</h1>
+    <div className="page-shell">
+      <h1 className="mb-6 text-2xl font-bold">Log a Play</h1>
       <LogPlayForm
         groupId={groupId}
         games={games ?? []}
@@ -99,6 +101,7 @@ export default async function NewPlayPage({
         members={members}
         userId={user.id}
         preselectedGameId={preselectedGameId}
+        preselectedExpansionId={preselectedExpansionId}
       />
     </div>
   );
