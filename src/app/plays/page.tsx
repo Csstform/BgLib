@@ -23,7 +23,7 @@ export default async function PlaysPage() {
 
   const supabase = await createClient();
 
-  const { data: plays } = await supabase
+  const { data: plays, error: playsError } = await supabase
     .from("plays")
     .select(
       `
@@ -34,7 +34,7 @@ export default async function PlaysPage() {
         user_id,
         is_winner,
         score,
-        profile:profiles (display_name)
+        profile:profiles!play_participants_user_id_fkey (display_name)
       ),
       play_expansions (
         game:games (title)
@@ -61,12 +61,26 @@ export default async function PlaysPage() {
         }
       />
 
+      {playsError && (
+        <div className="mb-4 rounded-lg border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-400">
+          Could not load play history: {playsError.message}
+        </div>
+      )}
+
       {(plays ?? []).length === 0 ? (
         <EmptyState
           icon={History}
-          title="No plays logged yet"
-          description="Record your first game night to start tracking stats."
-          action={{ href: "/plays/new", label: "Log your first play" }}
+          title={playsError ? "Play history unavailable" : "No plays logged yet"}
+          description={
+            playsError
+              ? "If this persists, ensure database migration 010_play_winners_stats.sql has been applied in Supabase."
+              : "Record your first game night to start tracking stats."
+          }
+          action={
+            playsError
+              ? undefined
+              : { href: "/plays/new", label: "Log your first play" }
+          }
         />
       ) : (
         <div className="space-y-2">

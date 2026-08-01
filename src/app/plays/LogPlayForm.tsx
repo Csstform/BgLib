@@ -3,8 +3,8 @@
 import { useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { createClient } from "@/lib/supabase/client";
 import { ArrowLeft, Trophy } from "lucide-react";
+import { parseJsonResponse } from "@/lib/parse-json-response";
 import type { Game, Profile } from "@/lib/types";
 
 type Member = { user_id: string; profile: Profile };
@@ -16,12 +16,12 @@ type ExpansionOption = {
 };
 
 export function LogPlayForm({
-  groupId,
   games,
   expansionsByBase,
   members,
   userId,
   preselectedGameId,
+  preselectedExpansionId,
 }: {
   groupId: string;
   games: Game[];
@@ -29,10 +29,13 @@ export function LogPlayForm({
   members: Member[];
   userId: string;
   preselectedGameId?: string;
+  preselectedExpansionId?: string;
 }) {
   const router = useRouter();
   const [gameId, setGameId] = useState(preselectedGameId ?? "");
-  const [selectedExpansions, setSelectedExpansions] = useState<string[]>([]);
+  const [selectedExpansions, setSelectedExpansions] = useState<string[]>(
+    preselectedExpansionId ? [preselectedExpansionId] : []
+  );
   const [playedAt, setPlayedAt] = useState(
     new Date().toISOString().slice(0, 16)
   );
@@ -46,10 +49,7 @@ export function LogPlayForm({
   const [error, setError] = useState("");
 
   const playableGames = useMemo(
-    () =>
-      games.filter(
-        (g) => g.bgg_type !== "boardgameexpansion" && !g.base_game_id
-      ),
+    () => games.filter((g) => !g.base_game_id),
     [games]
   );
 
@@ -99,45 +99,40 @@ export function LogPlayForm({
     setLoading(true);
     setError("");
 
-    const supabase = createClient();
-    const { data: play, error: playError } = await supabase
-      .from("plays")
-      .insert({
-        group_id: groupId,
-        game_id: gameId,
-        played_at: new Date(playedAt).toISOString(),
-        duration_minutes: duration ? parseInt(duration) : null,
-        notes: notes.trim() || null,
-        logged_by: userId,
-        first_time_played: firstTimePlayed,
-      })
-      .select()
-      .single();
+    const participantPayload = participants.map((uid) => {
+      const rawScore = scores[uid]?.trim();
+      let score: number | null = null;
+      if (rawScore) {
+        const parsed = parseInt(rawScore, 10);
+        if (Number.isFinite(parsed)) score = parsed;
+      }
+      return {
+        user_id: uid,
+        is_winner: winners.includes(uid),
+        score,
+      };
+    });
 
-    if (playError) {
-      setError(playError.message);
+    const res = await fetch("/api/plays", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        game_id: gameId,
+        played_at: playedAt,
+        duration_minutes: duration ? parseInt(duration, 10) : null,
+        notes: notes.trim() || null,
+        first_time_played: firstTimePlayed,
+        participants: participantPayload,
+        expansion_ids: selectedExpansions,
+      }),
+    });
+
+    const data = await parseJsonResponse<{ id?: string; error?: string }>(res);
+
+    if (!res.ok) {
+      setError(data.error ?? "Failed to log play");
       setLoading(false);
       return;
-    }
-
-    if (participants.length > 0) {
-      await supabase.from("play_participants").insert(
-        participants.map((uid) => ({
-          play_id: play!.id,
-          user_id: uid,
-          is_winner: winners.includes(uid),
-          score: scores[uid] ? parseInt(scores[uid], 10) : null,
-        }))
-      );
-    }
-
-    if (selectedExpansions.length > 0) {
-      await supabase.from("play_expansions").insert(
-        selectedExpansions.map((expId) => ({
-          play_id: play!.id,
-          game_id: expId,
-        }))
-      );
     }
 
     router.push("/plays");
@@ -175,6 +170,7 @@ export function LogPlayForm({
           {playableGames.map((g) => (
             <option key={g.id} value={g.id}>
               {g.title}
+              {g.bgg_type === "boardgameexpansion" ? " (Expansion)" : ""}
             </option>
           ))}
         </select>
