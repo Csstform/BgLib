@@ -1,13 +1,13 @@
 import Link from "next/link";
-import { Plus, History, Trophy } from "lucide-react";
+import { Plus, History } from "lucide-react";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getActiveGroupId } from "@/lib/group";
-import { isSupabaseConfigured, formatDateTime } from "@/lib/utils";
+import { isSupabaseConfigured } from "@/lib/utils";
 import { SetupBanner } from "@/components/SetupBanner";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { EmptyState } from "@/components/ui/EmptyState";
-import { GameCover } from "@/components/ui/GameCover";
+import { PlayHistoryCard } from "@/components/PlayHistoryCard";
 
 export default async function PlaysPage() {
   if (!isSupabaseConfigured()) {
@@ -22,12 +22,15 @@ export default async function PlaysPage() {
   if (!groupId) redirect("/onboarding");
 
   const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
 
   const { data: plays, error: playsError } = await supabase
     .from("plays")
     .select(
       `
-      id, played_at, duration_minutes, notes,
+      id, played_at, duration_minutes, notes, logged_by,
       game:games!plays_game_id_fkey (id, title, image_url),
       logger:profiles!plays_logged_by_fkey (display_name),
       play_participants (
@@ -96,7 +99,7 @@ export default async function PlaysPage() {
                 const prof = Array.isArray(pp.profile) ? pp.profile[0] : pp.profile;
                 return prof?.display_name as string | undefined;
               })
-              .filter(Boolean);
+              .filter(Boolean) as string[];
 
             const otherParticipants = (play.play_participants ?? [])
               .filter((pp) => !pp.is_winner)
@@ -106,62 +109,40 @@ export default async function PlaysPage() {
                 if (!name) return undefined;
                 return pp.score != null ? `${name} (${pp.score} pts)` : name;
               })
-              .filter(Boolean);
+              .filter(Boolean) as string[];
 
             const expansionTitles = (play.play_expansions ?? [])
               .map((pe) => {
                 const g = Array.isArray(pe.game) ? pe.game[0] : pe.game;
                 return g?.title as string | undefined;
               })
-              .filter(Boolean);
+              .filter(Boolean) as string[];
 
             return (
-              <Link
+              <PlayHistoryCard
                 key={play.id}
-                href={`/library/${game?.id}`}
-                className="touch-card flex gap-3 rounded-xl border border-border bg-surface p-3"
-              >
-                <GameCover
-                  src={game?.image_url}
-                  alt={game?.title ?? "Game"}
-                  size="sm"
-                />
-                <div className="min-w-0 flex-1">
-                  <p className="truncate font-semibold">
-                    {game?.title ?? "Unknown"}
-                  </p>
-                  <p className="text-sm text-muted">
-                    {formatDateTime(play.played_at)}
-                    {play.duration_minutes
-                      ? ` · ${play.duration_minutes} min`
-                      : ""}
-                  </p>
-                  {winnerNames.length > 0 && (
-                    <p className="mt-1 flex items-center gap-1 text-xs text-amber-400">
-                      <Trophy className="h-3.5 w-3.5 shrink-0" />
-                      {winnerNames.join(", ")}
-                    </p>
-                  )}
-                  {otherParticipants.length > 0 && (
-                    <p className="mt-0.5 text-xs text-muted">
-                      With: {otherParticipants.join(", ")}
-                    </p>
-                  )}
-                  {expansionTitles.length > 0 && (
-                    <p className="mt-0.5 text-xs text-muted">
-                      + {expansionTitles.join(", ")}
-                    </p>
-                  )}
-                  {play.notes && (
-                    <p className="mt-1 text-xs italic text-muted line-clamp-2">
-                      {play.notes}
-                    </p>
-                  )}
-                  <p className="mt-1 text-xs text-muted/80">
-                    Logged by {logger?.display_name}
-                  </p>
-                </div>
-              </Link>
+                currentUserId={user?.id}
+                play={{
+                  id: play.id,
+                  played_at: play.played_at,
+                  duration_minutes: play.duration_minutes,
+                  notes: play.notes,
+                  logged_by: play.logged_by,
+                  game: game
+                    ? {
+                        id: game.id,
+                        title: game.title,
+                        image_url: game.image_url,
+                      }
+                    : null,
+                  logger: logger
+                    ? { display_name: logger.display_name }
+                    : null,
+                  winnerNames,
+                  otherParticipants,
+                  expansionTitles,
+                }}
+              />
             );
           })}
         </div>
