@@ -47,7 +47,7 @@ export default async function StatsPage() {
   ] = await Promise.all([
     supabase
       .from("plays")
-      .select("id, game_id, played_at, game:games (id, title)")
+      .select("id, game_id, played_at, game:games!plays_game_id_fkey (id, title)")
       .eq("group_id", groupId)
       .order("played_at", { ascending: false }),
     supabase.from("play_participants").select(
