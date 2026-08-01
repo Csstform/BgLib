@@ -61,7 +61,7 @@ export default async function UserProfilePage({
       .in("game_id", gameIds.length > 0 ? gameIds : [emptyGameId]),
     supabase
       .from("plays")
-      .select("id, game_id, played_at, game:games (id, title)")
+      .select("id, game_id, played_at, game:games!plays_game_id_fkey (id, title)")
       .eq("group_id", groupId),
   ]);
 

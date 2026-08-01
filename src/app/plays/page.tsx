@@ -28,7 +28,7 @@ export default async function PlaysPage() {
     .select(
       `
       id, played_at, duration_minutes, notes,
-      game:games (id, title, image_url),
+      game:games!plays_game_id_fkey (id, title, image_url),
       logger:profiles!plays_logged_by_fkey (display_name),
       play_participants (
         user_id,
@@ -37,7 +37,7 @@ export default async function PlaysPage() {
         profile:profiles!play_participants_user_id_fkey (display_name)
       ),
       play_expansions (
-        game:games (title)
+        game:games!play_expansions_game_id_fkey (title)
       )
     `
     )
