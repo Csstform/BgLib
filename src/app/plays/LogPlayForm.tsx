@@ -6,6 +6,7 @@ import Link from "next/link";
 import { ArrowLeft, Trophy } from "lucide-react";
 import { parseJsonResponse } from "@/lib/parse-json-response";
 import type { Game, Profile } from "@/lib/types";
+import { GameSelect } from "@/components/GameSelect";
 
 type Member = { user_id: string; profile: Profile };
 
@@ -22,6 +23,16 @@ export function LogPlayForm({
   userId,
   preselectedGameId,
   preselectedExpansionId,
+  playId,
+  submitLabel,
+  initialPlayedAt,
+  initialDuration,
+  initialNotes,
+  initialParticipants,
+  initialWinners,
+  initialScores,
+  initialExpansionIds,
+  initialFirstTimePlayed,
 }: {
   groupId: string;
   games: Game[];
@@ -30,21 +41,39 @@ export function LogPlayForm({
   userId: string;
   preselectedGameId?: string;
   preselectedExpansionId?: string;
+  playId?: string;
+  submitLabel?: string;
+  initialPlayedAt?: string;
+  initialDuration?: string;
+  initialNotes?: string;
+  initialParticipants?: string[];
+  initialWinners?: string[];
+  initialScores?: Record<string, string>;
+  initialExpansionIds?: string[];
+  initialFirstTimePlayed?: boolean;
 }) {
   const router = useRouter();
   const [gameId, setGameId] = useState(preselectedGameId ?? "");
   const [selectedExpansions, setSelectedExpansions] = useState<string[]>(
-    preselectedExpansionId ? [preselectedExpansionId] : []
+    preselectedExpansionId
+      ? [preselectedExpansionId]
+      : (initialExpansionIds ?? [])
   );
   const [playedAt, setPlayedAt] = useState(
-    new Date().toISOString().slice(0, 16)
+    initialPlayedAt ?? new Date().toISOString().slice(0, 16)
   );
-  const [duration, setDuration] = useState("");
-  const [notes, setNotes] = useState("");
-  const [participants, setParticipants] = useState<string[]>([userId]);
-  const [winners, setWinners] = useState<string[]>([]);
-  const [scores, setScores] = useState<Record<string, string>>({});
-  const [firstTimePlayed, setFirstTimePlayed] = useState(false);
+  const [duration, setDuration] = useState(initialDuration ?? "");
+  const [notes, setNotes] = useState(initialNotes ?? "");
+  const [participants, setParticipants] = useState<string[]>(
+    initialParticipants ?? [userId]
+  );
+  const [winners, setWinners] = useState<string[]>(initialWinners ?? []);
+  const [scores, setScores] = useState<Record<string, string>>(
+    initialScores ?? {}
+  );
+  const [firstTimePlayed, setFirstTimePlayed] = useState(
+    initialFirstTimePlayed ?? false
+  );
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -113,8 +142,8 @@ export function LogPlayForm({
       };
     });
 
-    const res = await fetch("/api/plays", {
-      method: "POST",
+    const res = await fetch(playId ? `/api/plays/${playId}` : "/api/plays", {
+      method: playId ? "PATCH" : "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         game_id: gameId,
@@ -160,20 +189,12 @@ export function LogPlayForm({
 
       <div>
         <label className="block text-sm font-medium mb-1.5">Game *</label>
-        <select
+        <GameSelect
+          games={playableGames}
           value={gameId}
-          onChange={(e) => handleGameChange(e.target.value)}
+          onChange={handleGameChange}
           required
-          className={inputClass}
-        >
-          <option value="">Select a game</option>
-          {playableGames.map((g) => (
-            <option key={g.id} value={g.id}>
-              {g.title}
-              {g.bgg_type === "boardgameexpansion" ? " (Expansion)" : ""}
-            </option>
-          ))}
-        </select>
+        />
       </div>
 
       {availableExpansions.length > 0 && (
@@ -334,7 +355,7 @@ export function LogPlayForm({
         disabled={loading}
         className="btn-primary w-full rounded-xl bg-primary py-3 font-medium text-primary-fg disabled:opacity-50"
       >
-        {loading ? "Saving..." : "Log play"}
+        {loading ? "Saving..." : submitLabel ?? (playId ? "Save changes" : "Log play")}
       </button>
     </form>
   );

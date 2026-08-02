@@ -28,6 +28,8 @@ Run these files **in order** if you prefer step-by-step:
 | 8 | `migrations/008_expansions.sql` | Base/expansion links and play expansions |
 | 9 | `migrations/009_barcode_upc.sql` | UPC fields and UPC-to-BGG mapping cache |
 | 10 | `migrations/010_play_winners_stats.sql` | Play winners, scores, and first-time flags |
+| 11 | `migrations/011_fix_play_logging_rls.sql` | Fix RLS for play participants and expansions |
+| 12 | `migrations/012_game_night_reminders.sql` | Game night reminder tracking for cron |
 
 For existing projects, run only the migrations you have not applied yet, in
 order. Fresh projects can use `install.sql`, which already includes all

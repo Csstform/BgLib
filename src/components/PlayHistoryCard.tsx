@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Loader2, Trash2, Trophy } from "lucide-react";
+import { Loader2, Pencil, Trash2, Trophy } from "lucide-react";
 import { formatDateTime } from "@/lib/utils";
 import { GameCover } from "@/components/ui/GameCover";
 
@@ -71,7 +71,7 @@ export function PlayHistoryCard({ play, currentUserId }: PlayCardProps) {
           alt={game?.title ?? "Game"}
           size="sm"
         />
-        <div className="min-w-0 flex-1 pr-8">
+        <div className="min-w-0 flex-1 pr-16">
           <p className="truncate font-semibold">{game?.title ?? "Unknown"}</p>
           <p className="text-sm text-muted">
             {formatDateTime(play.played_at)}
@@ -105,19 +105,29 @@ export function PlayHistoryCard({ play, currentUserId }: PlayCardProps) {
         </div>
       </Link>
       {canDelete && (
-        <button
-          type="button"
-          onClick={handleDelete}
-          disabled={loading}
-          aria-label="Delete play"
-          className="pressable touch-target absolute right-2 top-2 flex items-center justify-center rounded-lg p-2 text-muted hover:bg-red-500/10 hover:text-red-400 disabled:opacity-50"
-        >
-          {loading ? (
-            <Loader2 className="h-4 w-4 animate-spin" />
-          ) : (
-            <Trash2 className="h-4 w-4" />
-          )}
-        </button>
+        <div className="absolute right-2 top-2 flex items-center gap-1">
+          <Link
+            href={`/plays/${play.id}/edit`}
+            onClick={(e) => e.stopPropagation()}
+            aria-label="Edit play"
+            className="pressable touch-target flex items-center justify-center rounded-lg p-2 text-muted hover:bg-surface-2 hover:text-foreground"
+          >
+            <Pencil className="h-4 w-4" />
+          </Link>
+          <button
+            type="button"
+            onClick={handleDelete}
+            disabled={loading}
+            aria-label="Delete play"
+            className="pressable touch-target flex items-center justify-center rounded-lg p-2 text-muted hover:bg-red-500/10 hover:text-red-400 disabled:opacity-50"
+          >
+            {loading ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Trash2 className="h-4 w-4" />
+            )}
+          </button>
+        </div>
       )}
     </div>
   );

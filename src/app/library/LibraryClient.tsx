@@ -43,7 +43,7 @@ export function LibraryClient({
   const [search, setSearch] = useState("");
   const [viewMode, setViewMode] = useState<ViewMode>("nested");
   const [filters, setFilters] = useState<LibraryFilters>(DEFAULT_LIBRARY_FILTERS);
-  const [offline, setOffline] = useState(false);
+  const [offline, setOffline] = useState(() => isOffline());
   const [cachedAt, setCachedAt] = useState<string | null>(null);
 
   const refreshFromApi = useCallback(async () => {
@@ -64,8 +64,10 @@ export function LibraryClient({
   }, [groupId, offline]);
 
   useEffect(() => {
-    setGames(initialGames);
-    setLastPlayedByGameId(initialLastPlayed);
+    queueMicrotask(() => {
+      setGames(initialGames);
+      setLastPlayedByGameId(initialLastPlayed);
+    });
     cacheLibrary(groupId, initialGames).catch(() => {});
   }, [groupId, initialGames, initialLastPlayed]);
 
@@ -85,7 +87,6 @@ export function LibraryClient({
     function handleOffline() {
       setOffline(true);
     }
-    setOffline(isOffline());
     window.addEventListener("online", handleOnline);
     window.addEventListener("offline", handleOffline);
     return () => {

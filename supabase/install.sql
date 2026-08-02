@@ -875,3 +875,9 @@ create policy "Play loggers can delete play expansions"
     )
   );
 
+-- >>> 012_game_night_reminders.sql
+-- Track when upcoming game night reminders have been sent (cron job).
+
+alter table public.game_nights
+  add column if not exists reminder_sent_at timestamptz;
+

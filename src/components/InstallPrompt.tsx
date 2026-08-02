@@ -23,20 +23,25 @@ function isStandalone(): boolean {
   );
 }
 
+function getInitialHidden(): boolean {
+  if (typeof window === "undefined") return true;
+  if (isStandalone()) return true;
+  if (localStorage.getItem(DISMISS_KEY) === "1") return true;
+  if (isIos()) return false;
+  return true;
+}
+
 export function InstallPrompt() {
   const [deferred, setDeferred] = useState<BeforeInstallPromptEvent | null>(
     null
   );
-  const [showIosHint, setShowIosHint] = useState(false);
-  const [hidden, setHidden] = useState(true);
+  const [showIosHint] = useState(
+    () => typeof navigator !== "undefined" && isIos()
+  );
+  const [hidden, setHidden] = useState(getInitialHidden);
 
   useEffect(() => {
-    if (isStandalone()) return;
-    if (localStorage.getItem(DISMISS_KEY) === "1") return;
-
-    if (isIos()) {
-      setShowIosHint(true);
-      setHidden(false);
+    if (isStandalone() || localStorage.getItem(DISMISS_KEY) === "1" || isIos()) {
       return;
     }
 
@@ -54,7 +59,6 @@ export function InstallPrompt() {
     localStorage.setItem(DISMISS_KEY, "1");
     setHidden(true);
     setDeferred(null);
-    setShowIosHint(false);
   }
 
   async function install() {

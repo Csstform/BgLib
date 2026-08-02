@@ -55,6 +55,18 @@ export function OnboardingWizard({ hasGroup }: { hasGroup: boolean }) {
     router.refresh();
   }
 
+  async function goToAddGame() {
+    await completeOnboarding();
+    router.push("/add-game");
+    router.refresh();
+  }
+
+  async function goToProfile() {
+    await completeOnboarding();
+    router.push("/profile");
+    router.refresh();
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex justify-center gap-2">
@@ -146,14 +158,14 @@ export function OnboardingWizard({ hasGroup }: { hasGroup: boolean }) {
           </p>
         <button
           type="button"
-          onClick={() => router.push("/add-game")}
+          onClick={goToAddGame}
           className="w-full rounded-xl bg-primary py-3 font-medium text-primary-fg"
         >
           Add a game manually
         </button>
         <button
           type="button"
-          onClick={() => router.push("/profile")}
+          onClick={goToProfile}
           className="w-full rounded-xl border border-border py-3 font-medium hover:bg-surface-2"
         >
           Import from BoardGameGeek
