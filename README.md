@@ -13,7 +13,7 @@ A mobile-first PWA for iOS and Android: a shared board game catalogue, ownership
 - **Game nights** — Schedule, RSVP, suggest games from attendees marked Going
 - **Loans** — Request, approve, return; due-date reminders via cron
 - **Want to play** — Mark interest on game detail pages
-- **Edit & merge** — Fix catalogue entries and combine duplicates
+- **Edit, merge, remove** — Fix catalogue entries, combine duplicates, or remove catalogue records
 - **BGG collection import** — Bulk import from a BGG username
 - **Push notifications** — Game night alerts (Web Push + service worker)
 - **Email notifications** — Fallback via Resend (loans, nights, reminders)
@@ -34,7 +34,7 @@ A mobile-first PWA for iOS and Android: a shared board game catalogue, ownership
 
 | Guide | Covers |
 |-------|--------|
-| [`docs/features/library-plays-picker.md`](docs/features/library-plays-picker.md) | Library grouping and filters, expansion linking, play logging, stats, offline cache, picker scoring |
+| [`docs/features/library-plays-picker.md`](docs/features/library-plays-picker.md) | Library grouping and filters, catalogue edit/merge/remove flows, expansion linking, play logging, stats, offline cache, picker scoring |
 
 ## Quick Start
 

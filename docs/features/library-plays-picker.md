@@ -1,7 +1,8 @@
 # Library, plays, stats, and picker
 
-This guide documents how BgLib connects the group catalogue, expansions, play
-logging, stats, offline browsing, and the game picker.
+This guide documents how BgLib connects the group catalogue, catalogue
+management, expansions, play logging, stats, offline browsing, and the game
+picker.
 
 ## Intent
 
@@ -71,6 +72,43 @@ in IndexedDB database `bglib-offline`, store `libraries`, keyed by `groupId`.
 If the browser later reports offline status, the library page shows cached data
 with the cache timestamp. Offline cache is browsing-only; mutations still need
 the network.
+
+## Catalogue management
+
+Primary codepaths:
+
+- `src/app/library/[id]/page.tsx`
+- `src/components/EditGameForm.tsx`
+- `src/components/MergeGamesPanel.tsx`
+- `src/components/DeleteGameButton.tsx`
+- `src/app/api/games/[id]/route.ts`
+- `src/app/api/games/merge/route.ts`
+
+Authenticated group members manage a catalogue entry from the game detail page's
+**Manage game details** section:
+
+| Action | API route | Behavior |
+|--------|-----------|----------|
+| Edit details | `PATCH /api/games/[id]` | Updates title, description, player counts, play time, and cover image URL for the active-group game. |
+| Merge duplicate | `POST /api/games/merge` | Keeps the selected entry, moves ownership, loans, plays, play-expansion links, linked expansions, and want-to-play rows from duplicate entries, then deletes the duplicates. |
+| Remove from library | `DELETE /api/games/[id]` | Permanently deletes the game row after confirming the game belongs to the user's active group. |
+
+Use **merge** when the group has two records for the same game and history should
+be preserved. Use **Remove from library** only when the catalogue entry and its
+history should be discarded; there is no undo or soft-delete table.
+
+Delete behavior comes from database foreign keys:
+
+- `ownership`, `game_night_games`, `loans`, `plays`, `want_to_play`, and
+  `play_expansions` rows referencing the game cascade away.
+- `play_participants` rows cascade through deleted `plays`.
+- Expansions that reference the removed game through `games.base_game_id` are
+  kept, but their `base_game_id` is set to `null`, so they appear as orphan
+  expansions until linked to another base game.
+
+The API routes check the current user's active group before mutating data. RLS
+also requires the user to be a member of the game's group; the delete policy was
+introduced in `supabase/migrations/004_tier1_features.sql`.
 
 ## Expansions workflow
 
@@ -186,14 +224,18 @@ When deploying or debugging this feature cluster:
    `/stats`.
 4. Add ownership rows before testing the picker; unowned games are excluded.
 5. Visit `/library` once while online before expecting offline cached browsing.
+6. Prefer merging duplicate games before deleting them if ownership, play
+   history, loans, wants, or game-night suggestions should survive.
 
 ## Troubleshooting
 
 | Symptom | Check |
 |---------|-------|
 | Expansion appears under "base not in library" | The expansion has no `base_game_id`, or the referenced base game is not in the active group. |
+| Expansion became orphaned after removing a base game | Expected when the base game's row is deleted; relink the expansion from another base game or edit it as needed. |
 | Expansion cannot be picked as the main game | Expected behavior; log the base game and select expansions used. |
 | Picker returns no games | Verify at least one attendee owns a matching base game, player count fits, `max_time` is not too strict, and `want_to_play=1` has matching wants. |
 | Picker ignores an expansion | Expansions are shown as metadata for eligible base games, not standalone candidates. |
 | Stats show no winners | Winners are counted only from plays where participants were marked with `is_winner`. |
 | Offline library shows old data | The cache is updated only after a successful online `/library` load for that group. |
+| Removed game disappeared from plays, loans, or game nights | Expected: removal deletes the game and cascades dependent records. Use duplicate merge instead when those records need to be preserved. |
