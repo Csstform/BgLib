@@ -23,7 +23,7 @@ export function SearchBar({
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
-        className="input-field w-full py-2.5 pl-10 pr-10"
+        className={`input-field w-full py-2.5 pl-11 ${value.length > 0 ? "pr-11" : "pr-4"}`}
       />
       {value.length > 0 && (
         <button

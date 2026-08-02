@@ -62,24 +62,27 @@ body {
   background: var(--surface);
 }
 
-.input-field {
-  width: 100%;
-  border-radius: 0.75rem;
-  border: 1px solid var(--border);
-  background: var(--surface);
-  padding: 0.625rem 1rem;
-  font-size: 0.875rem;
-  line-height: 1.25rem;
-}
+@layer components {
+  .input-field {
+    width: 100%;
+    border-radius: 0.75rem;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    padding-block: 0.625rem;
+    padding-inline: 1rem;
+    font-size: 0.875rem;
+    line-height: 1.25rem;
+  }
 
-.input-field::placeholder {
-  color: var(--muted);
-}
+  .input-field::placeholder {
+    color: var(--muted);
+  }
 
-.input-field:focus {
-  border-color: var(--primary);
-  outline: none;
-  box-shadow: 0 0 0 2px color-mix(in srgb, var(--primary) 20%, transparent);
+  .input-field:focus {
+    border-color: var(--primary);
+    outline: none;
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--primary) 20%, transparent);
+  }
 }
 
 .touch-target {
