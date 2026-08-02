@@ -82,6 +82,7 @@ export type GameNight = {
   scheduled_at: string;
   location: string | null;
   cancelled_at?: string | null;
+  reminder_sent_at?: string | null;
   created_at: string;
 };
 

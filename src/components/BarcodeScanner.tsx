@@ -12,6 +12,17 @@ type Props = {
 };
 
 export function BarcodeScanner({ open, onClose, onScan }: Props) {
+  if (!open) return null;
+  return <BarcodeScannerDialog onClose={onClose} onScan={onScan} />;
+}
+
+function BarcodeScannerDialog({
+  onClose,
+  onScan,
+}: {
+  onClose: () => void;
+  onScan: (upc: string) => void;
+}) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const scanFrameRef = useRef<number | null>(null);
@@ -48,15 +59,6 @@ export function BarcodeScanner({ open, onClose, onScan }: Props) {
   );
 
   useEffect(() => {
-    if (!open) {
-      handledRef.current = false;
-      setManualUpc("");
-      setCameraError("");
-      setScannerReady(false);
-      stopCamera();
-      return;
-    }
-
     let cancelled = false;
     const BarcodeDetector = getBarcodeDetector();
 
@@ -143,9 +145,7 @@ export function BarcodeScanner({ open, onClose, onScan }: Props) {
       cancelled = true;
       stopCamera();
     };
-  }, [open, stopCamera, submitUpc]);
-
-  if (!open) return null;
+  }, [stopCamera, submitUpc]);
 
   const inputClass =
     "w-full rounded-xl border border-border bg-surface px-4 py-2.5 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20";

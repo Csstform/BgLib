@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft, Users, Heart, Puzzle } from "lucide-react";
+import { ArrowLeft, History, Users, Heart, Puzzle } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured, formatPlayTime, formatPlayers } from "@/lib/utils";
 import { getActiveGroupId } from "@/lib/group";
@@ -14,6 +14,7 @@ import { GameCard } from "@/components/GameCard";
 import { GameCover } from "@/components/ui/GameCover";
 import { SectionHeading } from "@/components/ui/SectionHeading";
 import { GameDetailActions } from "@/components/GameDetailActions";
+import { PlayHistoryCard } from "@/components/PlayHistoryCard";
 import type { DuplicateMatch, GameWithOwners } from "@/lib/types";
 
 export default async function GameDetailPage({
@@ -206,6 +207,101 @@ export default async function GameDetailPage({
     );
   }
 
+  let recentPlays: {
+    id: string;
+    played_at: string;
+    duration_minutes: number | null;
+    notes: string | null;
+    logged_by: string;
+    game: { id: string; title: string; image_url: string | null } | null;
+    logger: { display_name: string } | null;
+    winnerNames: string[];
+    otherParticipants: string[];
+    expansionTitles: string[];
+  }[] = [];
+
+  if (groupId) {
+    const playSelect = `
+      id, played_at, duration_minutes, notes, logged_by,
+      game:games!plays_game_id_fkey (id, title, image_url),
+      logger:profiles!plays_logged_by_fkey (display_name),
+      play_participants (
+        user_id,
+        is_winner,
+        score,
+        profile:profiles!play_participants_user_id_fkey (display_name)
+      ),
+      play_expansions (
+        game:games!play_expansions_game_id_fkey (title)
+      )
+    `;
+
+    const playsQuery = game.base_game_id
+      ? supabase
+          .from("plays")
+          .select(`${playSelect}, play_expansions!inner (game_id)`)
+          .eq("group_id", groupId)
+          .eq("play_expansions.game_id", id)
+      : supabase
+          .from("plays")
+          .select(playSelect)
+          .eq("group_id", groupId)
+          .eq("game_id", id);
+
+    const { data: plays } = await playsQuery
+      .order("played_at", { ascending: false })
+      .limit(10);
+
+    recentPlays = (plays ?? []).map((play) => {
+        const playGame = Array.isArray(play.game) ? play.game[0] : play.game;
+        const logger = Array.isArray(play.logger) ? play.logger[0] : play.logger;
+
+        const winnerNames = (play.play_participants ?? [])
+          .filter((pp) => pp.is_winner)
+          .map((pp) => {
+            const prof = Array.isArray(pp.profile) ? pp.profile[0] : pp.profile;
+            return prof?.display_name as string | undefined;
+          })
+          .filter(Boolean) as string[];
+
+        const otherParticipants = (play.play_participants ?? [])
+          .filter((pp) => !pp.is_winner)
+          .map((pp) => {
+            const prof = Array.isArray(pp.profile) ? pp.profile[0] : pp.profile;
+            const name = prof?.display_name as string | undefined;
+            if (!name) return undefined;
+            return pp.score != null ? `${name} (${pp.score} pts)` : name;
+          })
+          .filter(Boolean) as string[];
+
+        const expansionTitles = (play.play_expansions ?? [])
+          .map((pe) => {
+            const g = Array.isArray(pe.game) ? pe.game[0] : pe.game;
+            return g?.title as string | undefined;
+          })
+          .filter(Boolean) as string[];
+
+        return {
+          id: play.id,
+          played_at: play.played_at,
+          duration_minutes: play.duration_minutes,
+          notes: play.notes,
+          logged_by: play.logged_by,
+          game: playGame
+            ? {
+                id: playGame.id,
+                title: playGame.title,
+                image_url: playGame.image_url,
+              }
+            : null,
+          logger: logger ? { display_name: logger.display_name } : null,
+          winnerNames,
+          otherParticipants,
+          expansionTitles,
+        };
+      });
+  }
+
   return (
     <div className="page-shell pb-48">
       <Link
@@ -263,6 +359,31 @@ export default async function GameDetailPage({
           wantsToPlay={userWantsToPlay}
         />
       )}
+
+      <div className="mt-6">
+        <SectionHeading
+          icon={History}
+          title="Recent plays"
+          action={
+            <Link href={`/plays/new?game=${game.id}`} className="text-sm text-primary hover:underline">
+              Log play
+            </Link>
+          }
+        />
+        {recentPlays.length === 0 ? (
+          <p className="py-2 text-sm text-muted">No plays logged yet for this game.</p>
+        ) : (
+          <div className="space-y-2">
+            {recentPlays.map((play) => (
+              <PlayHistoryCard
+                key={play.id}
+                currentUserId={user?.id}
+                play={play}
+              />
+            ))}
+          </div>
+        )}
+      </div>
 
       {wantToPlayUsers.length > 0 && (
         <div className="section-card mt-6 p-3">
