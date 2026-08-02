@@ -242,14 +242,33 @@ export async function searchBggGames(query: string): Promise<BggSearchResult[]> 
 export async function getBggGameDetails(
   id: number
 ): Promise<BggGameDetails | null> {
-  const xml = await fetchBgg(`/thing?id=${id}&stats=1`);
+  const batch = await getBggGameDetailsBatch([id]);
+  return batch.get(id) ?? null;
+}
+
+export async function getBggGameDetailsBatch(
+  ids: number[]
+): Promise<Map<number, BggGameDetails>> {
+  const uniqueIds = [...new Set(ids)].filter((id) => id > 0);
+  if (uniqueIds.length === 0) return new Map();
+
+  const xml = await fetchBgg(`/thing?id=${uniqueIds.join(",")}&stats=1`);
   const parsed = parser.parse(xml);
   const item = parsed?.items?.item;
 
-  if (!item) return null;
+  if (!item) return new Map();
 
-  const game = Array.isArray(item) ? item[0] : item;
-  return parseThingItem(game as Record<string, unknown>, id);
+  const list = Array.isArray(item) ? item : [item];
+  const results = new Map<number, BggGameDetails>();
+
+  for (const game of list) {
+    const record = game as Record<string, unknown>;
+    const id = parseInt(String(record["@_id"] ?? "0"), 10);
+    if (!id) continue;
+    results.set(id, parseThingItem(record, id));
+  }
+
+  return results;
 }
 
 export type BggCollectionItem = {
