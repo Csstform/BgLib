@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { getUserGroups } from "@/lib/group";
+import { getUserGroups, getActiveGroupId } from "@/lib/group";
 import { isSupabaseConfigured } from "@/lib/utils";
 import { SetupBanner } from "@/components/SetupBanner";
 import { OnboardingWizard } from "./OnboardingWizard";
@@ -29,10 +29,15 @@ export default async function OnboardingPage() {
   if (profile?.onboarding_completed) redirect("/library");
 
   const groups = await getUserGroups();
+  const groupId = await getActiveGroupId();
 
   return (
     <div className="px-4 py-8 pb-24 min-h-[calc(100dvh-3.5rem)] flex flex-col justify-center">
-      <OnboardingWizard hasGroup={groups.length > 0} />
+      <OnboardingWizard
+        hasGroup={groups.length > 0}
+        userId={user.id}
+        groupId={groupId}
+      />
     </div>
   );
 }

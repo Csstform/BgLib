@@ -8,15 +8,25 @@ import {
   completeOnboarding,
 } from "@/lib/group-actions";
 import { PushNotificationToggle } from "@/components/PushNotificationToggle";
+import { OnboardingQuickAdd } from "@/components/OnboardingQuickAdd";
 import { Dices, Users, Plus, Bell, Check } from "lucide-react";
 
 const STEPS = ["group", "game", "notifications", "done"] as const;
 
-export function OnboardingWizard({ hasGroup }: { hasGroup: boolean }) {
+export function OnboardingWizard({
+  hasGroup,
+  userId,
+  groupId,
+}: {
+  hasGroup: boolean;
+  userId: string;
+  groupId: string | null;
+}) {
   const router = useRouter();
   const [step, setStep] = useState<(typeof STEPS)[number]>(
     hasGroup ? "game" : "group"
   );
+  const [activeGroupId, setActiveGroupId] = useState(groupId);
   const [groupMode, setGroupMode] = useState<"create" | "join">("create");
   const [groupName, setGroupName] = useState("");
   const [inviteCode, setInviteCode] = useState("");
@@ -36,7 +46,10 @@ export function OnboardingWizard({ hasGroup }: { hasGroup: boolean }) {
         }
         const res = await createGroup(groupName);
         if (res.error) setError(res.error);
-        else setStep("game");
+        else {
+          setActiveGroupId(res.group?.id ?? null);
+          setStep("game");
+        }
       } else {
         if (!inviteCode.trim()) {
           setError("Enter an invite code");
@@ -44,20 +57,17 @@ export function OnboardingWizard({ hasGroup }: { hasGroup: boolean }) {
         }
         const res = await joinGroupByInvite(inviteCode);
         if (res.error) setError(res.error);
-        else setStep("game");
+        else {
+          setActiveGroupId(res.groupId ?? null);
+          setStep("game");
+        }
       }
     });
   }
 
   async function finish() {
     await completeOnboarding();
-    router.push("/library");
-    router.refresh();
-  }
-
-  async function goToAddGame() {
-    await completeOnboarding();
-    router.push("/add-game");
+    router.push("/");
     router.refresh();
   }
 
@@ -150,32 +160,37 @@ export function OnboardingWizard({ hasGroup }: { hasGroup: boolean }) {
       )}
 
       {step === "game" && (
-        <div className="space-y-4 text-center">
-          <Plus className="h-10 w-10 text-primary mx-auto" />
-          <h2 className="text-xl font-bold">Add your first game</h2>
-          <p className="text-sm text-muted">
-            Search BoardGameGeek to quickly add games to your group library.
-          </p>
-        <button
-          type="button"
-          onClick={goToAddGame}
-          className="w-full rounded-xl bg-primary py-3 font-medium text-primary-fg"
-        >
-          Add a game manually
-        </button>
-        <button
-          type="button"
-          onClick={goToProfile}
-          className="w-full rounded-xl border border-border py-3 font-medium hover:bg-surface-2"
-        >
-          Import from BoardGameGeek
-        </button>
+        <div className="space-y-4">
+          <div className="text-center">
+            <Plus className="h-10 w-10 text-primary mx-auto mb-2" />
+            <h2 className="text-xl font-bold">Add your first game</h2>
+            <p className="text-sm text-muted mt-1">
+              Search BoardGameGeek to add games to your group library. You can
+              always add more later.
+            </p>
+          </div>
+
+          {activeGroupId ? (
+            <OnboardingQuickAdd userId={userId} groupId={activeGroupId} />
+          ) : (
+            <p className="text-sm text-center text-muted">
+              Set up your group first to add games.
+            </p>
+          )}
+
           <button
             type="button"
             onClick={() => setStep("notifications")}
+            className="w-full rounded-xl bg-primary py-3 font-medium text-primary-fg"
+          >
+            Continue
+          </button>
+          <button
+            type="button"
+            onClick={goToProfile}
             className="w-full text-sm text-muted hover:text-foreground"
           >
-            Skip for now
+            Import your full BGG collection from Profile
           </button>
         </div>
       )}
@@ -205,8 +220,9 @@ export function OnboardingWizard({ hasGroup }: { hasGroup: boolean }) {
           <Check className="h-10 w-10 text-green-400 mx-auto" />
           <h2 className="text-xl font-bold">You&apos;re all set!</h2>
           <p className="text-sm text-muted">
-            Browse your library, use the game picker before game night, and
-            invite friends with your group&apos;s invite code from Profile.
+            Your home screen shows upcoming game nights, recent plays, and
+            suggestions. Invite friends with your group&apos;s invite code from
+            Profile.
           </p>
           <button
             type="button"
@@ -214,7 +230,7 @@ export function OnboardingWizard({ hasGroup }: { hasGroup: boolean }) {
             className="w-full rounded-xl bg-primary py-3 font-medium text-primary-fg flex items-center justify-center gap-2"
           >
             <Dices className="h-5 w-5" />
-            Go to library
+            Go to home
           </button>
         </div>
       )}
