@@ -6,6 +6,7 @@ import {
 } from "@/lib/bgg";
 import { normalizeTitle } from "@/lib/duplicate-detection";
 import { resolveBaseGameId } from "@/lib/resolve-base-game";
+import { linkExpansionsToBaseByBggId } from "@/lib/link-expansions";
 
 export type ExistingGameIndex = {
   byBggId: Map<number, { id: string; title: string }>;
@@ -280,6 +281,15 @@ export async function importBggBatch({
       await linkOwnership(supabase, userId, game.id);
       registerImportedGame(index, game);
       result.imported++;
+
+      if (details.bggType === "boardgame" && details.id) {
+        await linkExpansionsToBaseByBggId(
+          supabase,
+          groupId,
+          details.id,
+          game.id
+        );
+      }
     } catch {
       result.failed++;
     }

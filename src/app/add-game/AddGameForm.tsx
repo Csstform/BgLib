@@ -149,6 +149,8 @@ export function AddGameForm({
       });
     }
 
+    await fetch("/api/games/relink-expansions", { method: "POST" });
+
     router.push(`/library/${game!.id}`);
     router.refresh();
   }

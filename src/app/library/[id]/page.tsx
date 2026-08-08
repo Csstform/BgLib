@@ -15,6 +15,7 @@ import { GameCover } from "@/components/ui/GameCover";
 import { SectionHeading } from "@/components/ui/SectionHeading";
 import { GameDetailActions } from "@/components/GameDetailActions";
 import { PlayHistoryCard } from "@/components/PlayHistoryCard";
+import { LinkExpansionForm } from "@/components/LinkExpansionForm";
 import type { DuplicateMatch, GameWithOwners } from "@/lib/types";
 
 export default async function GameDetailPage({
@@ -302,6 +303,26 @@ export default async function GameDetailPage({
       });
   }
 
+  const isExpansion =
+    game.bgg_type === "boardgameexpansion" || !!game.base_game_id;
+  const isOrphanExpansion = isExpansion && !baseGame;
+
+  let baseGameOptions: { id: string; title: string }[] = [];
+  if (isOrphanExpansion && groupId) {
+    const { data: catalogueGames } = await supabase
+      .from("games")
+      .select("id, title, bgg_type, base_game_id")
+      .eq("group_id", groupId)
+      .order("title");
+
+    baseGameOptions = (catalogueGames ?? []).filter(
+      (g) =>
+        g.id !== game.id &&
+        g.bgg_type !== "boardgameexpansion" &&
+        !g.base_game_id
+    );
+  }
+
   return (
     <div className="page-shell pb-48">
       <Link
@@ -348,6 +369,16 @@ export default async function GameDetailPage({
           )}
         </div>
       </div>
+
+      {user && isOrphanExpansion && (
+        <div className="mt-6">
+          <LinkExpansionForm
+            expansionId={game.id}
+            expansionTitle={game.title}
+            baseGames={baseGameOptions}
+          />
+        </div>
+      )}
 
       {user && groupId && (
         <GameDetailActions
