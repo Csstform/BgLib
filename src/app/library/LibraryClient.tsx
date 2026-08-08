@@ -6,6 +6,7 @@ import { GameCard } from "@/components/GameCard";
 import { SearchBar } from "@/components/SearchBar";
 import { LibraryFiltersPanel } from "@/components/LibraryFiltersPanel";
 import { LibraryDuplicatesPanel } from "@/components/LibraryDuplicatesPanel";
+import { LinkExpansionsPanel } from "@/components/LinkExpansionsPanel";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { groupLibraryGames } from "@/lib/game-expansions";
 import { findDuplicateClusters } from "@/lib/duplicate-detection";
@@ -156,6 +157,13 @@ export function LibraryClient({
       )}
 
       <LibraryDuplicatesPanel clusters={duplicateClusters} />
+
+      {grouped.orphanExpansions.length > 0 && (
+        <LinkExpansionsPanel
+          orphanCount={grouped.orphanExpansions.length}
+          autoRun
+        />
+      )}
 
       <div className="flex items-start gap-2">
         <SearchBar value={search} onChange={setSearch} className="flex-1" />

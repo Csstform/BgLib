@@ -126,6 +126,8 @@ export function BggCollectionImport() {
       setProgress({ done: Math.min(i + batch.length, idsToImport.length), total: idsToImport.length });
     }
 
+    await fetch("/api/games/relink-expansions", { method: "POST" });
+
     setSummary({
       imported,
       linked,

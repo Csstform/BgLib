@@ -40,6 +40,41 @@ export async function PATCH(
   if (body.image_url !== undefined)
     updates.image_url = body.image_url?.trim() || null;
 
+  if (body.base_game_id !== undefined) {
+    const baseGameId = body.base_game_id as string | null;
+    if (baseGameId === null) {
+      updates.base_game_id = null;
+    } else {
+      const { data: baseGame } = await supabase
+        .from("games")
+        .select("id, bgg_type, base_game_id")
+        .eq("id", baseGameId)
+        .eq("group_id", groupId)
+        .single();
+
+      if (
+        !baseGame ||
+        baseGame.bgg_type === "boardgameexpansion" ||
+        baseGame.base_game_id
+      ) {
+        return NextResponse.json(
+          { error: "Select a base game, not another expansion" },
+          { status: 400 }
+        );
+      }
+
+      if (baseGameId === id) {
+        return NextResponse.json(
+          { error: "An expansion cannot link to itself" },
+          { status: 400 }
+        );
+      }
+
+      updates.base_game_id = baseGameId;
+      updates.bgg_type = "boardgameexpansion";
+    }
+  }
+
   const { error } = await supabase.from("games").update(updates).eq("id", id);
 
   if (error) {
