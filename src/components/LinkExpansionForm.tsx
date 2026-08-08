@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Link2, Loader2 } from "lucide-react";
+import { GameSelect } from "@/components/GameSelect";
 import type { Game } from "@/lib/types";
 
 export function LinkExpansionForm({
@@ -70,8 +71,7 @@ export function LinkExpansionForm({
     setLoading(false);
   }
 
-  const inputClass =
-    "w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm";
+  const selectableBaseGames = baseGames as Game[];
 
   return (
     <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-4 space-y-3">
@@ -106,21 +106,15 @@ export function LinkExpansionForm({
       {baseGames.length > 0 && (
         <form onSubmit={linkManual} className="space-y-2">
           <label className="block text-xs font-medium text-muted">
-            Or choose the base game manually
+            Or search for the base game manually
           </label>
-          <select
+          <GameSelect
+            games={selectableBaseGames}
             value={baseGameId}
-            onChange={(e) => setBaseGameId(e.target.value)}
-            className={inputClass}
+            onChange={setBaseGameId}
             required
-          >
-            <option value="">Select base game</option>
-            {baseGames.map((g) => (
-              <option key={g.id} value={g.id}>
-                {g.title}
-              </option>
-            ))}
-          </select>
+            placeholder="Search base games..."
+          />
           <button
             type="submit"
             disabled={loading || autoLoading || !baseGameId}
