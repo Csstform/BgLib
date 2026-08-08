@@ -10,9 +10,10 @@ type Props = {
   value: string;
   onChange: (gameId: string) => void;
   required?: boolean;
+  placeholder?: string;
 };
 
-export function GameSelect({ games, value, onChange, required }: Props) {
+export function GameSelect({ games, value, onChange, required, placeholder }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
@@ -65,7 +66,7 @@ export function GameSelect({ games, value, onChange, required }: Props) {
             setOpen(true);
             if (!next.trim()) onChange("");
           }}
-          placeholder="Search your library..."
+          placeholder={placeholder ?? "Search your library..."}
           className="pr-10"
         />
         <button
