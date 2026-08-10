@@ -199,9 +199,18 @@ Open **https://bglib.csst.rocks** in a browser — you should see BgLib.
 
 ---
 
-## 8. Loan reminder cron
+## 8. Reminder crons
 
-On Vercel, `vercel.json` runs the cron. On a droplet, use systemd timers:
+On Vercel, `vercel.json` runs both reminder crons:
+
+| Endpoint | Purpose | Schedule |
+|----------|---------|----------|
+| `/api/cron/loan-reminders` | Due-date reminders for open loans | 09:00 UTC daily |
+| `/api/cron/game-night-reminders` | Tomorrow reminders for uncancelled game nights | 10:00 UTC daily |
+
+On a droplet, use systemd timers with the same authenticated curl pattern. The
+included `bglib-cron.service` / `.timer` files run loan reminders; copy them if
+you also want a separate game-night reminder timer:
 
 ```bash
 cp /opt/bglib/deploy/bglib-cron.service /etc/systemd/system/
@@ -215,12 +224,18 @@ systemctl enable --now bglib-cron.timer
 systemctl list-timers | grep bglib
 ```
 
+For game-night reminders, copy the service/timer pair under distinct names and
+point the service at `/api/cron/game-night-reminders`.
+
 Test manually:
 
 ```bash
 source /opt/bglib/.env.local
 curl -fsS -H "Authorization: Bearer $CRON_SECRET" \
   "https://bglib.csst.rocks/api/cron/loan-reminders"
+
+curl -fsS -H "Authorization: Bearer $CRON_SECRET" \
+  "https://bglib.csst.rocks/api/cron/game-night-reminders"
 ```
 
 ---
