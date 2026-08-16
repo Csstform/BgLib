@@ -19,11 +19,13 @@ export function PickerClient({ members }: { members: Member[] }) {
   const [games, setGames] = useState<PickerGame[]>([]);
   const [loading, setLoading] = useState(false);
   const [searched, setSearched] = useState(false);
+  const [randomPick, setRandomPick] = useState(false);
 
   const fetchGames = useCallback(
     async (random = false) => {
       setLoading(true);
       setSearched(true);
+      setRandomPick(random);
       const params = new URLSearchParams({
         players: String(players),
         attendees: selectedAttendees.join(","),
@@ -35,6 +37,7 @@ export function PickerClient({ members }: { members: Member[] }) {
       const res = await fetch(`/api/picker?${params}`);
       const data = await res.json();
       setGames(data.games ?? []);
+      setRandomPick(Boolean(data.random_pick));
       setLoading(false);
     },
     [players, maxTime, selectedAttendees, wantToPlayOnly]
@@ -58,7 +61,7 @@ export function PickerClient({ members }: { members: Member[] }) {
         </div>
         <p className="text-sm text-muted">
           Prioritizes never-played and underplayed games, plus titles someone
-          wants to play. Use random pick when you&apos;re stuck deciding.
+          wants to play. Random pick chooses uniformly from all matching games.
         </p>
       </div>
 
@@ -152,8 +155,20 @@ export function PickerClient({ members }: { members: Member[] }) {
 
       {searched && !loading && (
         <div className="space-y-2">
+          {randomPick && games.length > 0 && (
+            <div className="rounded-xl border border-primary/30 bg-primary/10 px-4 py-3 text-center">
+              <p className="text-sm font-medium text-primary">Tonight&apos;s pick</p>
+              <p className="mt-1 text-xs text-muted">
+                Randomly chosen from all games matching your filters
+              </p>
+            </div>
+          )}
           <p className="text-sm text-muted">
-            {games.length} game{games.length !== 1 ? "s" : ""} found
+            {randomPick
+              ? games.length === 1
+                ? "1 game picked"
+                : `${games.length} games found`
+              : `${games.length} game${games.length !== 1 ? "s" : ""} found`}
           </p>
           {games.length === 0 ? (
             <p className="text-center text-muted py-8 text-sm">
