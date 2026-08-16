@@ -1,12 +1,12 @@
 "use client";
 
 import { useState, useMemo, useEffect, useCallback, type CSSProperties } from "react";
-import { Layers, List, Library, WifiOff } from "lucide-react";
+import Link from "next/link";
+import { Layers, List, Library, WifiOff, Link2 } from "lucide-react";
 import { GameCard } from "@/components/GameCard";
 import { SearchBar } from "@/components/SearchBar";
 import { LibraryFiltersPanel } from "@/components/LibraryFiltersPanel";
 import { LibraryDuplicatesPanel } from "@/components/LibraryDuplicatesPanel";
-import { LinkExpansionsPanel } from "@/components/LinkExpansionsPanel";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { groupLibraryGames } from "@/lib/game-expansions";
 import { findDuplicateClusters } from "@/lib/duplicate-detection";
@@ -159,10 +159,23 @@ export function LibraryClient({
       <LibraryDuplicatesPanel clusters={duplicateClusters} />
 
       {grouped.orphanExpansions.length > 0 && (
-        <LinkExpansionsPanel
-          orphanCount={grouped.orphanExpansions.length}
-          autoRun
-        />
+        <Link
+          href="/library/link-expansions"
+          className="touch-card flex items-center gap-3 rounded-xl border border-amber-500/30 bg-amber-500/10 p-4"
+        >
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-amber-500/15 text-amber-400">
+            <Link2 className="h-5 w-5" />
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="text-sm font-medium text-amber-200">
+              {grouped.orphanExpansions.length} unlinked expansion
+              {grouped.orphanExpansions.length !== 1 ? "s" : ""}
+            </p>
+            <p className="text-xs text-muted">
+              Link expansions and DLCs to their base games
+            </p>
+          </div>
+        </Link>
       )}
 
       <div className="flex items-start gap-2">
@@ -268,26 +281,6 @@ export function LibraryClient({
             </div>
           ))}
 
-          {grouped.orphanExpansions.length > 0 && (
-            <div className="space-y-2 pt-2">
-              <p className="text-xs font-medium uppercase tracking-wide text-muted px-1">
-                Expansions (base not in library)
-              </p>
-              {grouped.orphanExpansions.map((game, i) => (
-                <div
-                  key={game.id}
-                  className="stagger-item"
-                  style={{ "--stagger": i } as CSSProperties}
-                >
-                  <GameCard
-                    game={game}
-                    badge="Expansion"
-                    lastPlayed={lastPlayedByGameId[game.id]}
-                  />
-                </div>
-              ))}
-            </div>
-          )}
         </div>
       )}
 
