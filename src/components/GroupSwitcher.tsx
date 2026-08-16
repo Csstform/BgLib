@@ -33,7 +33,7 @@ export function GroupSwitcher({
           title="Group settings"
           aria-label="Group settings"
         >
-          <Plus className="h-3.5 w-3.5" />
+          <Settings className="h-3.5 w-3.5" />
         </Link>
       </div>
     );
