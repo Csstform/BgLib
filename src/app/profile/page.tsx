@@ -1,13 +1,18 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/utils";
-import { getActiveGroupId } from "@/lib/group";
+import {
+  countGroupOwners,
+  getActiveGroupId,
+  getGroupMembers,
+  getMyGroupRole,
+} from "@/lib/group";
 import { SetupBanner } from "@/components/SetupBanner";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { ProfileForm } from "./ProfileForm";
 import { PushNotificationToggle } from "@/components/PushNotificationToggle";
 import { EmailNotificationToggle } from "@/components/EmailNotificationToggle";
-import { GroupInviteCard } from "@/components/GroupInviteCard";
+import { GroupSettingsCard } from "@/components/GroupSettingsCard";
 import { JoinGroupCard } from "@/components/JoinGroupCard";
 import { BggCollectionImport } from "@/components/BggCollectionImport";
 import { isEmailConfigured } from "@/lib/email";
@@ -38,13 +43,26 @@ export default async function ProfilePage() {
 
   const groupId = await getActiveGroupId();
   let activeGroup = null;
+  let myRole: string | null = null;
+  let memberCount = 0;
+  let isSoleOwner = false;
+
   if (groupId) {
-    const { data } = await supabase
-      .from("groups")
-      .select("id, name, invite_code")
-      .eq("id", groupId)
-      .single();
+    const [{ data }, members, role, ownerCount] = await Promise.all([
+      supabase
+        .from("groups")
+        .select("id, name, description, invite_code")
+        .eq("id", groupId)
+        .single(),
+      getGroupMembers(groupId),
+      getMyGroupRole(groupId),
+      countGroupOwners(groupId),
+    ]);
+
     activeGroup = data;
+    memberCount = members.length;
+    myRole = role;
+    isSoleOwner = role === "owner" && ownerCount <= 1;
   }
 
   return (
@@ -59,16 +77,23 @@ export default async function ProfilePage() {
           <ProfileForm profile={profile} />
         </section>
 
-        <section>
+        <section id="group">
           <h2 className="mb-3 text-xs font-semibold uppercase tracking-wide text-muted">
             Your group
           </h2>
           <div className="space-y-4">
-            {activeGroup && (
-              <GroupInviteCard
-                name={activeGroup.name}
-                inviteCode={activeGroup.invite_code}
+            {activeGroup && myRole ? (
+              <GroupSettingsCard
+                group={activeGroup}
+                myRole={myRole}
+                memberCount={memberCount}
+                isSoleOwner={isSoleOwner}
               />
+            ) : (
+              <p className="text-sm text-muted">
+                You&apos;re not in a group yet. Join one below or create a new
+                group from onboarding.
+              </p>
             )}
             <JoinGroupCard />
           </div>

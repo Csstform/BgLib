@@ -30,6 +30,7 @@ Run these files **in order** if you prefer step-by-step:
 | 10 | `migrations/010_play_winners_stats.sql` | Play winners, scores, and first-time flags |
 | 11 | `migrations/011_fix_play_logging_rls.sql` | Fix RLS for play participants and expansions |
 | 12 | `migrations/012_game_night_reminders.sql` | Game night reminder tracking for cron |
+| 13 | `migrations/013_group_member_management.sql` | Owner can remove non-owner members |
 
 For existing projects, run only the migrations you have not applied yet, in
 order. Fresh projects can use `install.sql`, which already includes all
