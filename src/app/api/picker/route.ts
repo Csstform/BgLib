@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { getActiveGroupId } from "@/lib/group";
+import { pickRandomItem } from "@/lib/random";
 import { comparePickerGames, computePickerScore } from "@/lib/picker-scoring";
 import type { OwnedExpansion } from "@/lib/types";
 
@@ -194,12 +195,13 @@ export async function GET(request: NextRequest) {
     .sort(comparePickerGames);
 
   let output = results;
+  let randomPickResult = false;
 
   if (randomPick && output.length > 0) {
-    const topPool = output.slice(0, Math.min(5, output.length));
-    const pick = topPool[Math.floor(Math.random() * topPool.length)];
+    const pick = pickRandomItem(output);
     output = pick ? [pick] : output;
+    randomPickResult = !!pick;
   }
 
-  return NextResponse.json({ games: output });
+  return NextResponse.json({ games: output, random_pick: randomPickResult });
 }
