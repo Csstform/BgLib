@@ -1,7 +1,7 @@
 import { notFound, redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getActiveGroupId, getGroupMembers } from "@/lib/group";
-import { isSupabaseConfigured } from "@/lib/utils";
+import { isSupabaseConfigured, toDatetimeLocalValue } from "@/lib/utils";
 import { SetupBanner } from "@/components/SetupBanner";
 import { LogPlayForm } from "../../LogPlayForm";
 
@@ -125,11 +125,7 @@ export default async function EditPlayPage({
     (pe: { game_id: string }) => pe.game_id
   );
 
-  const playedAtLocal = new Date(play.played_at);
-  const offset = playedAtLocal.getTimezoneOffset() * 60000;
-  const localIso = new Date(playedAtLocal.getTime() - offset)
-    .toISOString()
-    .slice(0, 16);
+  const localIso = toDatetimeLocalValue(play.played_at);
 
   return (
     <div className="page-shell">
