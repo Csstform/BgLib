@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Merge } from "lucide-react";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import type { DuplicateMatch } from "@/lib/types";
 
 export function MergeGamesPanel({
@@ -16,18 +17,15 @@ export function MergeGamesPanel({
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [pendingMergeId, setPendingMergeId] = useState<string | null>(null);
 
   const others = duplicates.filter((d) => d.id !== gameId);
   if (others.length === 0) return null;
 
+  const pendingTitle =
+    others.find((d) => d.id === pendingMergeId)?.title ?? "the other entry";
+
   async function mergeIntoThis(mergeId: string) {
-    if (
-      !confirm(
-        "Merge the other entry into this one? Ownership and history will be combined."
-      )
-    ) {
-      return;
-    }
     setLoading(true);
     setError("");
     const res = await fetch("/api/games/merge", {
@@ -39,6 +37,7 @@ export function MergeGamesPanel({
     if (!res.ok) {
       setError(data.error ?? "Merge failed");
     } else {
+      setPendingMergeId(null);
       router.refresh();
     }
     setLoading(false);
@@ -59,7 +58,7 @@ export function MergeGamesPanel({
             </Link>
             <button
               type="button"
-              onClick={() => mergeIntoThis(d.id)}
+              onClick={() => setPendingMergeId(d.id)}
               disabled={loading}
               className="shrink-0 rounded-lg bg-primary/20 px-2.5 py-1 text-xs font-medium text-primary disabled:opacity-50"
             >
@@ -68,6 +67,16 @@ export function MergeGamesPanel({
           </li>
         ))}
       </ul>
+
+      <ConfirmDialog
+        open={pendingMergeId !== null}
+        title="Merge duplicate?"
+        description={`Merge "${pendingTitle}" into this entry? Ownership and history will be combined.`}
+        confirmLabel="Merge"
+        loading={loading}
+        onConfirm={() => pendingMergeId && mergeIntoThis(pendingMergeId)}
+        onCancel={() => setPendingMergeId(null)}
+      />
     </div>
   );
 }

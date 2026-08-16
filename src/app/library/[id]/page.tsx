@@ -10,6 +10,8 @@ import { EditGameForm } from "@/components/EditGameForm";
 import { MergeGamesPanel } from "@/components/MergeGamesPanel";
 import { DeleteGameButton } from "@/components/DeleteGameButton";
 import { AddExpansionLink } from "@/components/AddExpansionLink";
+import { DetachExpansionButton } from "@/components/DetachExpansionButton";
+import { ManageExpansionLink } from "@/components/ManageExpansionLink";
 import { GameCard } from "@/components/GameCard";
 import { GameCover } from "@/components/ui/GameCover";
 import { SectionHeading } from "@/components/ui/SectionHeading";
@@ -306,6 +308,22 @@ export default async function GameDetailPage({
     game.bgg_type === "boardgameexpansion" || !!game.base_game_id;
   const isOrphanExpansion = isExpansion && !baseGame;
 
+  let baseGameOptions: { id: string; title: string }[] = [];
+  if (isExpansion && groupId) {
+    const { data: catalogueGames } = await supabase
+      .from("games")
+      .select("id, title, bgg_type, base_game_id")
+      .eq("group_id", groupId)
+      .order("title");
+
+    baseGameOptions = (catalogueGames ?? []).filter(
+      (g) =>
+        g.id !== game.id &&
+        g.bgg_type !== "boardgameexpansion" &&
+        !g.base_game_id
+    );
+  }
+
   return (
     <div className="page-shell pb-48">
       <Link
@@ -354,17 +372,17 @@ export default async function GameDetailPage({
       </div>
 
       {user && isOrphanExpansion && (
-        <div className="mt-6 rounded-lg border border-amber-200 bg-amber-50 p-4">
-          <p className="text-sm font-medium text-amber-900">
+        <div className="mt-6 rounded-xl border border-amber-500/30 bg-amber-500/10 p-4">
+          <p className="text-sm font-medium text-amber-200">
             This expansion isn&apos;t linked to a base game yet.
           </p>
-          <p className="mt-1 text-sm text-amber-800">
+          <p className="mt-1 text-sm text-muted">
             Link it from the expansions page so it appears under the right title
             in your library.
           </p>
           <Link
             href={`/library/link-expansions?focus=${game.id}`}
-            className="mt-3 inline-flex rounded-lg bg-amber-600 px-4 py-2 text-sm font-medium text-white hover:bg-amber-700"
+            className="mt-3 inline-flex rounded-xl bg-primary px-4 py-2 text-sm font-medium text-primary-fg hover:bg-primary-hover"
           >
             Link to base game
           </Link>
@@ -428,7 +446,18 @@ export default async function GameDetailPage({
           ) : (
             <div className="space-y-2">
               {expansions.map((exp) => (
-                <GameCard key={exp.id} game={exp} badge="Expansion" compact />
+                <div key={exp.id} className="flex items-center gap-2">
+                  <div className="min-w-0 flex-1">
+                    <GameCard game={exp} badge="Expansion" compact />
+                  </div>
+                  {user && (
+                    <DetachExpansionButton
+                      expansionId={exp.id}
+                      expansionTitle={exp.title}
+                      baseGameTitle={game.title}
+                    />
+                  )}
+                </div>
               ))}
             </div>
           )}
@@ -474,6 +503,15 @@ export default async function GameDetailPage({
           </summary>
           <div className="border-t border-border p-4 space-y-4">
             <EditGameForm game={game} />
+            {user && isExpansion && (
+              <ManageExpansionLink
+                expansionId={game.id}
+                expansionTitle={game.title}
+                baseGameId={baseGame?.id ?? null}
+                baseGameTitle={baseGame?.title ?? null}
+                baseGames={baseGameOptions}
+              />
+            )}
             {duplicates.length > 1 && (
               <MergeGamesPanel gameId={game.id} duplicates={duplicates} />
             )}

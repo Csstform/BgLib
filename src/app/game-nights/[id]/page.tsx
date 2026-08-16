@@ -1,9 +1,11 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft, Calendar, MapPin, Users } from "lucide-react";
+import { ArrowLeft, Calendar, MapPin, Users, History } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured, formatDateTime, formatRsvpStatus } from "@/lib/utils";
 import { SetupBanner } from "@/components/SetupBanner";
+import { GameCover } from "@/components/ui/GameCover";
+import { SectionHeading } from "@/components/ui/SectionHeading";
 import { RsvpButtons } from "./RsvpButtons";
 import { CancelGameNightButton } from "./CancelGameNightButton";
 import { GameNightPicker } from "@/components/GameNightPicker";
@@ -19,7 +21,7 @@ export default async function GameNightDetailPage({
 
   if (!isSupabaseConfigured()) {
     return (
-      <div className="px-4 py-6">
+      <div className="page-shell">
         <SetupBanner />
       </div>
     );
@@ -81,6 +83,7 @@ export default async function GameNightDetailPage({
     .map((r: { user_id: string }) => r.user_id);
 
   const plannedGameIds = games.map((g: { id: string }) => g.id);
+  const isPast = new Date(night.scheduled_at) < new Date();
 
   const grouped = {
     going: rsvps.filter((r: { status: string }) => r.status === "going"),
@@ -88,50 +91,78 @@ export default async function GameNightDetailPage({
     declined: rsvps.filter((r: { status: string }) => r.status === "declined"),
   };
 
+  const logPlayHref =
+    games.length === 1
+      ? `/plays/new?game=${games[0].id}`
+      : "/plays/new";
+
   return (
-    <div className="px-4 py-6 pb-24">
+    <div className="page-shell">
       <Link
         href="/game-nights"
-        className="inline-flex items-center gap-1 text-sm text-muted hover:text-foreground mb-4"
+        className="mb-4 inline-flex items-center gap-1 text-sm text-muted hover:text-foreground"
       >
         <ArrowLeft className="h-4 w-4" />
         All game nights
       </Link>
 
-      <div className="rounded-2xl border border-border bg-surface p-4">
-        <h1 className="text-2xl font-bold">{night.title}</h1>
-        <p className="mt-2 text-sm flex items-center gap-1.5">
-          <Calendar className="h-4 w-4 text-primary" />
-          {formatDateTime(night.scheduled_at)}
-        </p>
-        {night.location && (
-          <p className="mt-1 text-sm flex items-center gap-1.5 text-muted">
-            <MapPin className="h-4 w-4" />
-            {night.location}
+      <div className="overflow-hidden rounded-2xl border border-border bg-surface">
+        <div className="p-4">
+          <h1 className="text-2xl font-bold">{night.title}</h1>
+          <p className="mt-2 flex items-center gap-1.5 text-sm">
+            <Calendar className="h-4 w-4 text-primary" />
+            {formatDateTime(night.scheduled_at)}
+            {isPast && (
+              <span className="rounded-md bg-surface-2 px-2 py-0.5 text-xs text-muted">
+                Past
+              </span>
+            )}
           </p>
-        )}
-        {night.description && (
-          <p className="mt-3 text-sm leading-relaxed">{night.description}</p>
-        )}
-        <p className="mt-3 text-sm text-muted">
-          Hosted by{" "}
-          <Link href={`/users/${host.id}`} className="text-primary hover:underline">
-            {host.display_name}
-          </Link>
-        </p>
+          {night.location && (
+            <p className="mt-1 flex items-center gap-1.5 text-sm text-muted">
+              <MapPin className="h-4 w-4" />
+              {night.location}
+            </p>
+          )}
+          {night.description && (
+            <p className="mt-3 text-sm leading-relaxed">{night.description}</p>
+          )}
+          <p className="mt-3 text-sm text-muted">
+            Hosted by{" "}
+            <Link href={`/users/${host.id}`} className="text-primary hover:underline">
+              {host.display_name}
+            </Link>
+          </p>
+        </div>
       </div>
 
+      {isPast && (
+        <div className="mt-4 rounded-xl border border-primary/20 bg-primary/5 p-4">
+          <p className="text-sm font-medium">This game night has passed.</p>
+          <p className="mt-1 text-sm text-muted">
+            Log what you played to keep your group&apos;s history up to date.
+          </p>
+          <Link
+            href={logPlayHref}
+            className="btn-primary mt-3 inline-flex min-h-10 items-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-medium text-primary-fg hover:bg-primary-hover"
+          >
+            <History className="h-4 w-4" />
+            Log plays
+          </Link>
+        </div>
+      )}
+
       {games.length > 0 && (
-        <div className="mt-4">
-          <h2 className="font-semibold mb-2">Planned games</h2>
+        <div className="mt-6">
+          <SectionHeading title="Planned games" />
           <div className="space-y-2">
             {games.map((g: { id: string; title: string; image_url: string | null }) => (
               <Link
                 key={g.id}
                 href={`/library/${g.id}`}
-                className="flex items-center gap-3 rounded-xl border border-border bg-surface p-2 hover:border-primary/30"
+                className="touch-card flex items-center gap-3 rounded-xl border border-border bg-surface p-2 hover:border-primary/30"
               >
-                <span className="text-xl">🎲</span>
+                <GameCover src={g.image_url} alt={g.title} size="sm" />
                 <span className="text-sm font-medium">{g.title}</span>
               </Link>
             ))}
@@ -139,17 +170,19 @@ export default async function GameNightDetailPage({
         </div>
       )}
 
-      <div className="mt-6 rounded-xl border border-border bg-surface p-4">
-        <GameNightPicker
-          gameNightId={night.id}
-          hostId={night.host_id}
-          currentUserId={user?.id ?? ""}
-          goingUserIds={goingUserIds}
-          plannedGameIds={plannedGameIds}
-        />
-      </div>
+      {!isPast && (
+        <div className="section-card mt-6 p-4">
+          <GameNightPicker
+            gameNightId={night.id}
+            hostId={night.host_id}
+            currentUserId={user?.id ?? ""}
+            goingUserIds={goingUserIds}
+            plannedGameIds={plannedGameIds}
+          />
+        </div>
+      )}
 
-      {user && (
+      {user && !isPast && (
         <div className="mt-6">
           <RsvpButtons
             gameNightId={night.id}
@@ -160,17 +193,14 @@ export default async function GameNightDetailPage({
       )}
 
       <div className="mt-6 space-y-4">
-        <h2 className="flex items-center gap-2 font-semibold">
-          <Users className="h-5 w-5" />
-          Attendees
-        </h2>
+        <SectionHeading icon={Users} title="Attendees" />
         {(["going", "maybe", "declined"] as const).map((status) =>
           grouped[status].length > 0 ? (
             <div key={status}>
-              <p className="text-xs font-medium text-muted mb-1 uppercase tracking-wide">
+              <p className="mb-1 text-xs font-medium uppercase tracking-wide text-muted">
                 {formatRsvpStatus(status)} ({grouped[status].length})
               </p>
-              <div className="rounded-xl border border-border bg-surface divide-y divide-border">
+              <div className="section-card divide-y divide-border">
                 {grouped[status].map(
                   (r: {
                     id: string;
@@ -207,7 +237,7 @@ export default async function GameNightDetailPage({
         )}
       </div>
 
-      {user && user.id === night.host_id && !night.cancelled_at && (
+      {user && user.id === night.host_id && !night.cancelled_at && !isPast && (
         <CancelGameNightButton gameNightId={night.id} />
       )}
     </div>

@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Loader2, Trash2 } from "lucide-react";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 
 type Props = {
   gameId: string;
@@ -16,22 +17,20 @@ export function DeleteGameButton({
   expansionCount = 0,
 }: Props) {
   const router = useRouter();
+  const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
+  const descriptionLines = [
+    `This permanently deletes play history and loan records for this game.`,
+  ];
+  if (expansionCount > 0) {
+    descriptionLines.push(
+      `${expansionCount} linked expansion${expansionCount !== 1 ? "s" : ""} will be kept but unlinked from this base game.`
+    );
+  }
+
   async function handleDelete() {
-    const lines = [
-      `Remove "${title}" from the group library?`,
-      "This permanently deletes play history and loan records for this game.",
-    ];
-    if (expansionCount > 0) {
-      lines.push(
-        `${expansionCount} linked expansion${expansionCount !== 1 ? "s" : ""} will be kept but unlinked from this base game.`
-      );
-    }
-
-    if (!confirm(lines.join("\n\n"))) return;
-
     setLoading(true);
     setError("");
 
@@ -58,7 +57,7 @@ export function DeleteGameButton({
       {error && <p className="mb-2 text-xs text-red-400">{error}</p>}
       <button
         type="button"
-        onClick={handleDelete}
+        onClick={() => setOpen(true)}
         disabled={loading}
         className="pressable flex min-h-10 w-full items-center justify-center gap-2 rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-2.5 text-sm font-medium text-red-400 disabled:opacity-50"
       >
@@ -69,6 +68,17 @@ export function DeleteGameButton({
         )}
         {loading ? "Removing..." : "Remove from library"}
       </button>
+
+      <ConfirmDialog
+        open={open}
+        title={`Remove "${title}"?`}
+        description={descriptionLines.join("\n\n")}
+        confirmLabel="Remove"
+        variant="danger"
+        loading={loading}
+        onConfirm={handleDelete}
+        onCancel={() => setOpen(false)}
+      />
     </div>
   );
 }

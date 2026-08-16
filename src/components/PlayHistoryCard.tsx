@@ -6,6 +6,7 @@ import Link from "next/link";
 import { Loader2, Pencil, Trash2, Trophy } from "lucide-react";
 import { formatDateTime } from "@/lib/utils";
 import { GameCover } from "@/components/ui/GameCover";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 
 type PlayCardProps = {
   play: {
@@ -27,23 +28,12 @@ export function PlayHistoryCard({ play, currentUserId }: PlayCardProps) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [confirmOpen, setConfirmOpen] = useState(false);
 
   const canDelete = currentUserId === play.logged_by;
   const game = play.game;
 
-  async function handleDelete(e: React.MouseEvent) {
-    e.preventDefault();
-    e.stopPropagation();
-
-    const title = game?.title ?? "this play";
-    if (
-      !confirm(
-        `Delete the play of "${title}" from ${formatDateTime(play.played_at)}?\n\nThis cannot be undone.`
-      )
-    ) {
-      return;
-    }
-
+  async function handleDelete() {
     setLoading(true);
     setError("");
 
@@ -56,6 +46,7 @@ export function PlayHistoryCard({ play, currentUserId }: PlayCardProps) {
       return;
     }
 
+    setConfirmOpen(false);
     router.refresh();
     setLoading(false);
   }
@@ -116,7 +107,11 @@ export function PlayHistoryCard({ play, currentUserId }: PlayCardProps) {
           </Link>
           <button
             type="button"
-            onClick={handleDelete}
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              setConfirmOpen(true);
+            }}
             disabled={loading}
             aria-label="Delete play"
             className="pressable touch-target flex items-center justify-center rounded-lg p-2 text-muted hover:bg-red-500/10 hover:text-red-400 disabled:opacity-50"
@@ -129,6 +124,16 @@ export function PlayHistoryCard({ play, currentUserId }: PlayCardProps) {
           </button>
         </div>
       )}
+      <ConfirmDialog
+        open={confirmOpen}
+        title="Delete play?"
+        description={`Delete the play of "${game?.title ?? "this game"}" from ${formatDateTime(play.played_at)}?\n\nThis cannot be undone.`}
+        confirmLabel="Delete"
+        variant="danger"
+        loading={loading}
+        onConfirm={handleDelete}
+        onCancel={() => setConfirmOpen(false)}
+      />
     </div>
   );
 }

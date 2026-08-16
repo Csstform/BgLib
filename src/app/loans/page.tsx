@@ -3,13 +3,16 @@ import { createClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/utils";
 import { getActiveGroupId, getGroupGameIds } from "@/lib/group";
 import { SetupBanner } from "@/components/SetupBanner";
+import { PageHeader } from "@/components/ui/PageHeader";
+import { EmptyState } from "@/components/ui/EmptyState";
 import { LoanCard } from "@/components/LoanCard";
+import { PackageOpen } from "lucide-react";
 import type { LoanWithDetails } from "@/lib/types";
 
 export default async function LoansPage() {
   if (!isSupabaseConfigured()) {
     return (
-      <div className="px-4 py-6">
+      <div className="page-shell">
         <SetupBanner />
       </div>
     );
@@ -58,25 +61,23 @@ export default async function LoansPage() {
   const borrowed = loansWithDetails.filter((l) => l.borrower_id === user.id);
 
   return (
-    <div className="px-4 py-6 pb-24">
-      <h1 className="text-2xl font-bold mb-1">Loans</h1>
-      <p className="text-sm text-muted mb-6">
-        Games lent or borrowed in this group
-      </p>
+    <div className="page-shell">
+      <PageHeader
+        title="Loans"
+        subtitle="Games lent or borrowed in this group"
+      />
 
       {loansWithDetails.length === 0 ? (
-        <div className="text-center py-12">
-          <p className="text-muted mb-2">No active loans.</p>
-          <p className="text-sm text-muted">
-            Visit a game in the library and tap &quot;Borrow&quot; on an
-            owner&apos;s name to request a loan.
-          </p>
-        </div>
+        <EmptyState
+          icon={PackageOpen}
+          title="No active loans"
+          description="Visit a game in the library and tap Borrow on an owner's name to request a loan."
+        />
       ) : (
         <div className="space-y-6">
           {borrowed.length > 0 && (
             <section>
-              <h2 className="font-semibold mb-2 text-sm text-muted uppercase tracking-wide">
+              <h2 className="mb-2 text-sm font-semibold uppercase tracking-wide text-muted">
                 Borrowed ({borrowed.length})
               </h2>
               <div className="space-y-2">
@@ -88,7 +89,7 @@ export default async function LoansPage() {
           )}
           {lent.length > 0 && (
             <section>
-              <h2 className="font-semibold mb-2 text-sm text-muted uppercase tracking-wide">
+              <h2 className="mb-2 text-sm font-semibold uppercase tracking-wide text-muted">
                 Lent out ({lent.length})
               </h2>
               <div className="space-y-2">

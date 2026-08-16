@@ -2,7 +2,8 @@
 
 import { useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { Sparkles, Loader2, Check } from "lucide-react";
+import { Sparkles, Users, Clock, Loader2, Check } from "lucide-react";
+import { GameCover } from "@/components/ui/GameCover";
 import type { PickerGame } from "@/lib/types";
 import { formatDate } from "@/lib/utils";
 
@@ -73,55 +74,70 @@ export function GameNightPicker({
   }
 
   const inputClass =
-    "w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm";
+    "w-full rounded-xl border border-border bg-surface px-4 py-2.5 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20";
 
   return (
-    <div className="space-y-3">
-      <div className="flex items-center gap-2">
-        <Sparkles className="h-4 w-4 text-primary" />
-        <p className="font-medium text-sm">Suggest games for tonight</p>
+    <div className="space-y-4">
+      <div className="rounded-xl border border-primary/20 bg-primary/5 p-4">
+        <div className="flex items-center gap-2 mb-1">
+          <Sparkles className="h-5 w-5 text-primary" />
+          <p className="font-semibold text-sm">Suggest games for tonight</p>
+        </div>
+        <p className="text-xs text-muted">
+          Based on {goingUserIds.length} player{goingUserIds.length !== 1 ? "s" : ""} marked Going
+        </p>
       </div>
-      <p className="text-xs text-muted">
-        Based on {goingUserIds.length} player{goingUserIds.length !== 1 ? "s" : ""} marked Going
-      </p>
 
-      <div className="grid grid-cols-2 gap-2">
-        <input
-          type="number"
-          min={1}
-          value={players}
-          onChange={(e) => setPlayers(parseInt(e.target.value) || 1)}
-          className={inputClass}
-          placeholder="Players"
-        />
-        <input
-          type="number"
-          value={maxTime}
-          onChange={(e) => setMaxTime(e.target.value)}
-          className={inputClass}
-          placeholder="Max min"
-        />
+      <div className="grid grid-cols-2 gap-3">
+        <div>
+          <label className="mb-1.5 block text-sm font-medium">
+            <Users className="mr-1 inline h-4 w-4" />
+            Players
+          </label>
+          <input
+            type="number"
+            min={1}
+            value={players}
+            onChange={(e) => setPlayers(parseInt(e.target.value) || 1)}
+            className={inputClass}
+          />
+        </div>
+        <div>
+          <label className="mb-1.5 block text-sm font-medium">
+            <Clock className="mr-1 inline h-4 w-4" />
+            Max time (min)
+          </label>
+          <input
+            type="number"
+            value={maxTime}
+            onChange={(e) => setMaxTime(e.target.value)}
+            className={inputClass}
+            placeholder="No limit"
+          />
+        </div>
       </div>
 
       <button
         type="button"
         onClick={search}
         disabled={loading}
-        className="w-full rounded-lg bg-primary/20 py-2 text-sm font-medium text-primary disabled:opacity-50 flex items-center justify-center gap-2"
+        className="pressable flex w-full items-center justify-center gap-2 rounded-xl bg-primary/20 py-2.5 text-sm font-medium text-primary disabled:opacity-50"
       >
         {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Find suggestions"}
       </button>
 
       {searched && !loading && (
-        <div className="space-y-2 max-h-64 overflow-y-auto">
+        <div className="max-h-64 space-y-2 overflow-y-auto">
           {games.length === 0 ? (
-            <p className="text-xs text-muted text-center py-4">No matches found</p>
+            <p className="py-4 text-center text-xs text-muted">No matches found</p>
           ) : (
             games.map((g) => (
               <label
                 key={g.id}
-                className={`flex items-start gap-2 rounded-lg border p-2 cursor-pointer ${
-                  selected.has(g.id) ? "border-primary bg-primary/10" : "border-border"
+                className={`flex cursor-pointer items-start gap-3 rounded-xl border p-2.5 ${
+                  selected.has(g.id)
+                    ? "border-primary bg-primary/10"
+                    : "border-border bg-surface"
                 }`}
               >
                 {isHost && (
@@ -129,11 +145,17 @@ export function GameNightPicker({
                     type="checkbox"
                     checked={selected.has(g.id)}
                     onChange={() => toggleGame(g.id)}
-                    className="mt-1 accent-primary"
+                    className="mt-2 accent-primary"
                   />
                 )}
+                <GameCover
+                  src={g.image_url}
+                  alt={g.title}
+                  size="sm"
+                  className="shrink-0"
+                />
                 <div className="min-w-0">
-                  <p className="text-sm font-medium truncate">{g.title}</p>
+                  <p className="truncate text-sm font-medium">{g.title}</p>
                   <p className="text-xs text-muted">
                     {g.owner_names?.join(", ")}
                     {g.last_played_at
@@ -152,7 +174,7 @@ export function GameNightPicker({
           type="button"
           onClick={savePlanned}
           disabled={saving}
-          className="w-full flex items-center justify-center gap-2 rounded-lg bg-primary py-2.5 text-sm font-medium text-primary-fg disabled:opacity-50"
+          className="pressable flex w-full items-center justify-center gap-2 rounded-xl bg-primary py-2.5 text-sm font-medium text-primary-fg disabled:opacity-50"
         >
           <Check className="h-4 w-4" />
           {saving ? "Saving..." : `Set ${selected.size} planned game${selected.size !== 1 ? "s" : ""}`}
