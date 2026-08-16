@@ -7,6 +7,7 @@ import { ArrowLeft, Trophy } from "lucide-react";
 import { parseJsonResponse } from "@/lib/parse-json-response";
 import type { Game, Profile } from "@/lib/types";
 import { GameSelect } from "@/components/GameSelect";
+import { datetimeLocalToIso, toDatetimeLocalValue } from "@/lib/utils";
 
 type Member = { user_id: string; profile: Profile };
 
@@ -60,7 +61,7 @@ export function LogPlayForm({
       : (initialExpansionIds ?? [])
   );
   const [playedAt, setPlayedAt] = useState(
-    initialPlayedAt ?? new Date().toISOString().slice(0, 16)
+    initialPlayedAt ?? toDatetimeLocalValue()
   );
   const [duration, setDuration] = useState(initialDuration ?? "");
   const [notes, setNotes] = useState(initialNotes ?? "");
@@ -147,7 +148,7 @@ export function LogPlayForm({
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         game_id: gameId,
-        played_at: playedAt,
+        played_at: datetimeLocalToIso(playedAt),
         duration_minutes: duration ? parseInt(duration, 10) : null,
         notes: notes.trim() || null,
         first_time_played: firstTimePlayed,

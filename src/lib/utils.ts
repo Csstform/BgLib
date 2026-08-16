@@ -59,6 +59,18 @@ export function formatDate(iso: string): string {
   });
 }
 
+/** Format a date for `<input type="datetime-local">` in the user's local timezone. */
+export function toDatetimeLocalValue(date: Date | string = new Date()): string {
+  const d = typeof date === "string" ? new Date(date) : date;
+  const offset = d.getTimezoneOffset() * 60000;
+  return new Date(d.getTime() - offset).toISOString().slice(0, 16);
+}
+
+/** Convert a datetime-local input value to an ISO string (run on the client). */
+export function datetimeLocalToIso(localValue: string): string {
+  return new Date(localValue).toISOString();
+}
+
 export function formatLoanStatus(status: string): string {
   const labels: Record<string, string> = {
     pending: "Pending approval",
