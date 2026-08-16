@@ -397,6 +397,10 @@ export default async function GameDetailPage({
           userOwns={userOwns}
           ownershipId={userOwnership?.ownership_id}
           wantsToPlay={userWantsToPlay}
+          playGameId={baseGame?.id ?? game.id}
+          expansionId={baseGame ? game.id : undefined}
+          isFirstPlay={recentPlays.length === 0}
+          canMarkAsPlayed={!isOrphanExpansion}
         />
       )}
 
