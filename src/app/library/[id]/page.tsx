@@ -15,7 +15,6 @@ import { GameCover } from "@/components/ui/GameCover";
 import { SectionHeading } from "@/components/ui/SectionHeading";
 import { GameDetailActions } from "@/components/GameDetailActions";
 import { PlayHistoryCard } from "@/components/PlayHistoryCard";
-import { LinkExpansionForm } from "@/components/LinkExpansionForm";
 import type { DuplicateMatch, GameWithOwners } from "@/lib/types";
 
 export default async function GameDetailPage({
@@ -307,22 +306,6 @@ export default async function GameDetailPage({
     game.bgg_type === "boardgameexpansion" || !!game.base_game_id;
   const isOrphanExpansion = isExpansion && !baseGame;
 
-  let baseGameOptions: { id: string; title: string }[] = [];
-  if (isOrphanExpansion && groupId) {
-    const { data: catalogueGames } = await supabase
-      .from("games")
-      .select("id, title, bgg_type, base_game_id")
-      .eq("group_id", groupId)
-      .order("title");
-
-    baseGameOptions = (catalogueGames ?? []).filter(
-      (g) =>
-        g.id !== game.id &&
-        g.bgg_type !== "boardgameexpansion" &&
-        !g.base_game_id
-    );
-  }
-
   return (
     <div className="page-shell pb-48">
       <Link
@@ -371,12 +354,20 @@ export default async function GameDetailPage({
       </div>
 
       {user && isOrphanExpansion && (
-        <div className="mt-6">
-          <LinkExpansionForm
-            expansionId={game.id}
-            expansionTitle={game.title}
-            baseGames={baseGameOptions}
-          />
+        <div className="mt-6 rounded-lg border border-amber-200 bg-amber-50 p-4">
+          <p className="text-sm font-medium text-amber-900">
+            This expansion isn&apos;t linked to a base game yet.
+          </p>
+          <p className="mt-1 text-sm text-amber-800">
+            Link it from the expansions page so it appears under the right title
+            in your library.
+          </p>
+          <Link
+            href={`/library/link-expansions?focus=${game.id}`}
+            className="mt-3 inline-flex rounded-lg bg-amber-600 px-4 py-2 text-sm font-medium text-white hover:bg-amber-700"
+          >
+            Link to base game
+          </Link>
         </div>
       )}
 
