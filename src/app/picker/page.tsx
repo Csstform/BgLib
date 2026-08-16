@@ -3,6 +3,7 @@ import { getActiveGroupId, getGroupMembers } from "@/lib/group";
 import { isSupabaseConfigured } from "@/lib/utils";
 import { SetupBanner } from "@/components/SetupBanner";
 import { PageHeader } from "@/components/ui/PageHeader";
+import { StartPlayerRandomizer } from "@/components/StartPlayerRandomizer";
 import { PickerClient } from "./PickerClient";
 
 export default async function PickerPage() {
@@ -19,13 +20,25 @@ export default async function PickerPage() {
 
   const members = await getGroupMembers(groupId);
 
+  const startPlayers = members.map((m) => ({
+    id: m.user_id,
+    name: m.profile.display_name,
+    avatar_url: m.profile.avatar_url,
+  }));
+
   return (
     <div className="page-shell">
       <PageHeader
         title="Game Picker"
-        subtitle="Find something to play from your group's library"
+        subtitle="Pick a game and who goes first"
       />
-      <PickerClient members={members} />
+      <div className="space-y-6">
+        <StartPlayerRandomizer
+          key={startPlayers.map((p) => p.id).join(",")}
+          players={startPlayers}
+        />
+        <PickerClient members={members} />
+      </div>
     </div>
   );
 }

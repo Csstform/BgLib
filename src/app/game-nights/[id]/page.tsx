@@ -9,6 +9,7 @@ import { SectionHeading } from "@/components/ui/SectionHeading";
 import { RsvpButtons } from "./RsvpButtons";
 import { CancelGameNightButton } from "./CancelGameNightButton";
 import { GameNightPicker } from "@/components/GameNightPicker";
+import { StartPlayerRandomizer } from "@/components/StartPlayerRandomizer";
 import { getInitials } from "@/lib/utils";
 import { isGroupMember } from "@/lib/group";
 
@@ -96,6 +97,17 @@ export default async function GameNightDetailPage({
       ? `/plays/new?game=${games[0].id}`
       : "/plays/new";
 
+  const goingPlayers = grouped.going.map(
+    (r: {
+      user_id: string;
+      profile: { display_name: string; avatar_url: string | null };
+    }) => ({
+      id: r.user_id,
+      name: r.profile.display_name,
+      avatar_url: r.profile.avatar_url,
+    })
+  );
+
   return (
     <div className="page-shell">
       <Link
@@ -135,6 +147,16 @@ export default async function GameNightDetailPage({
           </p>
         </div>
       </div>
+
+      {!isPast && goingPlayers.length > 0 && (
+        <div className="mt-4">
+          <StartPlayerRandomizer
+            key={goingPlayers.map((p: { id: string }) => p.id).join(",")}
+            players={goingPlayers}
+            description="Randomize who goes first among players marked Going."
+          />
+        </div>
+      )}
 
       {isPast && (
         <div className="mt-4 rounded-xl border border-primary/20 bg-primary/5 p-4">
