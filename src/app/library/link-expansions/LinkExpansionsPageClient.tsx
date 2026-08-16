@@ -139,6 +139,10 @@ export function LinkExpansionsPageClient({
             Search and link each one manually, or add the missing base game to
             your library and run auto-link.
           </p>
+          <p className="text-xs text-muted">
+            Linked to the wrong base game? Open the expansion from your library
+            and change the link under Manage game details.
+          </p>
           <div className="space-y-2">
             {orphans.map((expansion) => (
               <OrphanExpansionCard

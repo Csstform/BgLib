@@ -1,17 +1,19 @@
 import Link from "next/link";
-import { Plus } from "lucide-react";
+import { Plus, CalendarDays } from "lucide-react";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/utils";
 import { getActiveGroupId } from "@/lib/group";
 import { SetupBanner } from "@/components/SetupBanner";
+import { PageHeader } from "@/components/ui/PageHeader";
+import { EmptyState } from "@/components/ui/EmptyState";
 import { GameNightCard } from "@/components/GameNightCard";
 import type { GameNightWithDetails } from "@/lib/types";
 
 export default async function GameNightsPage() {
   if (!isSupabaseConfigured()) {
     return (
-      <div className="px-4 py-6">
+      <div className="page-shell">
         <SetupBanner />
       </div>
     );
@@ -76,33 +78,28 @@ export default async function GameNightsPage() {
   }));
 
   return (
-    <div className="px-4 py-6 pb-24">
-      <div className="mb-6 flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold">Game Nights</h1>
-          <p className="text-sm text-muted mt-0.5">
-            Upcoming sessions with your group
-          </p>
-        </div>
-        <Link
-          href="/game-nights/new"
-          className="flex items-center gap-1.5 rounded-xl bg-primary px-3 py-2 text-sm font-medium text-primary-fg hover:bg-primary-hover transition-colors"
-        >
-          <Plus className="h-4 w-4" />
-          Plan
-        </Link>
-      </div>
-
-      {nightsWithDetails.length === 0 ? (
-        <div className="text-center py-12">
-          <p className="text-muted mb-4">No upcoming game nights.</p>
+    <div className="page-shell">
+      <PageHeader
+        title="Game Nights"
+        subtitle="Upcoming sessions with your group"
+        action={
           <Link
             href="/game-nights/new"
-            className="inline-flex rounded-xl bg-primary px-4 py-2 text-sm font-medium text-primary-fg"
+            className="btn-primary pressable flex min-h-10 items-center gap-1.5 rounded-xl bg-primary px-3 py-2 text-sm font-medium text-primary-fg hover:bg-primary-hover"
           >
-            Plan the first one
+            <Plus className="h-4 w-4" />
+            Plan
           </Link>
-        </div>
+        }
+      />
+
+      {nightsWithDetails.length === 0 ? (
+        <EmptyState
+          icon={CalendarDays}
+          title="No upcoming game nights"
+          description="Plan a session so your group can RSVP and suggest games."
+          action={{ href: "/game-nights/new", label: "Plan the first one" }}
+        />
       ) : (
         <div className="space-y-3">
           {nightsWithDetails.map((night) => (

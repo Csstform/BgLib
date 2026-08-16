@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { AlertTriangle, ChevronDown, ChevronUp, Merge } from "lucide-react";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import type { DuplicateCluster } from "@/lib/duplicate-detection";
 
 export function LibraryDuplicatesPanel({
@@ -22,6 +23,9 @@ export function LibraryDuplicatesPanel({
     return initial;
   });
   const [error, setError] = useState("");
+  const [pendingCluster, setPendingCluster] = useState<DuplicateCluster | null>(
+    null
+  );
 
   if (clusters.length === 0) return null;
 
@@ -31,14 +35,6 @@ export function LibraryDuplicatesPanel({
     const keepId = keepers[cluster.id];
     const mergeIds = cluster.games.map((g) => g.id).filter((id) => id !== keepId);
     if (!keepId || mergeIds.length === 0) return;
-
-    if (
-      !confirm(
-        `Merge ${mergeIds.length} duplicate entr${mergeIds.length === 1 ? "y" : "ies"} into the selected game? Ownership and play history will be combined.`
-      )
-    ) {
-      return;
-    }
 
     setLoadingId(cluster.id);
     setError("");
@@ -51,10 +47,19 @@ export function LibraryDuplicatesPanel({
     if (!res.ok) {
       setError(data.error ?? "Merge failed");
     } else {
+      setPendingCluster(null);
       router.refresh();
     }
     setLoadingId(null);
   }
+
+  function requestMerge(cluster: DuplicateCluster) {
+    setPendingCluster(cluster);
+  }
+
+  const pendingMergeCount = pendingCluster
+    ? pendingCluster.games.length - 1
+    : 0;
 
   return (
     <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 overflow-hidden">
@@ -108,7 +113,7 @@ export function LibraryDuplicatesPanel({
               </ul>
               <button
                 type="button"
-                onClick={() => mergeCluster(cluster)}
+                onClick={() => requestMerge(cluster)}
                 disabled={loadingId === cluster.id}
                 className="inline-flex items-center gap-1.5 rounded-lg bg-primary/20 px-3 py-1.5 text-xs font-medium text-primary disabled:opacity-50"
               >
@@ -119,6 +124,20 @@ export function LibraryDuplicatesPanel({
           ))}
         </div>
       )}
+
+      <ConfirmDialog
+        open={pendingCluster !== null}
+        title="Merge duplicates?"
+        description={
+          pendingCluster
+            ? `Merge ${pendingMergeCount} duplicate entr${pendingMergeCount === 1 ? "y" : "ies"} into the selected game? Ownership and play history will be combined.`
+            : ""
+        }
+        confirmLabel="Merge"
+        loading={loadingId !== null}
+        onConfirm={() => pendingCluster && mergeCluster(pendingCluster)}
+        onCancel={() => setPendingCluster(null)}
+      />
     </div>
   );
 }
