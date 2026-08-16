@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getActiveGroupId, getGroupMembers } from "@/lib/group";
 import { isSupabaseConfigured } from "@/lib/utils";
