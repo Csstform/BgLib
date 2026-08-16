@@ -34,6 +34,8 @@ A mobile-first PWA for iOS and Android: a shared board game catalogue, ownership
 
 | Guide | Covers |
 |-------|--------|
+| [`docs/features/bgg-collection-import.md`](docs/features/bgg-collection-import.md) | BGG collection preview/batch import, duplicate handling, expansion linking, token requirements, troubleshooting |
+| [`docs/features/game-night-reminders.md`](docs/features/game-night-reminders.md) | Game-night planning, RSVPs, immediate notifications, daily reminder cron, deployment checks |
 | [`docs/features/library-plays-picker.md`](docs/features/library-plays-picker.md) | Library grouping and filters, catalogue edit/merge/remove flows, expansion linking, play logging, stats, offline cache, picker scoring |
 
 ## Quick Start
@@ -79,7 +81,7 @@ cp .env.local.example .env.local
 | `BGG_API_TOKEN` | **Required** for BGG search/import ([register here](https://boardgamegeek.com/applications)) |
 | `GAMEUPC_API_TOKEN` | Optional — improves barcode hit rate ([GameUPC](https://gameupc.com)); not required |
 | `NEXT_PUBLIC_APP_URL` | Email links and cron base URL |
-| `CRON_SECRET` | Bearer token for `/api/cron/loan-reminders` |
+| `CRON_SECRET` | Bearer token for `/api/cron/loan-reminders` and `/api/cron/game-night-reminders` |
 
 Generate VAPID keys: `npx web-push generate-vapid-keys`
 
@@ -102,7 +104,7 @@ If it installed as a shortcut/widget before, delete the old icon and reinstall a
 
 1. Push to GitHub and import the repo in [Vercel](https://vercel.com)
 2. Add environment variables from `.env.local.example`
-3. Deploy — `vercel.json` configures a daily loan-reminder cron at 09:00 UTC
+3. Deploy — `vercel.json` configures daily loan and game-night reminder crons
 
 Set `CRON_SECRET` in Vercel and ensure `SUPABASE_SERVICE_ROLE_KEY`, `RESEND_API_KEY`, and `EMAIL_FROM` are set for reminders and email.
 
@@ -112,7 +114,7 @@ To run on your own server with a custom domain (e.g. `bglib.csst.rocks` through 
 
 1. Follow **[`deploy/README.md`](deploy/README.md)** — droplet setup, nginx, systemd, origin SSL
 2. Set `NEXT_PUBLIC_APP_URL` to your public HTTPS URL
-3. Use the included systemd timer for loan reminders (replaces Vercel cron)
+3. Use systemd timers for reminder cron endpoints (replaces Vercel cron)
 
 Quick path on a fresh Ubuntu droplet:
 
@@ -185,7 +187,7 @@ src/
 supabase/
 ├── install.sql           # Single-file install (generated)
 ├── schema.sql            # Base schema
-├── migrations/           # Ordered migrations 002–010
+├── migrations/           # Ordered migrations 002–012
 └── README.md             # Database setup guide
 docs/
 └── features/             # Feature architecture and workflow docs

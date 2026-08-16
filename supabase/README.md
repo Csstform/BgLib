@@ -52,3 +52,5 @@ In Supabase Dashboard → **Database** → **Replication**, enable Realtime for:
 - Existing users running migration `003` get backfilled groups and `onboarding_completed = true`.
 - Feature behavior for migrations `008` and `010` is documented in
   [`../docs/features/library-plays-picker.md`](../docs/features/library-plays-picker.md).
+- Game-night reminder behavior for migration `012` is documented in
+  [`../docs/features/game-night-reminders.md`](../docs/features/game-night-reminders.md).
