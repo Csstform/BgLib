@@ -4,6 +4,7 @@ import Link from "next/link";
 import { Play } from "lucide-react";
 import { OwnGameButton } from "@/app/library/[id]/OwnGameButton";
 import { WantToPlayButton } from "@/components/WantToPlayButton";
+import { MarkAsPlayedButton } from "@/components/MarkAsPlayedButton";
 
 type Props = {
   gameId: string;
@@ -12,6 +13,10 @@ type Props = {
   userOwns: boolean;
   ownershipId?: string;
   wantsToPlay: boolean;
+  playGameId: string;
+  expansionId?: string;
+  isFirstPlay?: boolean;
+  canMarkAsPlayed?: boolean;
 };
 
 export function GameDetailActions({
@@ -21,6 +26,10 @@ export function GameDetailActions({
   userOwns,
   ownershipId,
   wantsToPlay,
+  playGameId,
+  expansionId,
+  isFirstPlay = false,
+  canMarkAsPlayed = true,
 }: Props) {
   return (
     <div className="sticky bottom-[calc(4.5rem+env(safe-area-inset-bottom))] z-30 -mx-4 mt-4 border-t border-border bg-background/95 px-4 py-3 backdrop-blur-md">
@@ -36,6 +45,14 @@ export function GameDetailActions({
           userId={userId}
           wantsToPlay={wantsToPlay}
         />
+        {canMarkAsPlayed && (
+          <MarkAsPlayedButton
+            playGameId={playGameId}
+            expansionId={expansionId}
+            userId={userId}
+            isFirstPlay={isFirstPlay}
+          />
+        )}
         <Link
           href={`/plays/new?game=${gameId}`}
           className="btn-secondary pressable flex w-full items-center justify-center gap-2 rounded-xl border border-border bg-surface py-3 text-sm font-medium hover:bg-surface-2"
