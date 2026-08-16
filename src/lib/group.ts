@@ -117,3 +117,33 @@ export async function getGroupGameIds(groupId: string): Promise<string[]> {
     .eq("group_id", groupId);
   return (data ?? []).map((g) => g.id);
 }
+
+export async function getMyGroupRole(
+  groupId: string
+): Promise<string | null> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return null;
+
+  const { data } = await supabase
+    .from("group_members")
+    .select("role")
+    .eq("group_id", groupId)
+    .eq("user_id", user.id)
+    .single();
+
+  return data?.role ?? null;
+}
+
+export async function countGroupOwners(groupId: string): Promise<number> {
+  const supabase = await createClient();
+  const { count } = await supabase
+    .from("group_members")
+    .select("id", { count: "exact", head: true })
+    .eq("group_id", groupId)
+    .eq("role", "owner");
+
+  return count ?? 0;
+}

@@ -1,14 +1,22 @@
+import Link from "next/link";
 import { redirect } from "next/navigation";
+import { Users } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/utils";
-import { getActiveGroupId, getGroupMembers } from "@/lib/group";
+import {
+  getActiveGroupId,
+  getGroupMembers,
+  getMyGroupRole,
+} from "@/lib/group";
 import { SetupBanner } from "@/components/SetupBanner";
+import { PageHeader } from "@/components/ui/PageHeader";
+import { EmptyState } from "@/components/ui/EmptyState";
 import { UserCard } from "@/components/UserCard";
 
 export default async function UsersPage() {
   if (!isSupabaseConfigured()) {
     return (
-      <div className="px-4 py-6">
+      <div className="page-shell">
         <SetupBanner />
       </div>
     );
@@ -17,8 +25,15 @@ export default async function UsersPage() {
   const groupId = await getActiveGroupId();
   if (!groupId) redirect("/onboarding");
 
-  const members = await getGroupMembers(groupId);
   const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  const [members, myRole] = await Promise.all([
+    getGroupMembers(groupId),
+    getMyGroupRole(groupId),
+  ]);
 
   const { data: groupGames } = await supabase
     .from("games")
@@ -39,15 +54,30 @@ export default async function UsersPage() {
     });
   }
 
+  const canRemove = myRole === "owner";
+
   return (
-    <div className="px-4 py-6 pb-24">
-      <h1 className="text-2xl font-bold mb-1">Players</h1>
-      <p className="text-sm text-muted mb-6">
-        Members of your active group
-      </p>
+    <div className="page-shell">
+      <PageHeader
+        title="Players"
+        subtitle="Members of your active group"
+        action={
+          <Link
+            href="/profile#group"
+            className="text-sm text-primary hover:underline"
+          >
+            Group settings
+          </Link>
+        }
+      />
 
       {members.length === 0 ? (
-        <p className="text-center text-muted py-8">No players in this group yet.</p>
+        <EmptyState
+          icon={Users}
+          title="No players yet"
+          description="Share your group's invite code so friends can join."
+          action={{ href: "/profile#group", label: "View invite code" }}
+        />
       ) : (
         <div className="space-y-2">
           {members.map((member) => (
@@ -55,6 +85,10 @@ export default async function UsersPage() {
               key={member.user_id}
               profile={member.profile}
               gameCount={countMap.get(member.user_id) ?? 0}
+              role={member.role}
+              groupId={groupId}
+              currentUserId={user?.id}
+              canRemove={canRemove}
             />
           ))}
         </div>

@@ -1,7 +1,9 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { ChevronDown, Users } from "lucide-react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { ChevronDown, Plus, Settings, Users } from "lucide-react";
 import { setActiveGroup } from "@/lib/group-actions";
 import type { Group } from "@/lib/types";
 
@@ -12,6 +14,7 @@ export function GroupSwitcher({
   groups: Group[];
   activeGroupId: string | null;
 }) {
+  const router = useRouter();
   const [open, setOpen] = useState(false);
   const [pending, startTransition] = useTransition();
 
@@ -19,9 +22,19 @@ export function GroupSwitcher({
 
   if (groups.length <= 1 && active) {
     return (
-      <div className="flex items-center gap-1.5 text-xs text-muted px-2 truncate max-w-[140px]">
-        <Users className="h-3.5 w-3.5 shrink-0" />
-        <span className="truncate">{active.name}</span>
+      <div className="flex items-center gap-1 max-w-[160px]">
+        <div className="flex min-w-0 items-center gap-1.5 truncate px-2 text-xs text-muted">
+          <Users className="h-3.5 w-3.5 shrink-0" />
+          <span className="truncate">{active.name}</span>
+        </div>
+        <Link
+          href="/profile#group"
+          className="pressable shrink-0 rounded-lg p-1 text-muted hover:bg-surface-2 hover:text-foreground"
+          title="Group settings"
+          aria-label="Group settings"
+        >
+          <Plus className="h-3.5 w-3.5" />
+        </Link>
       </div>
     );
   }
@@ -30,7 +43,7 @@ export function GroupSwitcher({
     startTransition(async () => {
       await setActiveGroup(id);
       setOpen(false);
-      window.location.reload();
+      router.refresh();
     });
   }
 
@@ -40,7 +53,7 @@ export function GroupSwitcher({
         type="button"
         onClick={() => setOpen(!open)}
         disabled={pending}
-        className="pressable flex items-center gap-1 rounded-lg px-2 py-1 text-xs text-muted hover:bg-surface-2 hover:text-foreground max-w-[160px]"
+        className="pressable flex max-w-[160px] items-center gap-1 rounded-lg px-2 py-1 text-xs text-muted hover:bg-surface-2 hover:text-foreground"
       >
         <Users className="h-3.5 w-3.5 shrink-0" />
         <span className="truncate">{active?.name ?? "Select group"}</span>
@@ -52,21 +65,33 @@ export function GroupSwitcher({
             className="fixed inset-0 z-40 animate-fade-in bg-black/20"
             onClick={() => setOpen(false)}
           />
-          <ul className="animate-dropdown absolute right-0 top-full z-50 mt-1 w-48 rounded-xl border border-border bg-surface shadow-lg py-1">
-            {groups.map((g) => (
-              <li key={g.id}>
-                <button
-                  type="button"
-                  onClick={() => switchGroup(g.id)}
-                  className={`pressable w-full px-3 py-2 text-left text-sm hover:bg-surface-2 ${
-                    g.id === activeGroupId ? "text-primary font-medium" : ""
-                  }`}
-                >
-                  {g.name}
-                </button>
-              </li>
-            ))}
-          </ul>
+          <div className="animate-dropdown absolute right-0 top-full z-50 mt-1 w-52 rounded-xl border border-border bg-surface py-1 shadow-lg">
+            <ul>
+              {groups.map((g) => (
+                <li key={g.id}>
+                  <button
+                    type="button"
+                    onClick={() => switchGroup(g.id)}
+                    className={`pressable w-full px-3 py-2 text-left text-sm hover:bg-surface-2 ${
+                      g.id === activeGroupId ? "font-medium text-primary" : ""
+                    }`}
+                  >
+                    {g.name}
+                  </button>
+                </li>
+              ))}
+            </ul>
+            <div className="border-t border-border px-3 py-2">
+              <Link
+                href="/profile#group"
+                onClick={() => setOpen(false)}
+                className="flex items-center gap-2 text-sm text-primary hover:underline"
+              >
+                <Plus className="h-3.5 w-3.5" />
+                Create or manage groups
+              </Link>
+            </div>
+          </div>
         </>
       )}
     </div>

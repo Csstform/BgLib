@@ -881,3 +881,15 @@ create policy "Play loggers can delete play expansions"
 alter table public.game_nights
   add column if not exists reminder_sent_at timestamptz;
 
+-- >>> 013_group_member_management.sql
+-- Allow group owners to remove non-owner members.
+
+drop policy if exists "Owners can remove members" on public.group_members;
+create policy "Owners can remove members"
+  on public.group_members for delete
+  using (
+    public.is_group_owner(group_id)
+    and user_id <> auth.uid()
+    and role <> 'owner'
+  );
+
