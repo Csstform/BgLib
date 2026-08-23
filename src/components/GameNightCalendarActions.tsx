@@ -37,13 +37,16 @@ export function GameNightCalendarActions({
         </p>
       </div>
       <div className="grid gap-2 sm:grid-cols-2">
-        <a
-          href={`/api/game-nights/${gameNightId}/calendar`}
+        <button
+          type="button"
+          onClick={() => {
+            window.location.assign(`/api/game-nights/${gameNightId}/calendar`);
+          }}
           className="pressable inline-flex items-center justify-center gap-2 rounded-xl border border-border bg-surface-2 px-3 py-2.5 text-sm font-medium hover:bg-surface"
         >
           <Download className="h-4 w-4" />
           Download .ics
-        </a>
+        </button>
         <a
           href={googleUrl}
           target="_blank"
