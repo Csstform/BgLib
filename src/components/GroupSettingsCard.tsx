@@ -18,6 +18,7 @@ import {
 } from "@/lib/group-actions";
 import { GroupInviteCard } from "@/components/GroupInviteCard";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
+import { parseJsonResponse } from "@/lib/parse-json-response";
 
 type Props = {
   group: {
@@ -47,7 +48,9 @@ export function GroupSettingsCard({
 
   const [showCreate, setShowCreate] = useState(false);
   const [newGroupName, setNewGroupName] = useState("");
+  const [copyOnCreate, setCopyOnCreate] = useState(true);
   const [createError, setCreateError] = useState("");
+  const [createNotice, setCreateNotice] = useState("");
 
   const [leaveOpen, setLeaveOpen] = useState(false);
   const [leaveError, setLeaveError] = useState("");
@@ -76,6 +79,7 @@ export function GroupSettingsCard({
   function handleCreateGroup(e: React.FormEvent) {
     e.preventDefault();
     setCreateError("");
+    setCreateNotice("");
 
     if (!newGroupName.trim()) {
       setCreateError("Enter a group name");
@@ -88,6 +92,52 @@ export function GroupSettingsCard({
         setCreateError(res.error);
         return;
       }
+
+      if (copyOnCreate && res.group) {
+        try {
+          const copyRes = await fetch("/api/groups/copy-library", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              action: "copy",
+              source_group_id: group.id,
+              target_group_id: res.group.id,
+              mode: "my_collection",
+            }),
+          });
+          const copyData = await parseJsonResponse<{
+            copied?: number;
+            linked?: number;
+            failed?: number;
+            error?: string;
+          }>(copyRes);
+
+          if (!copyRes.ok) {
+            setCreateNotice(
+              `Group created, but copying games failed: ${copyData.error ?? "unknown error"}`
+            );
+          } else {
+            const copied = copyData.copied ?? 0;
+            const linked = copyData.linked ?? 0;
+            setCreateNotice(
+              copied + linked > 0
+                ? `Copied ${copied} game${copied !== 1 ? "s" : ""}${
+                    linked > 0
+                      ? ` and linked ${linked} existing`
+                      : ""
+                  } from ${group.name}.`
+                : `Group created. No games needed copying from ${group.name}.`
+            );
+          }
+        } catch (err) {
+          setCreateNotice(
+            `Group created, but copying games failed: ${
+              err instanceof Error ? err.message : "unknown error"
+            }`
+          );
+        }
+      }
+
       setNewGroupName("");
       setShowCreate(false);
       router.refresh();
@@ -221,6 +271,22 @@ export function GroupSettingsCard({
               className="w-full rounded-xl border border-border bg-surface-2 px-3 py-2 text-sm"
               disabled={pending}
             />
+            <label className="flex items-start gap-2 text-sm">
+              <input
+                type="checkbox"
+                checked={copyOnCreate}
+                onChange={(e) => setCopyOnCreate(e.target.checked)}
+                disabled={pending}
+                className="mt-1 accent-primary"
+              />
+              <span>
+                Copy my collection from {group.name}
+                <span className="mt-0.5 block text-xs text-muted">
+                  Adds the games you own here so you don&apos;t have to
+                  reimport them.
+                </span>
+              </span>
+            </label>
             {createError && (
               <p className="text-xs text-red-400">{createError}</p>
             )}
@@ -232,6 +298,11 @@ export function GroupSettingsCard({
               {pending ? "Creating..." : "Create group"}
             </button>
           </form>
+        )}
+        {createNotice && (
+          <p className="border-t border-border px-4 py-3 text-xs text-muted">
+            {createNotice}
+          </p>
         )}
       </div>
 

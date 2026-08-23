@@ -6,6 +6,7 @@ import {
   getActiveGroupId,
   getGroupMembers,
   getMyGroupRole,
+  getUserGroups,
 } from "@/lib/group";
 import { SetupBanner } from "@/components/SetupBanner";
 import { PageHeader } from "@/components/ui/PageHeader";
@@ -13,6 +14,7 @@ import { ProfileForm } from "./ProfileForm";
 import { PushNotificationToggle } from "@/components/PushNotificationToggle";
 import { EmailNotificationToggle } from "@/components/EmailNotificationToggle";
 import { GroupSettingsCard } from "@/components/GroupSettingsCard";
+import { CopyLibraryCard } from "@/components/CopyLibraryCard";
 import { JoinGroupCard } from "@/components/JoinGroupCard";
 import { BggCollectionImport } from "@/components/BggCollectionImport";
 import { isEmailConfigured } from "@/lib/email";
@@ -42,6 +44,7 @@ export default async function ProfilePage() {
   if (!profile) redirect("/login");
 
   const groupId = await getActiveGroupId();
+  const userGroups = await getUserGroups();
   let activeGroup = null;
   let myRole: string | null = null;
   let memberCount = 0;
@@ -83,12 +86,18 @@ export default async function ProfilePage() {
           </h2>
           <div className="space-y-4">
             {activeGroup && myRole ? (
-              <GroupSettingsCard
-                group={activeGroup}
-                myRole={myRole}
-                memberCount={memberCount}
-                isSoleOwner={isSoleOwner}
-              />
+              <>
+                <GroupSettingsCard
+                  group={activeGroup}
+                  myRole={myRole}
+                  memberCount={memberCount}
+                  isSoleOwner={isSoleOwner}
+                />
+                <CopyLibraryCard
+                  activeGroupName={activeGroup.name}
+                  otherGroups={userGroups.filter((g) => g.id !== activeGroup.id)}
+                />
+              </>
             ) : (
               <p className="text-sm text-muted">
                 You&apos;re not in a group yet. Join one below or create a new
