@@ -1,6 +1,7 @@
 -- RLS hardening: scope game nights and ownership by group membership
 
 drop policy if exists "Game nights are viewable by everyone" on public.game_nights;
+drop policy if exists "Group members can view game nights" on public.game_nights;
 create policy "Group members can view game nights"
   on public.game_nights for select using (
     group_id is null or exists (
@@ -10,6 +11,7 @@ create policy "Group members can view game nights"
   );
 
 drop policy if exists "Ownership is viewable by everyone" on public.ownership;
+drop policy if exists "Group members can view ownership" on public.ownership;
 create policy "Group members can view ownership"
   on public.ownership for select using (
     exists (

@@ -133,6 +133,7 @@ alter table public.plays enable row level security;
 alter table public.play_participants enable row level security;
 
 -- Groups: members can view their groups
+drop policy if exists "Members can view their groups" on public.groups;
 create policy "Members can view their groups"
   on public.groups for select using (
     exists (
@@ -141,9 +142,11 @@ create policy "Members can view their groups"
     )
   );
 
+drop policy if exists "Authenticated users can create groups" on public.groups;
 create policy "Authenticated users can create groups"
   on public.groups for insert with check (auth.uid() = created_by);
 
+drop policy if exists "Owners can update their groups" on public.groups;
 create policy "Owners can update their groups"
   on public.groups for update using (
     exists (
@@ -153,6 +156,7 @@ create policy "Owners can update their groups"
   );
 
 -- Group members
+drop policy if exists "Members can view group membership" on public.group_members;
 create policy "Members can view group membership"
   on public.group_members for select using (
     exists (
@@ -161,13 +165,16 @@ create policy "Members can view group membership"
     )
   );
 
+drop policy if exists "Users can join groups" on public.group_members;
 create policy "Users can join groups"
   on public.group_members for insert with check (auth.uid() = user_id);
 
+drop policy if exists "Users can leave groups" on public.group_members;
 create policy "Users can leave groups"
   on public.group_members for delete using (auth.uid() = user_id);
 
 -- Plays
+drop policy if exists "Group members can view plays" on public.plays;
 create policy "Group members can view plays"
   on public.plays for select using (
     exists (
@@ -176,6 +183,7 @@ create policy "Group members can view plays"
     )
   );
 
+drop policy if exists "Group members can log plays" on public.plays;
 create policy "Group members can log plays"
   on public.plays for insert with check (
     auth.uid() = logged_by and
@@ -185,10 +193,12 @@ create policy "Group members can log plays"
     )
   );
 
+drop policy if exists "Loggers can delete their plays" on public.plays;
 create policy "Loggers can delete their plays"
   on public.plays for delete using (auth.uid() = logged_by);
 
 -- Play participants
+drop policy if exists "Group members can view play participants" on public.play_participants;
 create policy "Group members can view play participants"
   on public.play_participants for select using (
     exists (
@@ -198,6 +208,7 @@ create policy "Group members can view play participants"
     )
   );
 
+drop policy if exists "Play loggers can manage participants" on public.play_participants;
 create policy "Play loggers can manage participants"
   on public.play_participants for all using (
     exists (
@@ -208,6 +219,7 @@ create policy "Play loggers can manage participants"
 
 -- Update games policies for group scoping
 drop policy if exists "Games are viewable by everyone" on public.games;
+drop policy if exists "Group members can view games" on public.games;
 create policy "Group members can view games"
   on public.games for select using (
     group_id is null or exists (
@@ -217,6 +229,7 @@ create policy "Group members can view games"
   );
 
 drop policy if exists "Authenticated users can create games" on public.games;
+drop policy if exists "Group members can create games" on public.games;
 create policy "Group members can create games"
   on public.games for insert with check (
     auth.uid() is not null and

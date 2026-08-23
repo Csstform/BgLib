@@ -48,7 +48,7 @@ In Supabase Dashboard → **Database** → **Replication**, enable Realtime for:
 
 ## Notes
 
-- SQL files are **run once** per project. Re-running may fail on existing triggers/policies.
+- `install.sql` is safe to re-run on an existing project (tables/indexes use `IF NOT EXISTS`; triggers/policies are dropped before recreate). Do not use `supabase db reset` locally.
 - New signups automatically get a default group and profile (via `handle_new_user` trigger).
 - Existing users running migration `003` get backfilled groups and `onboarding_completed = true`.
 - Feature behavior for migrations `008` and `010` is documented in

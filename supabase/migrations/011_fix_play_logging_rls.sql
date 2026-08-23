@@ -3,6 +3,12 @@
 
 drop policy if exists "Play loggers can manage participants" on public.play_participants;
 drop policy if exists "Play loggers can manage play expansions" on public.play_expansions;
+drop policy if exists "Play loggers can insert participants" on public.play_participants;
+drop policy if exists "Play loggers can update participants" on public.play_participants;
+drop policy if exists "Play loggers can delete participants" on public.play_participants;
+drop policy if exists "Play loggers can insert play expansions" on public.play_expansions;
+drop policy if exists "Play loggers can update play expansions" on public.play_expansions;
+drop policy if exists "Play loggers can delete play expansions" on public.play_expansions;
 
 create policy "Play loggers can insert participants"
   on public.play_participants for insert with check (
