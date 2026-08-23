@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { notifyGroupMembers } from "@/lib/push";
 import { formatDateTime, parseClientIsoDateTime } from "@/lib/utils";
 import { getActiveGroupId } from "@/lib/group";
+import { profileName } from "@/lib/profile-name";
 
 export async function POST(request: NextRequest) {
   const supabase = await createClient();
@@ -70,13 +71,13 @@ export async function POST(request: NextRequest) {
 
   const { data: host } = await supabase
     .from("profiles")
-    .select("display_name")
+    .select("display_name, real_name")
     .eq("id", user.id)
     .single();
 
   await notifyGroupMembers(groupId, user.id, {
     title: "New game night planned!",
-    body: `${host?.display_name ?? "Someone"} is hosting "${title}" on ${formatDateTime(scheduledAtIso)}`,
+    body: `${profileName(host)} is hosting "${title}" on ${formatDateTime(scheduledAtIso)}`,
     url: `/game-nights/${gameNight.id}`,
   });
 

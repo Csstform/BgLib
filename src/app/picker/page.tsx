@@ -5,6 +5,7 @@ import { SetupBanner } from "@/components/SetupBanner";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { StartPlayerRandomizer } from "@/components/StartPlayerRandomizer";
 import { PickerClient } from "./PickerClient";
+import { profileName } from "@/lib/profile-name";
 
 export default async function PickerPage() {
   if (!isSupabaseConfigured()) {
@@ -22,7 +23,7 @@ export default async function PickerPage() {
 
   const startPlayers = members.map((m) => ({
     id: m.user_id,
-    name: m.profile.display_name,
+    name: profileName(m.profile),
     avatar_url: m.profile.avatar_url,
   }));
 

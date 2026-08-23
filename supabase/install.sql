@@ -9,6 +9,7 @@
 create table if not exists public.profiles (
   id uuid references auth.users on delete cascade primary key,
   display_name text not null,
+  real_name text,
   avatar_url text,
   bio text,
   created_at timestamptz default now() not null,
@@ -952,4 +953,10 @@ create policy "Owners can remove members"
     and user_id <> auth.uid()
     and role <> 'owner'
   );
+
+-- >>> 014_profile_real_name.sql
+-- Optional real name on profiles. The app falls back to display_name (username).
+
+alter table public.profiles
+  add column if not exists real_name text;
 

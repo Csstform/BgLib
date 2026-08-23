@@ -34,10 +34,10 @@ export default async function GameNightsPage() {
     .select(
       `
       *,
-      host:profiles!game_nights_host_id_fkey (id, display_name, avatar_url, bio, created_at),
+      host:profiles!game_nights_host_id_fkey (id, display_name, real_name, avatar_url, bio, created_at),
       rsvps:game_night_rsvps (
         id, game_night_id, user_id, status, created_at,
-        profile:profiles (id, display_name, avatar_url, bio, created_at)
+        profile:profiles (id, display_name, real_name, avatar_url, bio, created_at)
       ),
       game_night_games (
         game:games (id, title, description, min_players, max_players, play_time_minutes, image_url, bgg_id, created_by, created_at)

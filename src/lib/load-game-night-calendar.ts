@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { isGroupMember } from "@/lib/group";
 import type { GameNightCalendarInput } from "@/lib/game-night-calendar";
+import { profileName } from "@/lib/profile-name";
 
 export async function loadGroupGameNightsForCalendar(
   groupId: string,
@@ -18,7 +19,7 @@ export async function loadGroupGameNightsForCalendar(
       description,
       location,
       scheduled_at,
-      host:profiles!game_nights_host_id_fkey (display_name),
+      host:profiles!game_nights_host_id_fkey (display_name, real_name),
       game_night_games (
         game:games (title)
       )
@@ -51,7 +52,7 @@ export async function loadGroupGameNightsForCalendar(
       description: night.description,
       location: night.location,
       scheduled_at: night.scheduled_at,
-      host_name: host?.display_name,
+      host_name: profileName(host, ""),
       game_titles: gameTitles,
     };
   });

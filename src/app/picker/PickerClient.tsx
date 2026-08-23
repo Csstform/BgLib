@@ -6,6 +6,7 @@ import { Sparkles, Users, Clock, Loader2, Shuffle, Heart } from "lucide-react";
 import { GameCard } from "@/components/GameCard";
 import type { PickerGame, Profile } from "@/lib/types";
 import { formatDate } from "@/lib/utils";
+import { profileName } from "@/lib/profile-name";
 
 type Member = { user_id: string; profile: Profile };
 
@@ -110,7 +111,7 @@ export function PickerClient({ members }: { members: Member[] }) {
                   : "border-border bg-surface-2 text-muted"
               }`}
             >
-              {m.profile.display_name}
+              {profileName(m.profile)}
             </button>
           ))}
         </div>

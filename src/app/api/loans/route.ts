@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { getActiveGroupId } from "@/lib/group";
 import { notifyUsersWithEmail } from "@/lib/push";
+import { profileName } from "@/lib/profile-name";
 
 export async function POST(request: NextRequest) {
   const supabase = await createClient();
@@ -52,7 +53,7 @@ export async function POST(request: NextRequest) {
 
   const { data: borrower } = await supabase
     .from("profiles")
-    .select("display_name")
+    .select("display_name, real_name")
     .eq("id", user.id)
     .single();
 
@@ -75,7 +76,7 @@ export async function POST(request: NextRequest) {
 
   await notifyUsersWithEmail([lender_id], {
     title: "Loan request",
-    body: `${borrower?.display_name ?? "Someone"} wants to borrow ${game.title}`,
+    body: `${profileName(borrower)} wants to borrow ${game.title}`,
     url: "/loans",
   });
 

@@ -4,6 +4,7 @@ import { getActiveGroupId, getGroupMembers } from "@/lib/group";
 import { isSupabaseConfigured, toDatetimeLocalValue } from "@/lib/utils";
 import { SetupBanner } from "@/components/SetupBanner";
 import { LogPlayForm } from "../../LogPlayForm";
+import { profileName } from "@/lib/profile-name";
 
 async function loadExpansionsByBase(
   supabase: Awaited<ReturnType<typeof createClient>>,
@@ -24,7 +25,7 @@ async function loadExpansionsByBase(
   const expansionIds = expansionGames.map((g) => g.id);
   const { data: ownership } = await supabase
     .from("ownership")
-    .select("game_id, profiles (display_name)")
+    .select("game_id, profiles (display_name, real_name)")
     .in("game_id", expansionIds);
 
   const ownersByGame = new Map<string, string[]>();
@@ -33,7 +34,8 @@ async function loadExpansionsByBase(
     const profile = Array.isArray(row.profiles)
       ? row.profiles[0]
       : row.profiles;
-    if (profile?.display_name) names.push(profile.display_name);
+    const name = profileName(profile, "");
+    if (name) names.push(name);
     ownersByGame.set(row.game_id, names);
   }
 

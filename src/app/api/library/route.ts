@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { getActiveGroupId } from "@/lib/group";
 import type { GameWithOwners } from "@/lib/types";
+import { profileName } from "@/lib/profile-name";
 
 export async function GET() {
   const groupId = await getActiveGroupId();
@@ -21,7 +22,7 @@ export async function GET() {
           condition,
           notes,
           acquired_date,
-          profiles (id, display_name, avatar_url)
+          profiles (id, display_name, real_name, avatar_url)
         )
       `
       )
@@ -63,11 +64,12 @@ export async function GET() {
         profiles: {
           id: string;
           display_name: string;
+          real_name?: string | null;
           avatar_url: string | null;
         };
       }) => ({
         user_id: o.profiles.id,
-        display_name: o.profiles.display_name,
+        display_name: profileName(o.profiles),
         avatar_url: o.profiles.avatar_url,
         condition: o.condition,
         notes: o.notes,

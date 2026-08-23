@@ -8,6 +8,7 @@ import { SetupBanner } from "@/components/SetupBanner";
 import { GameCard } from "@/components/GameCard";
 import { computePlayerStats } from "@/lib/play-stats";
 import type { GameWithOwners } from "@/lib/types";
+import { profileName, profileUsername } from "@/lib/profile-name";
 
 export default async function UserProfilePage({
   params,
@@ -99,15 +100,19 @@ export default async function UserProfilePage({
             // eslint-disable-next-line @next/next/no-img-element
             <img
               src={profile.avatar_url}
-              alt={profile.display_name}
+              alt={profileName(profile)}
               className="h-full w-full object-cover"
             />
           ) : (
-            getInitials(profile.display_name)
+            getInitials(profileName(profile))
           )}
         </div>
         <div>
-          <h1 className="text-2xl font-bold">{profile.display_name}</h1>
+          <h1 className="text-2xl font-bold">{profileName(profile)}</h1>
+          {profileUsername(profile) &&
+            profileName(profile) !== profileUsername(profile) && (
+              <p className="text-sm text-muted">{profileUsername(profile)}</p>
+            )}
           {profile.bio && (
             <p className="text-sm text-muted mt-0.5">{profile.bio}</p>
           )}

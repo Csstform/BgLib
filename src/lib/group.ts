@@ -89,7 +89,7 @@ export async function getGroupMembers(groupId: string) {
   const { data } = await supabase
     .from("group_members")
     .select(
-      "user_id, role, profile:profiles (id, display_name, avatar_url, bio, created_at)"
+      "user_id, role, profile:profiles (id, display_name, real_name, avatar_url, bio, created_at)"
     )
     .eq("group_id", groupId);
 
