@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { notifyGroupMembers } from "@/lib/push";
-import { formatDateTime } from "@/lib/utils";
+import { formatDateTime, parseClientIsoDateTime } from "@/lib/utils";
 
 export async function PATCH(
   request: NextRequest,
@@ -75,12 +75,21 @@ export async function PUT(
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
+  let scheduledAtIso = night.scheduled_at;
+  if (scheduled_at != null) {
+    const scheduledDate = parseClientIsoDateTime(scheduled_at);
+    if (!scheduledDate) {
+      return NextResponse.json({ error: "Invalid date" }, { status: 400 });
+    }
+    scheduledAtIso = scheduledDate.toISOString();
+  }
+
   await supabase
     .from("game_nights")
     .update({
       title: title?.trim() ?? night.title,
       description: description?.trim() ?? night.description,
-      scheduled_at: scheduled_at ?? night.scheduled_at,
+      scheduled_at: scheduledAtIso,
       location: location?.trim() ?? night.location,
     })
     .eq("id", id);
@@ -88,7 +97,7 @@ export async function PUT(
   if (night.group_id) {
     await notifyGroupMembers(night.group_id, user.id, {
       title: "Game night updated",
-      body: `"${title ?? night.title}" — ${formatDateTime(scheduled_at ?? night.scheduled_at)}`,
+      body: `"${title ?? night.title}" — ${formatDateTime(scheduledAtIso)}`,
       url: `/game-nights/${id}`,
     });
   }

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { notifyGroupMembers } from "@/lib/push";
-import { formatDateTime } from "@/lib/utils";
+import { formatDateTime, parseClientIsoDateTime } from "@/lib/utils";
 import { getActiveGroupId } from "@/lib/group";
 
 export async function POST(request: NextRequest) {
@@ -29,12 +29,19 @@ export async function POST(request: NextRequest) {
     );
   }
 
+  const scheduledDate = parseClientIsoDateTime(scheduled_at);
+  if (!scheduledDate) {
+    return NextResponse.json({ error: "Invalid date" }, { status: 400 });
+  }
+
+  const scheduledAtIso = scheduledDate.toISOString();
+
   const { data: gameNight, error } = await supabase
     .from("game_nights")
     .insert({
       title: title.trim(),
       description: description?.trim() || null,
-      scheduled_at,
+      scheduled_at: scheduledAtIso,
       location: location?.trim() || null,
       host_id: user.id,
       group_id: groupId,
@@ -69,7 +76,7 @@ export async function POST(request: NextRequest) {
 
   await notifyGroupMembers(groupId, user.id, {
     title: "New game night planned!",
-    body: `${host?.display_name ?? "Someone"} is hosting "${title}" on ${formatDateTime(scheduled_at)}`,
+    body: `${host?.display_name ?? "Someone"} is hosting "${title}" on ${formatDateTime(scheduledAtIso)}`,
     url: `/game-nights/${gameNight.id}`,
   });
 
