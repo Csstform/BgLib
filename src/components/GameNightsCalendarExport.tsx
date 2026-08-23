@@ -46,13 +46,16 @@ export function GameNightsCalendarExport({
           {copied ? <Check className="h-4 w-4" /> : <Rss className="h-4 w-4" />}
           {copied ? "Copied subscribe URL" : "Copy subscribe URL"}
         </button>
-        <a
-          href="/api/game-nights/calendar"
+        <button
+          type="button"
+          onClick={() => {
+            window.location.assign("/api/game-nights/calendar");
+          }}
           className="pressable inline-flex items-center justify-center gap-2 rounded-xl border border-border bg-surface-2 px-3 py-2.5 text-sm font-medium hover:bg-surface"
         >
           <Download className="h-4 w-4" />
           Download {nightCount} upcoming
-        </a>
+        </button>
       </div>
 
       <p className="text-xs text-muted">
