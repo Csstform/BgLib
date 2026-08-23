@@ -60,7 +60,7 @@ export default function SignupPage() {
               htmlFor="displayName"
               className="block text-sm font-medium mb-1.5"
             >
-              Display name
+              Username
             </label>
             <input
               id="displayName"

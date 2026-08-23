@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAdminClient } from "@/lib/supabase/admin";
 import { sendPushToUsers } from "@/lib/push";
 import { sendEmailToUsers } from "@/lib/email";
+import { profileName } from "@/lib/profile-name";
 
 export async function GET(request: NextRequest) {
   const authHeader = request.headers.get("authorization");
@@ -31,8 +32,8 @@ export async function GET(request: NextRequest) {
       `
       id, due_date, borrower_id, lender_id, reminder_sent_at,
       game:games (title),
-      borrower:profiles!loans_borrower_id_fkey (display_name),
-      lender:profiles!loans_lender_id_fkey (display_name)
+      borrower:profiles!loans_borrower_id_fkey (display_name, real_name),
+      lender:profiles!loans_lender_id_fkey (display_name, real_name)
     `
     )
     .eq("status", "active")
@@ -44,7 +45,10 @@ export async function GET(request: NextRequest) {
 
   for (const loan of dueLoans ?? []) {
     const gameTitle = (Array.isArray(loan.game) ? loan.game[0] : loan.game)?.title ?? "a game";
-    const borrowerName = (Array.isArray(loan.borrower) ? loan.borrower[0] : loan.borrower)?.display_name;
+    const borrowerName = profileName(
+      Array.isArray(loan.borrower) ? loan.borrower[0] : loan.borrower,
+      "Borrower"
+    );
     const isOverdue = loan.due_date < todayStr;
     const title = isOverdue ? "Loan overdue" : "Loan due tomorrow";
     const body = isOverdue

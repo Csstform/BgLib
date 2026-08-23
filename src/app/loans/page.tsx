@@ -38,8 +38,8 @@ export default async function LoansPage() {
             `
       *,
       game:games (id, title, description, min_players, max_players, play_time_minutes, image_url, bgg_id, created_by, created_at, group_id),
-      lender:profiles!loans_lender_id_fkey (id, display_name, avatar_url, bio, created_at),
-      borrower:profiles!loans_borrower_id_fkey (id, display_name, avatar_url, bio, created_at)
+      lender:profiles!loans_lender_id_fkey (id, display_name, real_name, avatar_url, bio, created_at),
+      borrower:profiles!loans_borrower_id_fkey (id, display_name, real_name, avatar_url, bio, created_at)
     `
           )
           .or(`lender_id.eq.${user.id},borrower_id.eq.${user.id}`)

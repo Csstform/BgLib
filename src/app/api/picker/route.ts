@@ -4,6 +4,7 @@ import { getActiveGroupId } from "@/lib/group";
 import { pickRandomItem } from "@/lib/random";
 import { comparePickerGames, computePickerScore } from "@/lib/picker-scoring";
 import type { OwnedExpansion } from "@/lib/types";
+import { profileName } from "@/lib/profile-name";
 
 export async function GET(request: NextRequest) {
   const groupId = await getActiveGroupId();
@@ -33,7 +34,7 @@ export async function GET(request: NextRequest) {
       *,
       ownership (
         user_id,
-        profiles (id, display_name, avatar_url)
+        profiles (id, display_name, real_name, avatar_url)
       )
     `
       )
@@ -72,7 +73,9 @@ export async function GET(request: NextRequest) {
 
     const ownerRows = (g.ownership ?? []) as {
       user_id: string;
-      profiles: { display_name: string } | { display_name: string }[];
+      profiles:
+        | { display_name?: string | null; real_name?: string | null }
+        | { display_name?: string | null; real_name?: string | null }[];
     }[];
 
     if (ownerRows.length === 0) continue;
@@ -80,9 +83,9 @@ export async function GET(request: NextRequest) {
     const ownerNames = ownerRows
       .map((o) => {
         const profile = Array.isArray(o.profiles) ? o.profiles[0] : o.profiles;
-        return profile?.display_name;
+        return profileName(profile, "");
       })
-      .filter(Boolean) as string[];
+      .filter(Boolean);
 
     const ownerIds = ownerRows.map((o) => o.user_id);
 
@@ -102,11 +105,17 @@ export async function GET(request: NextRequest) {
       const owners = (g.ownership ?? []).map(
         (o: {
           user_id: string;
-          profiles: { id: string; display_name: string; avatar_url: string | null };
+          profiles: {
+            id: string;
+            display_name?: string | null;
+            real_name?: string | null;
+            avatar_url: string | null;
+          };
         }) => ({
           user_id: o.user_id,
-          display_name: (Array.isArray(o.profiles) ? o.profiles[0] : o.profiles)
-            ?.display_name,
+          display_name: profileName(
+            Array.isArray(o.profiles) ? o.profiles[0] : o.profiles
+          ),
           avatar_url: (Array.isArray(o.profiles) ? o.profiles[0] : o.profiles)
             ?.avatar_url,
         })

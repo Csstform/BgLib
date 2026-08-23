@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { notifyUsersWithEmail } from "@/lib/push";
+import { profileName } from "@/lib/profile-name";
 
 export async function PATCH(
   request: NextRequest,
@@ -25,8 +26,8 @@ export async function PATCH(
       `
       *,
       game:games (title),
-      lender:profiles!loans_lender_id_fkey (display_name),
-      borrower:profiles!loans_borrower_id_fkey (display_name)
+      lender:profiles!loans_lender_id_fkey (display_name, real_name),
+      borrower:profiles!loans_borrower_id_fkey (display_name, real_name)
     `
     )
     .eq("id", id)
@@ -50,13 +51,18 @@ export async function PATCH(
   }
 
   const gameTitle = (Array.isArray(loan.game) ? loan.game[0] : loan.game)?.title ?? "a game";
-  const lenderName = (Array.isArray(loan.lender) ? loan.lender[0] : loan.lender)?.display_name;
-  const borrowerName = (Array.isArray(loan.borrower) ? loan.borrower[0] : loan.borrower)?.display_name;
+  const lenderName = profileName(
+    Array.isArray(loan.lender) ? loan.lender[0] : loan.lender,
+    "The owner"
+  );
+  const borrowerName = profileName(
+    Array.isArray(loan.borrower) ? loan.borrower[0] : loan.borrower
+  );
 
   if (status === "active" && loan.borrower_id) {
     await notifyUsersWithEmail([loan.borrower_id], {
       title: "Loan approved",
-      body: `${lenderName ?? "The owner"} approved your borrow request for ${gameTitle}`,
+      body: `${lenderName} approved your borrow request for ${gameTitle}`,
       url: "/loans",
     });
   } else if (status === "declined" && loan.borrower_id) {

@@ -18,6 +18,7 @@ import { SectionHeading } from "@/components/ui/SectionHeading";
 import { GameDetailActions } from "@/components/GameDetailActions";
 import { PlayHistoryCard } from "@/components/PlayHistoryCard";
 import type { DuplicateMatch, GameWithOwners } from "@/lib/types";
+import { profileName } from "@/lib/profile-name";
 
 export default async function GameDetailPage({
   params,
@@ -50,7 +51,7 @@ export default async function GameDetailPage({
         notes,
         acquired_date,
         user_id,
-        profiles (id, display_name, avatar_url)
+        profiles (id, display_name, real_name, avatar_url)
       )
     `
     )
@@ -82,7 +83,7 @@ export default async function GameDetailPage({
           condition,
           notes,
           acquired_date,
-          profiles (id, display_name, avatar_url)
+          profiles (id, display_name, real_name, avatar_url)
         )
       `
       )
@@ -115,7 +116,7 @@ export default async function GameDetailPage({
           };
         }) => ({
           user_id: o.profiles.id,
-          display_name: o.profiles.display_name,
+          display_name: profileName(o.profiles),
           avatar_url: o.profiles.avatar_url,
           condition: o.condition,
           notes: o.notes,
@@ -157,12 +158,14 @@ export default async function GameDetailPage({
   if (groupId) {
     const { data: wants } = await supabase
       .from("want_to_play")
-      .select("user_id, profiles (display_name)")
+      .select("user_id, profiles (display_name, real_name)")
       .eq("game_id", id)
       .eq("group_id", groupId);
 
     wantToPlayUsers = (wants ?? []).map((w) => ({
-      display_name: (Array.isArray(w.profiles) ? w.profiles[0] : w.profiles)?.display_name ?? "Someone",
+      display_name: profileName(
+        Array.isArray(w.profiles) ? w.profiles[0] : w.profiles
+      ),
     }));
 
     if (user) {
@@ -180,7 +183,7 @@ export default async function GameDetailPage({
       profiles: { id: string; display_name: string; avatar_url: string | null };
     }) => ({
       user_id: o.profiles.id,
-      display_name: o.profiles.display_name,
+      display_name: profileName(o.profiles),
       avatar_url: o.profiles.avatar_url,
       condition: o.condition,
       notes: o.notes,
@@ -226,12 +229,12 @@ export default async function GameDetailPage({
     const playSelect = `
       id, played_at, duration_minutes, notes, logged_by,
       game:games!plays_game_id_fkey (id, title, image_url),
-      logger:profiles!plays_logged_by_fkey (display_name),
+      logger:profiles!plays_logged_by_fkey (display_name, real_name),
       play_participants (
         user_id,
         is_winner,
         score,
-        profile:profiles!play_participants_user_id_fkey (display_name)
+        profile:profiles!play_participants_user_id_fkey (display_name, real_name)
       ),
       play_expansions (
         game:games!play_expansions_game_id_fkey (title)
@@ -262,7 +265,7 @@ export default async function GameDetailPage({
           .filter((pp) => pp.is_winner)
           .map((pp) => {
             const prof = Array.isArray(pp.profile) ? pp.profile[0] : pp.profile;
-            return prof?.display_name as string | undefined;
+            return prof ? profileName(prof) : undefined;
           })
           .filter(Boolean) as string[];
 
@@ -270,7 +273,7 @@ export default async function GameDetailPage({
           .filter((pp) => !pp.is_winner)
           .map((pp) => {
             const prof = Array.isArray(pp.profile) ? pp.profile[0] : pp.profile;
-            const name = prof?.display_name as string | undefined;
+            const name = prof ? profileName(prof) : undefined;
             if (!name) return undefined;
             return pp.score != null ? `${name} (${pp.score} pts)` : name;
           })
@@ -296,7 +299,7 @@ export default async function GameDetailPage({
                 image_url: playGame.image_url,
               }
             : null,
-          logger: logger ? { display_name: logger.display_name } : null,
+          logger: logger ? { display_name: profileName(logger) } : null,
           winnerNames,
           otherParticipants,
           expansionTitles,

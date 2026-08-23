@@ -1,4 +1,5 @@
 import type { NeverPlayedGame, PlayerStats } from "@/lib/types";
+import { profileName } from "@/lib/profile-name";
 
 type PlayRow = {
   id: string;
@@ -142,8 +143,8 @@ export function computeTopWinners(
   winners: {
     user_id: string;
     profile:
-      | { id?: string; display_name: string }
-      | { id?: string; display_name: string }[]
+      | { id?: string; display_name?: string | null; real_name?: string | null }
+      | { id?: string; display_name?: string | null; real_name?: string | null }[]
       | null;
   }[],
   limit = 8
@@ -158,7 +159,7 @@ export function computeTopWinners(
       ? row.profile[0]
       : row.profile;
     const userId = profile?.id ?? row.user_id;
-    const name = profile?.display_name ?? "Someone";
+    const name = profileName(profile);
     const entry = winnerCounts.get(userId) ?? {
       display_name: name,
       wins: 0,

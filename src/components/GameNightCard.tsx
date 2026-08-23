@@ -3,6 +3,7 @@ import { Calendar, MapPin, Users } from "lucide-react";
 import type { GameNightWithDetails } from "@/lib/types";
 import { OwnerAvatars } from "./OwnerAvatars";
 import { LocalDateTime } from "@/components/LocalDateTime";
+import { profileName } from "@/lib/profile-name";
 
 export function GameNightCard({ night }: { night: GameNightWithDetails }) {
   const going = night.rsvps.filter((r) => r.status === "going");
@@ -25,7 +26,7 @@ export function GameNightCard({ night }: { night: GameNightWithDetails }) {
         </p>
       )}
       <p className="text-xs text-muted mt-2">
-        Hosted by {night.host.display_name}
+        Hosted by {profileName(night.host)}
       </p>
 
       {night.games.length > 0 && (
@@ -39,7 +40,7 @@ export function GameNightCard({ night }: { night: GameNightWithDetails }) {
         <OwnerAvatars
           owners={going.map((r) => ({
             user_id: r.user_id,
-            display_name: r.profile.display_name,
+            display_name: profileName(r.profile),
             avatar_url: r.profile.avatar_url,
             condition: "",
             notes: null,

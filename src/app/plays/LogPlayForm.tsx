@@ -8,6 +8,7 @@ import { parseJsonResponse } from "@/lib/parse-json-response";
 import type { Game, Profile } from "@/lib/types";
 import { GameSelect } from "@/components/GameSelect";
 import { datetimeLocalToIso, toDatetimeLocalValue } from "@/lib/utils";
+import { profileName } from "@/lib/profile-name";
 
 type Member = { user_id: string; profile: Profile };
 
@@ -266,7 +267,7 @@ export function LogPlayForm({
                   : "border-border bg-surface-2 text-muted"
               }`}
             >
-              {m.profile.display_name}
+              {profileName(m.profile)}
             </button>
           ))}
         </div>
@@ -295,7 +296,7 @@ export function LogPlayForm({
                       : "border-border bg-surface-2 text-muted"
                   }`}
                 >
-                  {m.profile.display_name}
+                  {profileName(m.profile)}
                 </button>
               ))}
           </div>
@@ -313,7 +314,7 @@ export function LogPlayForm({
               .map((m) => (
                 <div key={m.user_id} className="flex items-center gap-2">
                   <span className="text-sm w-28 truncate shrink-0">
-                    {m.profile.display_name}
+                    {profileName(m.profile)}
                   </span>
                   <input
                     type="number"

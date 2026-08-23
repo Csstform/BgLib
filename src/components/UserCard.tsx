@@ -3,6 +3,7 @@ import { Dices } from "lucide-react";
 import type { Profile } from "@/lib/types";
 import { getInitials } from "@/lib/utils";
 import { RemoveMemberButton } from "@/components/RemoveMemberButton";
+import { profileName, profileUsername } from "@/lib/profile-name";
 
 export function UserCard({
   profile,
@@ -19,6 +20,9 @@ export function UserCard({
   currentUserId?: string;
   canRemove?: boolean;
 }) {
+  const name = profileName(profile);
+  const username = profileUsername(profile);
+  const showUsername = Boolean(username && name !== username);
   const showRemove =
     canRemove &&
     groupId &&
@@ -37,22 +41,25 @@ export function UserCard({
             // eslint-disable-next-line @next/next/no-img-element
             <img
               src={profile.avatar_url}
-              alt={profile.display_name}
+              alt={name}
               className="h-full w-full object-cover"
             />
           ) : (
-            getInitials(profile.display_name)
+            getInitials(name)
           )}
         </div>
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2">
-            <h3 className="truncate font-semibold">{profile.display_name}</h3>
+            <h3 className="truncate font-semibold">{name}</h3>
             {role && (
               <span className="shrink-0 rounded-md bg-surface-2 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-muted">
                 {role}
               </span>
             )}
           </div>
+          {showUsername && (
+            <p className="truncate text-xs text-muted">{username}</p>
+          )}
           <p className="flex items-center gap-1 text-sm text-muted">
             <Dices className="h-3.5 w-3.5" />
             {gameCount} game{gameCount !== 1 ? "s" : ""}
@@ -63,7 +70,7 @@ export function UserCard({
         <RemoveMemberButton
           groupId={groupId}
           userId={profile.id}
-          displayName={profile.display_name}
+          displayName={name}
         />
       )}
     </div>

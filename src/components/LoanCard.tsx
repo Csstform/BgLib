@@ -7,6 +7,7 @@ import { Check, Loader2, RotateCcw, X } from "lucide-react";
 import { formatDate, formatLoanStatus } from "@/lib/utils";
 import type { LoanWithDetails } from "@/lib/types";
 import { GameCover } from "./ui/GameCover";
+import { profileName } from "@/lib/profile-name";
 
 export function LoanCard({
   loan,
@@ -68,8 +69,8 @@ export function LoanCard({
               className="hover:text-foreground"
             >
               {isLender
-                ? loan.borrower.display_name
-                : loan.lender.display_name}
+                ? profileName(loan.borrower)
+                : profileName(loan.lender)}
             </Link>
           </p>
           {loan.due_date && (

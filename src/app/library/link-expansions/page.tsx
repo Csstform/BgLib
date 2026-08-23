@@ -7,6 +7,7 @@ import { SetupBanner } from "@/components/SetupBanner";
 import { groupLibraryGames } from "@/lib/game-expansions";
 import { LinkExpansionsPageClient } from "./LinkExpansionsPageClient";
 import type { GameWithOwners } from "@/lib/types";
+import { profileName } from "@/lib/profile-name";
 
 export default async function LinkExpansionsPage() {
   if (!isSupabaseConfigured()) {
@@ -35,7 +36,7 @@ export default async function LinkExpansionsPage() {
         condition,
         notes,
         acquired_date,
-        profiles (id, display_name, avatar_url)
+        profiles (id, display_name, real_name, avatar_url)
       )
     `
     )
@@ -68,7 +69,7 @@ export default async function LinkExpansionsPage() {
         };
       }) => ({
         user_id: o.profiles.id,
-        display_name: o.profiles.display_name,
+        display_name: profileName(o.profiles),
         avatar_url: o.profiles.avatar_url,
         condition: o.condition,
         notes: o.notes,

@@ -8,6 +8,7 @@ import { SetupBanner } from "@/components/SetupBanner";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { PlayHistoryCard } from "@/components/PlayHistoryCard";
+import { profileName } from "@/lib/profile-name";
 
 export default async function PlaysPage() {
   if (!isSupabaseConfigured()) {
@@ -32,12 +33,12 @@ export default async function PlaysPage() {
       `
       id, played_at, duration_minutes, notes, logged_by,
       game:games!plays_game_id_fkey (id, title, image_url),
-      logger:profiles!plays_logged_by_fkey (display_name),
+      logger:profiles!plays_logged_by_fkey (display_name, real_name),
       play_participants (
         user_id,
         is_winner,
         score,
-        profile:profiles!play_participants_user_id_fkey (display_name)
+        profile:profiles!play_participants_user_id_fkey (display_name, real_name)
       ),
       play_expansions (
         game:games!play_expansions_game_id_fkey (title)
@@ -97,7 +98,7 @@ export default async function PlaysPage() {
               .filter((pp) => pp.is_winner)
               .map((pp) => {
                 const prof = Array.isArray(pp.profile) ? pp.profile[0] : pp.profile;
-                return prof?.display_name as string | undefined;
+                return prof ? profileName(prof) : undefined;
               })
               .filter(Boolean) as string[];
 
@@ -105,7 +106,7 @@ export default async function PlaysPage() {
               .filter((pp) => !pp.is_winner)
               .map((pp) => {
                 const prof = Array.isArray(pp.profile) ? pp.profile[0] : pp.profile;
-                const name = prof?.display_name as string | undefined;
+                const name = prof ? profileName(prof) : undefined;
                 if (!name) return undefined;
                 return pp.score != null ? `${name} (${pp.score} pts)` : name;
               })
@@ -136,7 +137,7 @@ export default async function PlaysPage() {
                       }
                     : null,
                   logger: logger
-                    ? { display_name: logger.display_name }
+                    ? { display_name: profileName(logger) }
                     : null,
                   winnerNames,
                   otherParticipants,

@@ -18,6 +18,7 @@ import { GameCover } from "@/components/ui/GameCover";
 import { SectionHeading } from "@/components/ui/SectionHeading";
 import type { CSSProperties } from "react";
 import type { GameNightWithDetails } from "@/lib/types";
+import { profileName } from "@/lib/profile-name";
 
 export async function HomeDashboard({ userId }: { userId: string }) {
   const groupId = await getActiveGroupId();
@@ -40,10 +41,10 @@ export async function HomeDashboard({ userId }: { userId: string }) {
       .select(
         `
         *,
-        host:profiles!game_nights_host_id_fkey (id, display_name, avatar_url, bio, created_at),
+        host:profiles!game_nights_host_id_fkey (id, display_name, real_name, avatar_url, bio, created_at),
         rsvps:game_night_rsvps (
           id, game_night_id, user_id, status, created_at,
-          profile:profiles (id, display_name, avatar_url, bio, created_at)
+          profile:profiles (id, display_name, real_name, avatar_url, bio, created_at)
         ),
         game_night_games (
           game:games (id, title, description, min_players, max_players, play_time_minutes, image_url, bgg_id, created_by, created_at)
@@ -64,7 +65,7 @@ export async function HomeDashboard({ userId }: { userId: string }) {
         game:games!plays_game_id_fkey (id, title, image_url),
         play_participants (
           is_winner,
-          profile:profiles!play_participants_user_id_fkey (display_name)
+          profile:profiles!play_participants_user_id_fkey (display_name, real_name)
         )
       `
       )
@@ -79,7 +80,7 @@ export async function HomeDashboard({ userId }: { userId: string }) {
     supabase.from("ownership").select("game_id"),
     supabase
       .from("profiles")
-      .select("display_name")
+      .select("display_name, real_name")
       .eq("id", userId)
       .single(),
   ]);
@@ -134,7 +135,7 @@ export async function HomeDashboard({ userId }: { userId: string }) {
     ownedGameIds
   ).slice(0, 4);
 
-  const displayName = profile?.display_name ?? "there";
+  const displayName = profileName(profile, "there");
   const goingCount = nextNight
     ? nextNight.rsvps.filter((r) => r.status === "going").length
     : 0;
@@ -192,7 +193,7 @@ export async function HomeDashboard({ userId }: { userId: string }) {
               {nextNight.location ? ` · ${nextNight.location}` : ""}
             </p>
             <p className="mt-2 text-xs text-muted">
-              {goingCount} going · Hosted by {nextNight.host.display_name}
+              {goingCount} going · Hosted by {profileName(nextNight.host)}
             </p>
           </Link>
         </section>
@@ -228,7 +229,7 @@ export async function HomeDashboard({ userId }: { userId: string }) {
                   const prof = Array.isArray(pp.profile)
                     ? pp.profile[0]
                     : pp.profile;
-                  return prof?.display_name as string | undefined;
+                  return prof ? profileName(prof) : undefined;
                 })
                 .filter(Boolean) as string[];
 

@@ -15,6 +15,7 @@ import { GameNightCalendarActions } from "@/components/GameNightCalendarActions"
 import { gameNightToIcsEvent } from "@/lib/game-night-calendar";
 import { getInitials } from "@/lib/utils";
 import { isGroupMember } from "@/lib/group";
+import { profileName } from "@/lib/profile-name";
 
 export default async function GameNightDetailPage({
   params,
@@ -41,10 +42,10 @@ export default async function GameNightDetailPage({
     .select(
       `
       *,
-      host:profiles!game_nights_host_id_fkey (id, display_name, avatar_url),
+      host:profiles!game_nights_host_id_fkey (id, display_name, real_name, avatar_url),
       rsvps:game_night_rsvps (
         id, user_id, status,
-        profile:profiles (id, display_name, avatar_url)
+        profile:profiles (id, display_name, real_name, avatar_url)
       ),
       game_night_games (
         game:games (id, title, image_url)
@@ -108,7 +109,7 @@ export default async function GameNightDetailPage({
       description: night.description,
       location: night.location,
       scheduled_at: night.scheduled_at,
-      host_name: host.display_name,
+      host_name: profileName(host),
       game_titles: games.map((g: { title: string }) => g.title),
     },
     appUrl
@@ -120,7 +121,7 @@ export default async function GameNightDetailPage({
       profile: { display_name: string; avatar_url: string | null };
     }) => ({
       id: r.user_id,
-      name: r.profile.display_name,
+      name: profileName(r.profile),
       avatar_url: r.profile.avatar_url,
     })
   );
@@ -170,7 +171,7 @@ export default async function GameNightDetailPage({
           <p className="mt-3 text-sm text-muted">
             Hosted by{" "}
             <Link href={`/users/${host.id}`} className="text-primary hover:underline">
-              {host.display_name}
+              {profileName(host)}
             </Link>
           </p>
         </div>
@@ -278,10 +279,10 @@ export default async function GameNightDetailPage({
                             className="h-full w-full rounded-full object-cover"
                           />
                         ) : (
-                          getInitials(r.profile.display_name)
+                          getInitials(profileName(r.profile))
                         )}
                       </div>
-                      <span className="text-sm">{r.profile.display_name}</span>
+                      <span className="text-sm">{profileName(r.profile)}</span>
                     </Link>
                   )
                 )}

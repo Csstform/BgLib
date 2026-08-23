@@ -9,6 +9,7 @@ import type { Profile } from "@/lib/types";
 export function ProfileForm({ profile }: { profile: Profile }) {
   const router = useRouter();
   const [displayName, setDisplayName] = useState(profile.display_name);
+  const [realName, setRealName] = useState(profile.real_name ?? "");
   const [bio, setBio] = useState(profile.bio ?? "");
   const [avatarUrl, setAvatarUrl] = useState(profile.avatar_url ?? "");
   const [error, setError] = useState("");
@@ -26,6 +27,7 @@ export function ProfileForm({ profile }: { profile: Profile }) {
       .from("profiles")
       .update({
         display_name: displayName.trim(),
+        real_name: realName.trim() || null,
         bio: bio.trim() || null,
         avatar_url: avatarUrl.trim() || null,
       })
@@ -51,11 +53,11 @@ export function ProfileForm({ profile }: { profile: Profile }) {
             // eslint-disable-next-line @next/next/no-img-element
             <img
               src={avatarUrl}
-              alt={displayName}
+              alt={realName.trim() || displayName}
               className="h-full w-full object-cover"
             />
           ) : (
-            getInitials(displayName)
+            getInitials(realName.trim() || displayName)
           )}
         </div>
       </div>
@@ -73,7 +75,7 @@ export function ProfileForm({ profile }: { profile: Profile }) {
 
       <div>
         <label htmlFor="displayName" className="block text-sm font-medium mb-1.5">
-          Display name
+          Username
         </label>
         <input
           id="displayName"
@@ -83,6 +85,23 @@ export function ProfileForm({ profile }: { profile: Profile }) {
           required
           className={inputClass}
         />
+      </div>
+
+      <div>
+        <label htmlFor="realName" className="block text-sm font-medium mb-1.5">
+          Real name
+        </label>
+        <input
+          id="realName"
+          type="text"
+          value={realName}
+          onChange={(e) => setRealName(e.target.value)}
+          className={inputClass}
+          placeholder="Optional"
+        />
+        <p className="mt-1 text-xs text-muted">
+          Shown to your group. If this is blank, your username is used.
+        </p>
       </div>
 
       <div>

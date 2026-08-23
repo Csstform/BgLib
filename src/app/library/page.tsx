@@ -9,6 +9,7 @@ import { PageHeader } from "@/components/ui/PageHeader";
 import { LibraryClient } from "./LibraryClient";
 import { groupLibraryGames } from "@/lib/game-expansions";
 import type { GameWithOwners } from "@/lib/types";
+import { profileName } from "@/lib/profile-name";
 
 export default async function LibraryPage() {
   if (!isSupabaseConfigured()) {
@@ -37,7 +38,7 @@ export default async function LibraryPage() {
           condition,
           notes,
           acquired_date,
-          profiles (id, display_name, avatar_url)
+          profiles (id, display_name, real_name, avatar_url)
         )
       `
       )
@@ -79,11 +80,12 @@ export default async function LibraryPage() {
         profiles: {
           id: string;
           display_name: string;
+          real_name?: string | null;
           avatar_url: string | null;
         };
       }) => ({
         user_id: o.profiles.id,
-        display_name: o.profiles.display_name,
+        display_name: profileName(o.profiles),
         avatar_url: o.profiles.avatar_url,
         condition: o.condition,
         notes: o.notes,
