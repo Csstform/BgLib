@@ -6,7 +6,7 @@
 -- Run this in your Supabase SQL Editor (https://supabase.com/dashboard)
 
 -- Profiles (extends auth.users)
-create table public.profiles (
+create table if not exists public.profiles (
   id uuid references auth.users on delete cascade primary key,
   display_name text not null,
   avatar_url text,
@@ -16,7 +16,7 @@ create table public.profiles (
 );
 
 -- Board games catalogue
-create table public.games (
+create table if not exists public.games (
   id uuid default gen_random_uuid() primary key,
   title text not null,
   description text,
@@ -31,7 +31,7 @@ create table public.games (
 );
 
 -- Ownership: who owns which games
-create table public.ownership (
+create table if not exists public.ownership (
   id uuid default gen_random_uuid() primary key,
   user_id uuid references public.profiles(id) on delete cascade not null,
   game_id uuid references public.games(id) on delete cascade not null,
@@ -43,9 +43,9 @@ create table public.ownership (
 );
 
 -- Indexes
-create index games_title_idx on public.games using gin (to_tsvector('english', title));
-create index ownership_user_idx on public.ownership (user_id);
-create index ownership_game_idx on public.ownership (game_id);
+create index if not exists games_title_idx on public.games using gin (to_tsvector('english', title));
+create index if not exists ownership_user_idx on public.ownership (user_id);
+create index if not exists ownership_game_idx on public.ownership (game_id);
 
 -- Auto-create profile on signup
 create or replace function public.handle_new_user()
@@ -60,6 +60,7 @@ begin
 end;
 $$ language plpgsql security definer;
 
+drop trigger if exists on_auth_user_created on auth.users;
 create trigger on_auth_user_created
   after insert on auth.users
   for each row execute function public.handle_new_user();
@@ -73,9 +74,11 @@ begin
 end;
 $$ language plpgsql;
 
+drop trigger if exists profiles_updated_at on public.profiles;
 create trigger profiles_updated_at before update on public.profiles
   for each row execute function public.update_updated_at();
 
+drop trigger if exists games_updated_at on public.games;
 create trigger games_updated_at before update on public.games
   for each row execute function public.update_updated_at();
 
@@ -85,39 +88,50 @@ alter table public.games enable row level security;
 alter table public.ownership enable row level security;
 
 -- Profiles: anyone can read, users can update own
+drop policy if exists "Profiles are viewable by everyone" on public.profiles;
 create policy "Profiles are viewable by everyone"
   on public.profiles for select using (true);
 
+drop policy if exists "Users can update own profile" on public.profiles;
 create policy "Users can update own profile"
   on public.profiles for update using (auth.uid() = id);
 
+drop policy if exists "Users can insert own profile" on public.profiles;
 create policy "Users can insert own profile"
   on public.profiles for insert with check (auth.uid() = id);
 
 -- Games: anyone can read, authenticated users can create
+drop policy if exists "Games are viewable by everyone" on public.games;
 create policy "Games are viewable by everyone"
   on public.games for select using (true);
 
+drop policy if exists "Authenticated users can create games" on public.games;
 create policy "Authenticated users can create games"
   on public.games for insert with check (auth.uid() is not null);
 
+drop policy if exists "Creators can update their games" on public.games;
 create policy "Creators can update their games"
   on public.games for update using (auth.uid() = created_by);
 
 -- Ownership: anyone can read, users manage their own
+drop policy if exists "Ownership is viewable by everyone" on public.ownership;
 create policy "Ownership is viewable by everyone"
   on public.ownership for select using (true);
 
+drop policy if exists "Users can add to their collection" on public.ownership;
 create policy "Users can add to their collection"
   on public.ownership for insert with check (auth.uid() = user_id);
 
+drop policy if exists "Users can update their ownership" on public.ownership;
 create policy "Users can update their ownership"
   on public.ownership for update using (auth.uid() = user_id);
 
+drop policy if exists "Users can remove from their collection" on public.ownership;
 create policy "Users can remove from their collection"
   on public.ownership for delete using (auth.uid() = user_id);
 
 -- View: games with owner count
+drop view if exists public.games_with_owners;
 create or replace view public.games_with_owners as
 select
   g.*,
@@ -202,12 +216,15 @@ create index if not exists loans_borrower_idx on public.loans (borrower_id);
 create index if not exists loans_status_idx on public.loans (status);
 
 -- Updated_at triggers
+drop trigger if exists game_nights_updated_at on public.game_nights;
 create trigger game_nights_updated_at before update on public.game_nights
   for each row execute function public.update_updated_at();
 
+drop trigger if exists game_night_rsvps_updated_at on public.game_night_rsvps;
 create trigger game_night_rsvps_updated_at before update on public.game_night_rsvps
   for each row execute function public.update_updated_at();
 
+drop trigger if exists loans_updated_at on public.loans;
 create trigger loans_updated_at before update on public.loans
   for each row execute function public.update_updated_at();
 
@@ -219,22 +236,28 @@ alter table public.loans enable row level security;
 alter table public.push_subscriptions enable row level security;
 
 -- Game nights policies
+drop policy if exists "Game nights are viewable by everyone" on public.game_nights;
 create policy "Game nights are viewable by everyone"
   on public.game_nights for select using (true);
 
+drop policy if exists "Authenticated users can create game nights" on public.game_nights;
 create policy "Authenticated users can create game nights"
   on public.game_nights for insert with check (auth.uid() = host_id);
 
+drop policy if exists "Hosts can update their game nights" on public.game_nights;
 create policy "Hosts can update their game nights"
   on public.game_nights for update using (auth.uid() = host_id);
 
+drop policy if exists "Hosts can delete their game nights" on public.game_nights;
 create policy "Hosts can delete their game nights"
   on public.game_nights for delete using (auth.uid() = host_id);
 
 -- Game night games policies
+drop policy if exists "Game night games are viewable by everyone" on public.game_night_games;
 create policy "Game night games are viewable by everyone"
   on public.game_night_games for select using (true);
 
+drop policy if exists "Hosts can manage game night games" on public.game_night_games;
 create policy "Hosts can manage game night games"
   on public.game_night_games for all using (
     exists (
@@ -244,32 +267,39 @@ create policy "Hosts can manage game night games"
   );
 
 -- RSVP policies
+drop policy if exists "RSVPs are viewable by everyone" on public.game_night_rsvps;
 create policy "RSVPs are viewable by everyone"
   on public.game_night_rsvps for select using (true);
 
+drop policy if exists "Users can manage their RSVPs" on public.game_night_rsvps;
 create policy "Users can manage their RSVPs"
   on public.game_night_rsvps for all using (auth.uid() = user_id);
 
 -- Loan policies
+drop policy if exists "Loans are viewable by involved parties" on public.loans;
 create policy "Loans are viewable by involved parties"
   on public.loans for select using (
     auth.uid() = lender_id or auth.uid() = borrower_id
   );
 
+drop policy if exists "Borrowers can request loans" on public.loans;
 create policy "Borrowers can request loans"
   on public.loans for insert with check (
     auth.uid() = borrower_id and status = 'pending'
   );
 
+drop policy if exists "Involved parties can update loans" on public.loans;
 create policy "Involved parties can update loans"
   on public.loans for update using (
     auth.uid() = lender_id or auth.uid() = borrower_id
   );
 
 -- Push subscription policies
+drop policy if exists "Users can view own subscriptions" on public.push_subscriptions;
 create policy "Users can view own subscriptions"
   on public.push_subscriptions for select using (auth.uid() = user_id);
 
+drop policy if exists "Users can manage own subscriptions" on public.push_subscriptions;
 create policy "Users can manage own subscriptions"
   on public.push_subscriptions for all using (auth.uid() = user_id);
 
@@ -409,6 +439,7 @@ alter table public.plays enable row level security;
 alter table public.play_participants enable row level security;
 
 -- Groups: members can view their groups
+drop policy if exists "Members can view their groups" on public.groups;
 create policy "Members can view their groups"
   on public.groups for select using (
     exists (
@@ -417,9 +448,11 @@ create policy "Members can view their groups"
     )
   );
 
+drop policy if exists "Authenticated users can create groups" on public.groups;
 create policy "Authenticated users can create groups"
   on public.groups for insert with check (auth.uid() = created_by);
 
+drop policy if exists "Owners can update their groups" on public.groups;
 create policy "Owners can update their groups"
   on public.groups for update using (
     exists (
@@ -429,6 +462,7 @@ create policy "Owners can update their groups"
   );
 
 -- Group members
+drop policy if exists "Members can view group membership" on public.group_members;
 create policy "Members can view group membership"
   on public.group_members for select using (
     exists (
@@ -437,13 +471,16 @@ create policy "Members can view group membership"
     )
   );
 
+drop policy if exists "Users can join groups" on public.group_members;
 create policy "Users can join groups"
   on public.group_members for insert with check (auth.uid() = user_id);
 
+drop policy if exists "Users can leave groups" on public.group_members;
 create policy "Users can leave groups"
   on public.group_members for delete using (auth.uid() = user_id);
 
 -- Plays
+drop policy if exists "Group members can view plays" on public.plays;
 create policy "Group members can view plays"
   on public.plays for select using (
     exists (
@@ -452,6 +489,7 @@ create policy "Group members can view plays"
     )
   );
 
+drop policy if exists "Group members can log plays" on public.plays;
 create policy "Group members can log plays"
   on public.plays for insert with check (
     auth.uid() = logged_by and
@@ -461,10 +499,12 @@ create policy "Group members can log plays"
     )
   );
 
+drop policy if exists "Loggers can delete their plays" on public.plays;
 create policy "Loggers can delete their plays"
   on public.plays for delete using (auth.uid() = logged_by);
 
 -- Play participants
+drop policy if exists "Group members can view play participants" on public.play_participants;
 create policy "Group members can view play participants"
   on public.play_participants for select using (
     exists (
@@ -474,6 +514,7 @@ create policy "Group members can view play participants"
     )
   );
 
+drop policy if exists "Play loggers can manage participants" on public.play_participants;
 create policy "Play loggers can manage participants"
   on public.play_participants for all using (
     exists (
@@ -484,6 +525,7 @@ create policy "Play loggers can manage participants"
 
 -- Update games policies for group scoping
 drop policy if exists "Games are viewable by everyone" on public.games;
+drop policy if exists "Group members can view games" on public.games;
 create policy "Group members can view games"
   on public.games for select using (
     group_id is null or exists (
@@ -493,6 +535,7 @@ create policy "Group members can view games"
   );
 
 drop policy if exists "Authenticated users can create games" on public.games;
+drop policy if exists "Group members can create games" on public.games;
 create policy "Group members can create games"
   on public.games for insert with check (
     auth.uid() is not null and
@@ -552,6 +595,7 @@ alter table public.loans
 -- RLS for want_to_play
 alter table public.want_to_play enable row level security;
 
+drop policy if exists "Group members can view want to play" on public.want_to_play;
 create policy "Group members can view want to play"
   on public.want_to_play for select using (
     exists (
@@ -560,11 +604,13 @@ create policy "Group members can view want to play"
     )
   );
 
+drop policy if exists "Users can manage their want to play" on public.want_to_play;
 create policy "Users can manage their want to play"
   on public.want_to_play for all using (auth.uid() = user_id);
 
 -- Allow group members to update games in their group
 drop policy if exists "Creators can update their games" on public.games;
+drop policy if exists "Group members can update group games" on public.games;
 create policy "Group members can update group games"
   on public.games for update using (
     exists (
@@ -574,6 +620,7 @@ create policy "Group members can update group games"
   );
 
 -- Allow group members to delete games in their group (for merge cleanup)
+drop policy if exists "Group members can delete group games" on public.games;
 create policy "Group members can delete group games"
   on public.games for delete using (
     exists (
@@ -586,6 +633,7 @@ create policy "Group members can delete group games"
 -- RLS hardening: scope game nights and ownership by group membership
 
 drop policy if exists "Game nights are viewable by everyone" on public.game_nights;
+drop policy if exists "Group members can view game nights" on public.game_nights;
 create policy "Group members can view game nights"
   on public.game_nights for select using (
     group_id is null or exists (
@@ -595,6 +643,7 @@ create policy "Group members can view game nights"
   );
 
 drop policy if exists "Ownership is viewable by everyone" on public.ownership;
+drop policy if exists "Group members can view ownership" on public.ownership;
 create policy "Group members can view ownership"
   on public.ownership for select using (
     exists (
@@ -750,6 +799,7 @@ create index if not exists play_expansions_game_idx on public.play_expansions (g
 
 alter table public.play_expansions enable row level security;
 
+drop policy if exists "Group members can view play expansions" on public.play_expansions;
 create policy "Group members can view play expansions"
   on public.play_expansions for select using (
     exists (
@@ -759,6 +809,7 @@ create policy "Group members can view play expansions"
     )
   );
 
+drop policy if exists "Play loggers can manage play expansions" on public.play_expansions;
 create policy "Play loggers can manage play expansions"
   on public.play_expansions for all using (
     exists (
@@ -785,16 +836,19 @@ create table if not exists public.upc_bgg_mappings (
 
 alter table public.upc_bgg_mappings enable row level security;
 
+drop policy if exists "Authenticated users can read UPC mappings" on public.upc_bgg_mappings;
 create policy "Authenticated users can read UPC mappings"
   on public.upc_bgg_mappings for select
   to authenticated
   using (true);
 
+drop policy if exists "Authenticated users can insert UPC mappings" on public.upc_bgg_mappings;
 create policy "Authenticated users can insert UPC mappings"
   on public.upc_bgg_mappings for insert
   to authenticated
   with check (true);
 
+drop policy if exists "Authenticated users can update UPC mappings" on public.upc_bgg_mappings;
 create policy "Authenticated users can update UPC mappings"
   on public.upc_bgg_mappings for update
   to authenticated
@@ -820,6 +874,12 @@ create index if not exists play_participants_winner_idx
 
 drop policy if exists "Play loggers can manage participants" on public.play_participants;
 drop policy if exists "Play loggers can manage play expansions" on public.play_expansions;
+drop policy if exists "Play loggers can insert participants" on public.play_participants;
+drop policy if exists "Play loggers can update participants" on public.play_participants;
+drop policy if exists "Play loggers can delete participants" on public.play_participants;
+drop policy if exists "Play loggers can insert play expansions" on public.play_expansions;
+drop policy if exists "Play loggers can update play expansions" on public.play_expansions;
+drop policy if exists "Play loggers can delete play expansions" on public.play_expansions;
 
 create policy "Play loggers can insert participants"
   on public.play_participants for insert with check (

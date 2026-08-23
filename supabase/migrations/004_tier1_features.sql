@@ -24,6 +24,7 @@ alter table public.loans
 -- RLS for want_to_play
 alter table public.want_to_play enable row level security;
 
+drop policy if exists "Group members can view want to play" on public.want_to_play;
 create policy "Group members can view want to play"
   on public.want_to_play for select using (
     exists (
@@ -32,11 +33,13 @@ create policy "Group members can view want to play"
     )
   );
 
+drop policy if exists "Users can manage their want to play" on public.want_to_play;
 create policy "Users can manage their want to play"
   on public.want_to_play for all using (auth.uid() = user_id);
 
 -- Allow group members to update games in their group
 drop policy if exists "Creators can update their games" on public.games;
+drop policy if exists "Group members can update group games" on public.games;
 create policy "Group members can update group games"
   on public.games for update using (
     exists (
@@ -46,6 +49,7 @@ create policy "Group members can update group games"
   );
 
 -- Allow group members to delete games in their group (for merge cleanup)
+drop policy if exists "Group members can delete group games" on public.games;
 create policy "Group members can delete group games"
   on public.games for delete using (
     exists (

@@ -63,12 +63,15 @@ create index if not exists loans_borrower_idx on public.loans (borrower_id);
 create index if not exists loans_status_idx on public.loans (status);
 
 -- Updated_at triggers
+drop trigger if exists game_nights_updated_at on public.game_nights;
 create trigger game_nights_updated_at before update on public.game_nights
   for each row execute function public.update_updated_at();
 
+drop trigger if exists game_night_rsvps_updated_at on public.game_night_rsvps;
 create trigger game_night_rsvps_updated_at before update on public.game_night_rsvps
   for each row execute function public.update_updated_at();
 
+drop trigger if exists loans_updated_at on public.loans;
 create trigger loans_updated_at before update on public.loans
   for each row execute function public.update_updated_at();
 
@@ -80,22 +83,28 @@ alter table public.loans enable row level security;
 alter table public.push_subscriptions enable row level security;
 
 -- Game nights policies
+drop policy if exists "Game nights are viewable by everyone" on public.game_nights;
 create policy "Game nights are viewable by everyone"
   on public.game_nights for select using (true);
 
+drop policy if exists "Authenticated users can create game nights" on public.game_nights;
 create policy "Authenticated users can create game nights"
   on public.game_nights for insert with check (auth.uid() = host_id);
 
+drop policy if exists "Hosts can update their game nights" on public.game_nights;
 create policy "Hosts can update their game nights"
   on public.game_nights for update using (auth.uid() = host_id);
 
+drop policy if exists "Hosts can delete their game nights" on public.game_nights;
 create policy "Hosts can delete their game nights"
   on public.game_nights for delete using (auth.uid() = host_id);
 
 -- Game night games policies
+drop policy if exists "Game night games are viewable by everyone" on public.game_night_games;
 create policy "Game night games are viewable by everyone"
   on public.game_night_games for select using (true);
 
+drop policy if exists "Hosts can manage game night games" on public.game_night_games;
 create policy "Hosts can manage game night games"
   on public.game_night_games for all using (
     exists (
@@ -105,31 +114,38 @@ create policy "Hosts can manage game night games"
   );
 
 -- RSVP policies
+drop policy if exists "RSVPs are viewable by everyone" on public.game_night_rsvps;
 create policy "RSVPs are viewable by everyone"
   on public.game_night_rsvps for select using (true);
 
+drop policy if exists "Users can manage their RSVPs" on public.game_night_rsvps;
 create policy "Users can manage their RSVPs"
   on public.game_night_rsvps for all using (auth.uid() = user_id);
 
 -- Loan policies
+drop policy if exists "Loans are viewable by involved parties" on public.loans;
 create policy "Loans are viewable by involved parties"
   on public.loans for select using (
     auth.uid() = lender_id or auth.uid() = borrower_id
   );
 
+drop policy if exists "Borrowers can request loans" on public.loans;
 create policy "Borrowers can request loans"
   on public.loans for insert with check (
     auth.uid() = borrower_id and status = 'pending'
   );
 
+drop policy if exists "Involved parties can update loans" on public.loans;
 create policy "Involved parties can update loans"
   on public.loans for update using (
     auth.uid() = lender_id or auth.uid() = borrower_id
   );
 
 -- Push subscription policies
+drop policy if exists "Users can view own subscriptions" on public.push_subscriptions;
 create policy "Users can view own subscriptions"
   on public.push_subscriptions for select using (auth.uid() = user_id);
 
+drop policy if exists "Users can manage own subscriptions" on public.push_subscriptions;
 create policy "Users can manage own subscriptions"
   on public.push_subscriptions for all using (auth.uid() = user_id);

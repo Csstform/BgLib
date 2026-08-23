@@ -17,6 +17,7 @@ create index if not exists play_expansions_game_idx on public.play_expansions (g
 
 alter table public.play_expansions enable row level security;
 
+drop policy if exists "Group members can view play expansions" on public.play_expansions;
 create policy "Group members can view play expansions"
   on public.play_expansions for select using (
     exists (
@@ -26,6 +27,7 @@ create policy "Group members can view play expansions"
     )
   );
 
+drop policy if exists "Play loggers can manage play expansions" on public.play_expansions;
 create policy "Play loggers can manage play expansions"
   on public.play_expansions for all using (
     exists (

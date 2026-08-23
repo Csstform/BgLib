@@ -15,16 +15,19 @@ create table if not exists public.upc_bgg_mappings (
 
 alter table public.upc_bgg_mappings enable row level security;
 
+drop policy if exists "Authenticated users can read UPC mappings" on public.upc_bgg_mappings;
 create policy "Authenticated users can read UPC mappings"
   on public.upc_bgg_mappings for select
   to authenticated
   using (true);
 
+drop policy if exists "Authenticated users can insert UPC mappings" on public.upc_bgg_mappings;
 create policy "Authenticated users can insert UPC mappings"
   on public.upc_bgg_mappings for insert
   to authenticated
   with check (true);
 
+drop policy if exists "Authenticated users can update UPC mappings" on public.upc_bgg_mappings;
 create policy "Authenticated users can update UPC mappings"
   on public.upc_bgg_mappings for update
   to authenticated
