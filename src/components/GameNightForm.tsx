@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useSyncExternalStore } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
@@ -13,6 +13,18 @@ function defaultGameNightScheduledAt(): string {
   d.setMinutes(0, 0, 0);
   d.setHours(d.getHours() + 1);
   return toDatetimeLocalValue(d);
+}
+
+function subscribe() {
+  return () => {};
+}
+
+function useClientDatetimeLocal(iso?: string) {
+  return useSyncExternalStore(
+    subscribe,
+    () => (iso ? toDatetimeLocalValue(iso) : defaultGameNightScheduledAt()),
+    () => ""
+  );
 }
 
 type ExistingNight = {
@@ -35,9 +47,11 @@ export function GameNightForm({
   const isEdit = !!night;
   const [title, setTitle] = useState(night?.title ?? "");
   const [description, setDescription] = useState(night?.description ?? "");
-  const [scheduledAt, setScheduledAt] = useState(
-    night ? toDatetimeLocalValue(night.scheduled_at) : defaultGameNightScheduledAt
+  const clientScheduledAt = useClientDatetimeLocal(night?.scheduled_at);
+  const [scheduledAtOverride, setScheduledAtOverride] = useState<string | null>(
+    null
   );
+  const scheduledAt = scheduledAtOverride ?? clientScheduledAt;
   const [location, setLocation] = useState(night?.location ?? "");
   const [selectedGames, setSelectedGames] = useState<string[]>(night?.game_ids ?? []);
   const [loading, setLoading] = useState(false);
@@ -123,7 +137,7 @@ export function GameNightForm({
           id="scheduledAt"
           type="datetime-local"
           value={scheduledAt}
-          onChange={(e) => setScheduledAt(e.target.value)}
+          onChange={(e) => setScheduledAtOverride(e.target.value)}
           required
           className={inputClass}
         />
