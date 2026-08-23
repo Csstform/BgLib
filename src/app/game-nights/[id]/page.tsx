@@ -10,6 +10,8 @@ import { RsvpButtons } from "./RsvpButtons";
 import { CancelGameNightButton } from "./CancelGameNightButton";
 import { GameNightPicker } from "@/components/GameNightPicker";
 import { StartPlayerRandomizer } from "@/components/StartPlayerRandomizer";
+import { GameNightCalendarActions } from "@/components/GameNightCalendarActions";
+import { gameNightToIcsEvent } from "@/lib/game-night-calendar";
 import { getInitials } from "@/lib/utils";
 import { isGroupMember } from "@/lib/group";
 
@@ -97,6 +99,20 @@ export default async function GameNightDetailPage({
       ? `/plays/new?game=${games[0].id}`
       : "/plays/new";
 
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+  const calendarEvent = gameNightToIcsEvent(
+    {
+      id: night.id,
+      title: night.title,
+      description: night.description,
+      location: night.location,
+      scheduled_at: night.scheduled_at,
+      host_name: host.display_name,
+      game_titles: games.map((g: { title: string }) => g.title),
+    },
+    appUrl
+  );
+
   const goingPlayers = grouped.going.map(
     (r: {
       user_id: string;
@@ -147,6 +163,10 @@ export default async function GameNightDetailPage({
           </p>
         </div>
       </div>
+
+      {!night.cancelled_at && (
+        <GameNightCalendarActions gameNightId={night.id} event={calendarEvent} />
+      )}
 
       {!isPast && goingPlayers.length > 0 && (
         <div className="mt-4">
