@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft, Calendar, MapPin, Users, History } from "lucide-react";
+import { ArrowLeft, Calendar, MapPin, Users, History, Pencil } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured, formatDateTime, formatRsvpStatus } from "@/lib/utils";
 import { SetupBanner } from "@/components/SetupBanner";
@@ -136,7 +136,18 @@ export default async function GameNightDetailPage({
 
       <div className="overflow-hidden rounded-2xl border border-border bg-surface">
         <div className="p-4">
-          <h1 className="text-2xl font-bold">{night.title}</h1>
+          <div className="flex items-start justify-between gap-3">
+            <h1 className="text-2xl font-bold">{night.title}</h1>
+            {user && user.id === night.host_id && !night.cancelled_at && (
+              <Link
+                href={`/game-nights/${night.id}/edit`}
+                className="pressable inline-flex min-h-10 shrink-0 items-center gap-1.5 rounded-xl border border-border px-3 py-2 text-sm font-medium hover:bg-surface-2"
+              >
+                <Pencil className="h-4 w-4" />
+                Edit
+              </Link>
+            )}
+          </div>
           <p className="mt-2 flex items-center gap-1.5 text-sm">
             <Calendar className="h-4 w-4 text-primary" />
             {formatDateTime(night.scheduled_at)}

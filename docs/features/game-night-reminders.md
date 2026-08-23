@@ -16,8 +16,10 @@ Both notification paths reuse the app's push and email helpers.
 ## Primary codepaths
 
 - `src/app/game-nights/page.tsx`
-- `src/app/game-nights/new/CreateGameNightForm.tsx`
+- `src/components/GameNightForm.tsx`
+- `src/app/game-nights/new/page.tsx`
 - `src/app/game-nights/[id]/page.tsx`
+- `src/app/game-nights/[id]/edit/page.tsx`
 - `src/app/game-nights/[id]/RsvpButtons.tsx`
 - `src/components/GameNightPicker.tsx`
 - `src/app/api/game-nights/route.ts`
@@ -54,9 +56,13 @@ Fresh installs through `supabase/install.sql` include both.
    members in the group.
 5. The user lands on `/game-nights/[id]`, where members can RSVP and the
    `GameNightPicker` can suggest games based on people marked `going`.
+6. The host can open `/game-nights/[id]/edit` to change title, time, location,
+   description, or planned games. The form puts those fields to
+   `PUT /api/game-nights/[id]`, which notifies the group of the update.
 
 Only the host can update, cancel, or replace the planned games for a game night.
-The API checks `night.host_id === user.id` before those mutations.
+The API checks `night.host_id === user.id` before those mutations. Cancelled
+nights cannot be edited.
 
 ## Reminder cron
 

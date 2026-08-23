@@ -3,12 +3,12 @@ import { createClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/utils";
 import { getActiveGroupId } from "@/lib/group";
 import { SetupBanner } from "@/components/SetupBanner";
-import { CreateGameNightForm } from "./CreateGameNightForm";
+import { GameNightForm } from "@/components/GameNightForm";
 
 export default async function NewGameNightPage() {
   if (!isSupabaseConfigured()) {
     return (
-      <div className="px-4 py-6">
+      <div className="page-shell">
         <SetupBanner />
       </div>
     );
@@ -31,9 +31,9 @@ export default async function NewGameNightPage() {
     .order("title");
 
   return (
-    <div className="px-4 py-6 pb-24">
-      <h1 className="text-2xl font-bold mb-6">Plan a Game Night</h1>
-      <CreateGameNightForm games={games ?? []} />
+    <div className="page-shell">
+      <h1 className="mb-6 text-2xl font-bold">Plan a Game Night</h1>
+      <GameNightForm games={games ?? []} />
     </div>
   );
 }

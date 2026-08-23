@@ -63,7 +63,7 @@ export async function PUT(
   }
 
   const body = await request.json();
-  const { title, description, scheduled_at, location } = body;
+  const { title, description, scheduled_at, location, game_ids } = body;
 
   const { data: night } = await supabase
     .from("game_nights")
@@ -75,6 +75,18 @@ export async function PUT(
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
+  if (night.cancelled_at) {
+    return NextResponse.json(
+      { error: "Cancelled game nights cannot be edited" },
+      { status: 400 }
+    );
+  }
+
+  const nextTitle = typeof title === "string" ? title.trim() : night.title;
+  if (!nextTitle) {
+    return NextResponse.json({ error: "Title is required" }, { status: 400 });
+  }
+
   let scheduledAtIso = night.scheduled_at;
   if (scheduled_at != null) {
     const scheduledDate = parseClientIsoDateTime(scheduled_at);
@@ -84,23 +96,66 @@ export async function PUT(
     scheduledAtIso = scheduledDate.toISOString();
   }
 
-  await supabase
+  const { data: updated, error } = await supabase
     .from("game_nights")
     .update({
-      title: title?.trim() ?? night.title,
-      description: description?.trim() ?? night.description,
+      title: nextTitle,
+      description:
+        typeof description === "string"
+          ? description.trim() || null
+          : night.description,
       scheduled_at: scheduledAtIso,
-      location: location?.trim() ?? night.location,
+      location:
+        typeof location === "string" ? location.trim() || null : night.location,
     })
-    .eq("id", id);
+    .eq("id", id)
+    .select()
+    .single();
+
+  if (error) {
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+
+  if (Array.isArray(game_ids)) {
+    if (!night.group_id) {
+      return NextResponse.json(
+        { error: "Game night has no group" },
+        { status: 400 }
+      );
+    }
+
+    await supabase.from("game_night_games").delete().eq("game_night_id", id);
+
+    if (game_ids.length > 0) {
+      const { data: validGames } = await supabase
+        .from("games")
+        .select("id")
+        .eq("group_id", night.group_id)
+        .in("id", game_ids);
+
+      const validIds = new Set((validGames ?? []).map((g) => g.id));
+      const filtered = (game_ids as string[]).filter((gameId) =>
+        validIds.has(gameId)
+      );
+
+      if (filtered.length > 0) {
+        await supabase.from("game_night_games").insert(
+          filtered.map((game_id: string) => ({
+            game_night_id: id,
+            game_id,
+          }))
+        );
+      }
+    }
+  }
 
   if (night.group_id) {
     await notifyGroupMembers(night.group_id, user.id, {
       title: "Game night updated",
-      body: `"${title ?? night.title}" — ${formatDateTime(scheduledAtIso)}`,
+      body: `"${nextTitle}" — ${formatDateTime(scheduledAtIso)}`,
       url: `/game-nights/${id}`,
     });
   }
 
-  return NextResponse.json({ ok: true });
+  return NextResponse.json(updated ?? { ok: true, id });
 }
