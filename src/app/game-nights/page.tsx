@@ -8,6 +8,8 @@ import { SetupBanner } from "@/components/SetupBanner";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { GameNightCard } from "@/components/GameNightCard";
+import { GameNightsCalendarExport } from "@/components/GameNightsCalendarExport";
+import { createCalendarFeedToken } from "@/lib/calendar-feed";
 import type { GameNightWithDetails } from "@/lib/types";
 
 export default async function GameNightsPage() {
@@ -23,6 +25,9 @@ export default async function GameNightsPage() {
   if (!groupId) redirect("/onboarding");
 
   const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
 
   const { data: nights } = await supabase
     .from("game_nights")
@@ -77,6 +82,10 @@ export default async function GameNightsPage() {
       .filter(Boolean),
   }));
 
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+  const feedToken =
+    user && groupId ? createCalendarFeedToken(user.id, groupId) : null;
+
   return (
     <div className="page-shell">
       <PageHeader
@@ -92,6 +101,16 @@ export default async function GameNightsPage() {
           </Link>
         }
       />
+
+      {feedToken && (
+        <div className="mb-4">
+          <GameNightsCalendarExport
+            feedToken={feedToken}
+            appUrl={appUrl}
+            nightCount={nightsWithDetails.length}
+          />
+        </div>
+      )}
 
       {nightsWithDetails.length === 0 ? (
         <EmptyState
