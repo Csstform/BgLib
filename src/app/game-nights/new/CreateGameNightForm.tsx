@@ -4,7 +4,15 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
+import { datetimeLocalToIso, toDatetimeLocalValue } from "@/lib/utils";
 import type { Game } from "@/lib/types";
+
+function defaultGameNightScheduledAt(): string {
+  const d = new Date();
+  d.setMinutes(0, 0, 0);
+  d.setHours(d.getHours() + 1);
+  return toDatetimeLocalValue(d);
+}
 
 type Props = {
   games: Game[];
@@ -14,7 +22,7 @@ export function CreateGameNightForm({ games }: Props) {
   const router = useRouter();
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
-  const [scheduledAt, setScheduledAt] = useState("");
+  const [scheduledAt, setScheduledAt] = useState(defaultGameNightScheduledAt);
   const [location, setLocation] = useState("");
   const [selectedGames, setSelectedGames] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
@@ -38,7 +46,7 @@ export function CreateGameNightForm({ games }: Props) {
         body: JSON.stringify({
           title,
           description,
-          scheduled_at: new Date(scheduledAt).toISOString(),
+          scheduled_at: datetimeLocalToIso(scheduledAt),
           location,
           game_ids: selectedGames,
         }),

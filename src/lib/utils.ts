@@ -59,6 +59,8 @@ export function formatDate(iso: string): string {
   });
 }
 
+const DATETIME_LOCAL_RE = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})$/;
+
 /** Format a date for `<input type="datetime-local">` in the user's local timezone. */
 export function toDatetimeLocalValue(date: Date | string = new Date()): string {
   const d = typeof date === "string" ? new Date(date) : date;
@@ -68,7 +70,30 @@ export function toDatetimeLocalValue(date: Date | string = new Date()): string {
 
 /** Convert a datetime-local input value to an ISO string (run on the client). */
 export function datetimeLocalToIso(localValue: string): string {
-  return new Date(localValue).toISOString();
+  const match = DATETIME_LOCAL_RE.exec(localValue);
+  if (match) {
+    const year = Number(match[1]);
+    const month = Number(match[2]);
+    const day = Number(match[3]);
+    const hour = Number(match[4]);
+    const minute = Number(match[5]);
+    return new Date(year, month - 1, day, hour, minute, 0, 0).toISOString();
+  }
+
+  const date = new Date(localValue);
+  if (Number.isNaN(date.getTime())) {
+    throw new RangeError("Invalid datetime-local value");
+  }
+  return date.toISOString();
+}
+
+/** Parse an ISO datetime from the client, rejecting bare datetime-local strings. */
+export function parseClientIsoDateTime(value: string): Date | null {
+  if (DATETIME_LOCAL_RE.test(value)) return null;
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return null;
+  return date;
 }
 
 export function formatLoanStatus(status: string): string {
