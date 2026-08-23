@@ -1,8 +1,8 @@
 import Link from "next/link";
 import { Calendar, MapPin, Users } from "lucide-react";
-import { formatDateTime } from "@/lib/utils";
 import type { GameNightWithDetails } from "@/lib/types";
 import { OwnerAvatars } from "./OwnerAvatars";
+import { LocalDateTime } from "@/components/LocalDateTime";
 
 export function GameNightCard({ night }: { night: GameNightWithDetails }) {
   const going = night.rsvps.filter((r) => r.status === "going");
@@ -16,7 +16,7 @@ export function GameNightCard({ night }: { night: GameNightWithDetails }) {
       <h3 className="font-semibold text-lg">{night.title}</h3>
       <p className="text-sm text-muted mt-1 flex items-center gap-1.5">
         <Calendar className="h-4 w-4 shrink-0" />
-        {formatDateTime(night.scheduled_at)}
+        <LocalDateTime iso={night.scheduled_at} />
       </p>
       {night.location && (
         <p className="text-sm text-muted mt-0.5 flex items-center gap-1.5">

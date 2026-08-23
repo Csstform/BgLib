@@ -2,7 +2,8 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft, Calendar, MapPin, Users, History, Pencil } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
-import { isSupabaseConfigured, formatDateTime, formatRsvpStatus } from "@/lib/utils";
+import { isSupabaseConfigured, formatRsvpStatus } from "@/lib/utils";
+import { LocalDateTime } from "@/components/LocalDateTime";
 import { SetupBanner } from "@/components/SetupBanner";
 import { GameCover } from "@/components/ui/GameCover";
 import { SectionHeading } from "@/components/ui/SectionHeading";
@@ -150,7 +151,7 @@ export default async function GameNightDetailPage({
           </div>
           <p className="mt-2 flex items-center gap-1.5 text-sm">
             <Calendar className="h-4 w-4 text-primary" />
-            {formatDateTime(night.scheduled_at)}
+            <LocalDateTime iso={night.scheduled_at} />
             {isPast && (
               <span className="rounded-md bg-surface-2 px-2 py-0.5 text-xs text-muted">
                 Past

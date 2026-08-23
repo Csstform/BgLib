@@ -12,7 +12,7 @@ import {
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { getActiveGroupId } from "@/lib/group";
-import { formatDateTime } from "@/lib/utils";
+import { LocalDateTime } from "@/components/LocalDateTime";
 import { computeNeverPlayedGames } from "@/lib/play-stats";
 import { GameCover } from "@/components/ui/GameCover";
 import { SectionHeading } from "@/components/ui/SectionHeading";
@@ -188,7 +188,7 @@ export async function HomeDashboard({ userId }: { userId: string }) {
           >
             <h3 className="font-semibold">{nextNight.title}</h3>
             <p className="mt-1 text-sm text-muted">
-              {formatDateTime(nextNight.scheduled_at)}
+              <LocalDateTime iso={nextNight.scheduled_at} />
               {nextNight.location ? ` · ${nextNight.location}` : ""}
             </p>
             <p className="mt-2 text-xs text-muted">
