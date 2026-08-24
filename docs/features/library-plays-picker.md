@@ -1,8 +1,8 @@
-# Library, plays, stats, and picker
+# Library, plays, stats, picker, and copy
 
 This guide documents how BgLib connects the group catalogue, catalogue
-management, expansions, play logging, stats, offline browsing, and the game
-picker.
+management, copying between groups, expansions, play logging, stats, offline
+browsing, and the game picker.
 
 ## Intent
 
@@ -14,6 +14,8 @@ These features share one data loop:
 3. `/stats` summarizes play history and winners.
 4. `/picker` uses ownership, attendance, wants, and play history to suggest
    games that can actually be played.
+5. Group members can seed another group catalogue by copying games they already
+   own, or by copying an entire source catalogue.
 
 All queries are scoped to the active group. Row Level Security should keep group
 data visible only to members.
@@ -72,6 +74,44 @@ in IndexedDB database `bglib-offline`, store `libraries`, keyed by `groupId`.
 If the browser later reports offline status, the library page shows cached data
 with the cache timestamp. Offline cache is browsing-only; mutations still need
 the network.
+
+## Copying a library between groups
+
+Primary codepaths:
+
+- `src/app/profile/page.tsx`
+- `src/components/GroupSettingsCard.tsx`
+- `src/components/CopyLibraryCard.tsx`
+- `src/app/api/groups/copy-library/route.ts`
+- `src/lib/copy-library.ts`
+- `src/lib/link-expansions.ts`
+
+Users who belong to more than one group can copy games into their active group
+from the Profile page's **Your group** section. Creating a new group can also
+copy the current user's collection from the previous active group.
+
+The API accepts `POST /api/groups/copy-library` with:
+
+| Field | Values | Behavior |
+|-------|--------|----------|
+| `action` | `preview` or `copy` | `preview` classifies what will be copied or linked; `copy` performs the mutation. |
+| `source_group_id` | UUID | Group to copy from. The current user must be a member. |
+| `target_group_id` | UUID, optional | Defaults to the user's active group. The current user must be a member. |
+| `mode` | `my_collection` or `full_catalogue` | `my_collection` copies only games owned by the current user; `full_catalogue` copies every source catalogue entry. |
+
+Copy behavior is intentionally catalogue-scoped:
+
+- Plays, loans, game nights, and want-to-play rows stay in the source group.
+- Ownership is created only for the current user, and only when the source row
+  has that user's ownership metadata. `condition`, `notes`, and
+  `acquired_date` are preserved.
+- Existing target games are linked instead of duplicated when they match by BGG
+  ID, UPC, or normalized title. Missing BGG/UPC metadata on the target game is
+  backfilled from the source.
+- `my_collection` also includes any missing base games needed to keep owned
+  expansions nested, but those helper base games do not create ownership rows.
+- After copying, orphan expansions in the target group are relinked on a
+  best-effort basis.
 
 ## Catalogue management
 
@@ -226,6 +266,8 @@ When deploying or debugging this feature cluster:
 5. Visit `/library` once while online before expecting offline cached browsing.
 6. Prefer merging duplicate games before deleting them if ownership, play
    history, loans, wants, or game-night suggestions should survive.
+7. Use copy-library preview before importing between groups; duplicate matching
+   depends on BGG ID, UPC, then normalized title.
 
 ## Troubleshooting
 
@@ -236,6 +278,8 @@ When deploying or debugging this feature cluster:
 | Expansion cannot be picked as the main game | Expected behavior; log the base game and select expansions used. |
 | Picker returns no games | Verify at least one attendee owns a matching base game, player count fits, `max_time` is not too strict, and `want_to_play=1` has matching wants. |
 | Picker ignores an expansion | Expansions are shown as metadata for eligible base games, not standalone candidates. |
+| Copying between groups made no new rows | The matching games already exist in the target group and were linked by BGG ID, UPC, or normalized title. |
+| Copied expansion is not nested | Confirm the base game exists or was included in the copy; orphan relinking is best-effort after the copy succeeds. |
 | Stats show no winners | Winners are counted only from plays where participants were marked with `is_winner`. |
 | Offline library shows old data | The cache is updated only after a successful online `/library` load for that group. |
 | Removed game disappeared from plays, loans, or game nights | Expected: removal deletes the game and cascades dependent records. Use duplicate merge instead when those records need to be preserved. |

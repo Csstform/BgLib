@@ -1,7 +1,7 @@
 # Game nights and reminders
 
-This guide documents the game-night planning workflow, immediate notifications,
-and the daily reminder cron.
+This guide documents the game-night planning workflow, local-time display,
+immediate notifications, and the daily reminder cron.
 
 ## Intent
 
@@ -22,6 +22,7 @@ Both notification paths reuse the app's push and email helpers.
 - `src/app/game-nights/[id]/edit/page.tsx`
 - `src/app/game-nights/[id]/RsvpButtons.tsx`
 - `src/components/GameNightPicker.tsx`
+- `src/components/LocalDateTime.tsx`
 - `src/app/api/game-nights/route.ts`
 - `src/app/api/game-nights/[id]/route.ts`
 - `src/app/api/game-nights/[id]/games/route.ts`
@@ -63,6 +64,18 @@ Fresh installs through `supabase/install.sql` include both.
 Only the host can update, cancel, or replace the planned games for a game night.
 The API checks `night.host_id === user.id` before those mutations. Cancelled
 nights cannot be edited.
+
+## Timezone handling
+
+Game-night times are stored as ISO timestamps in `game_nights.scheduled_at`.
+Create and edit forms render `datetime-local` values in the browser so hosts
+enter the time in their own local timezone, then submit an ISO value to the API.
+
+List cards, detail pages, and dashboard cards render through `LocalDateTime` or
+the shared date utilities so each viewer sees the scheduled time in their own
+local timezone. Calendar exports keep the ISO timestamp and let the calendar
+client interpret it. Do not pre-format game-night times on the server for
+user-facing UI; server rendering does not know the viewer's timezone.
 
 ## Reminder cron
 
