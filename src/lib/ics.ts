@@ -37,7 +37,7 @@ function buildEvent(event: IcsEvent): string {
   const lines = [
     "BEGIN:VEVENT",
     `UID:${escapeIcsText(event.uid)}`,
-    `DTSTAMP:${formatIcsUtc(new Date())}`,
+    `DTSTAMP:${formatIcsUtc(event.start)}`,
     `DTSTART:${formatIcsUtc(event.start)}`,
     `DTEND:${formatIcsUtc(event.end)}`,
     `SUMMARY:${escapeIcsText(event.title)}`,
@@ -68,11 +68,14 @@ export function buildIcsCalendar(
     "CALSCALE:GREGORIAN",
     "METHOD:PUBLISH",
     `X-WR-CALNAME:${escapeIcsText(calendarName)}`,
+    `NAME:${escapeIcsText(calendarName)}`,
+    "REFRESH-INTERVAL;VALUE=DURATION:PT1H",
+    "X-PUBLISHED-TTL:PT1H",
   ];
 
   const footer = ["END:VCALENDAR"];
 
-  return [...header, ...events.map(buildEvent), ...footer].join("\r\n");
+  return `${[...header, ...events.map(buildEvent), ...footer].join("\r\n")}\r\n`;
 }
 
 export function defaultGameNightEnd(start: Date, hours = 3): Date {

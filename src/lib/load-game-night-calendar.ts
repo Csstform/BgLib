@@ -1,13 +1,19 @@
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/server";
-import { isGroupMember } from "@/lib/group";
+import { getAdminClient } from "@/lib/supabase/admin";
 import type { GameNightCalendarInput } from "@/lib/game-night-calendar";
 import { profileName } from "@/lib/profile-name";
 
 export async function loadGroupGameNightsForCalendar(
   groupId: string,
-  options?: { upcomingOnly?: boolean; nightId?: string }
+  options?: {
+    upcomingOnly?: boolean;
+    nightId?: string;
+    /** Service-role client so unauthenticated calendar subscribers can read events. */
+    supabase?: SupabaseClient;
+  }
 ): Promise<GameNightCalendarInput[]> {
-  const supabase = await createClient();
+  const supabase = options?.supabase ?? (await createClient());
   const upcomingOnly = options?.upcomingOnly ?? true;
 
   let query = supabase
@@ -63,5 +69,14 @@ export async function canAccessGroupCalendar(
   userId?: string
 ): Promise<boolean> {
   if (!userId) return false;
-  return isGroupMember(groupId);
+
+  const supabase = getAdminClient();
+  const { data } = await supabase
+    .from("group_members")
+    .select("id")
+    .eq("group_id", groupId)
+    .eq("user_id", userId)
+    .maybeSingle();
+
+  return !!data;
 }
