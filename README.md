@@ -4,7 +4,7 @@ A mobile-first PWA for iOS and Android: a shared board game catalogue, ownership
 
 ## Features
 
-- **Gaming groups** — Separate libraries per group with invite codes
+- **Gaming groups** — Separate libraries per group with invite codes and copy-between-groups support
 - **Shared catalogue** — Title, players, play time, cover image; BGG search on add, filters, offline cache
 - **Ownership tracking** — See who owns what in your active group
 - **Game picker** — Filter by players, time, and attendees; scores never-played, underplayed, and wanted games
@@ -35,8 +35,8 @@ A mobile-first PWA for iOS and Android: a shared board game catalogue, ownership
 | Guide | Covers |
 |-------|--------|
 | [`docs/features/bgg-collection-import.md`](docs/features/bgg-collection-import.md) | BGG collection preview/batch import, duplicate handling, expansion linking, token requirements, troubleshooting |
-| [`docs/features/game-night-reminders.md`](docs/features/game-night-reminders.md) | Game-night planning, RSVPs, immediate notifications, daily reminder cron, deployment checks |
-| [`docs/features/library-plays-picker.md`](docs/features/library-plays-picker.md) | Library grouping and filters, catalogue edit/merge/remove flows, expansion linking, play logging, stats, offline cache, picker scoring |
+| [`docs/features/game-night-reminders.md`](docs/features/game-night-reminders.md) | Game-night planning, local-time display, RSVPs, immediate notifications, daily reminder cron, deployment checks |
+| [`docs/features/library-plays-picker.md`](docs/features/library-plays-picker.md) | Library grouping and filters, copy-between-groups workflow, catalogue edit/merge/remove flows, expansion linking, play logging, stats, offline cache, picker scoring |
 
 ## Quick Start
 
@@ -140,7 +140,7 @@ npm run start:prod   # smoke test, then set up systemd + nginx per deploy/README
 
 | Table | Purpose |
 |-------|---------|
-| `profiles` | Display names, avatars, notification prefs |
+| `profiles` | Usernames, optional real names, avatars, notification prefs |
 | `groups` / `group_members` | Gaming groups and membership |
 | `games` | Group-scoped catalogue |
 | `ownership` | User ↔ game ownership |
@@ -187,7 +187,7 @@ src/
 supabase/
 ├── install.sql           # Single-file install (generated)
 ├── schema.sql            # Base schema
-├── migrations/           # Ordered migrations 002–012
+├── migrations/           # Ordered migrations 002–014
 └── README.md             # Database setup guide
 docs/
 └── features/             # Feature architecture and workflow docs

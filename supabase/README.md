@@ -31,6 +31,7 @@ Run these files **in order** if you prefer step-by-step:
 | 11 | `migrations/011_fix_play_logging_rls.sql` | Fix RLS for play participants and expansions |
 | 12 | `migrations/012_game_night_reminders.sql` | Game night reminder tracking for cron |
 | 13 | `migrations/013_group_member_management.sql` | Owner can remove non-owner members |
+| 14 | `migrations/014_profile_real_name.sql` | Optional real name on profiles with username fallback |
 
 For existing projects, run only the migrations you have not applied yet, in
 order. Fresh projects can use `install.sql`, which already includes all
@@ -50,6 +51,9 @@ In Supabase Dashboard → **Database** → **Replication**, enable Realtime for:
 
 - `install.sql` is safe to re-run on an existing project (tables/indexes use `IF NOT EXISTS`; triggers/policies are dropped before recreate). Do not use `supabase db reset` locally.
 - New signups automatically get a default group and profile (via `handle_new_user` trigger).
+- Profiles have required `display_name` usernames and optional `real_name`;
+  user-facing name helpers display `real_name` when present, otherwise
+  `display_name`.
 - Existing users running migration `003` get backfilled groups and `onboarding_completed = true`.
 - Feature behavior for migrations `008` and `010` is documented in
   [`../docs/features/library-plays-picker.md`](../docs/features/library-plays-picker.md).
