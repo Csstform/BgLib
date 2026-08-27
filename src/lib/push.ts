@@ -61,7 +61,8 @@ export async function sendPushToUsers(
 export async function notifyGroupMembers(
   groupId: string,
   excludeUserId: string | null,
-  payload: { title: string; body: string; url?: string }
+  payload: { title: string; body: string; url?: string },
+  options?: { email?: boolean }
 ): Promise<number> {
   const supabase = getAdminClient();
   const { data: members } = await supabase
@@ -73,7 +74,12 @@ export async function notifyGroupMembers(
     .map((m) => m.user_id)
     .filter((id) => id !== excludeUserId);
 
-  const result = await notifyUsersMulti(userIds, payload, sendPushToUsers);
+  const result = await notifyUsersMulti(
+    userIds,
+    payload,
+    sendPushToUsers,
+    options
+  );
   return result.push + result.email;
 }
 

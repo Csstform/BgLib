@@ -39,9 +39,11 @@ type ExistingNight = {
 export function GameNightForm({
   games,
   night,
+  emailConfigured = false,
 }: {
   games: Game[];
   night?: ExistingNight;
+  emailConfigured?: boolean;
 }) {
   const router = useRouter();
   const isEdit = !!night;
@@ -54,6 +56,7 @@ export function GameNightForm({
   const scheduledAt = scheduledAtOverride ?? clientScheduledAt;
   const [location, setLocation] = useState(night?.location ?? "");
   const [selectedGames, setSelectedGames] = useState<string[]>(night?.game_ids ?? []);
+  const [sendEmail, setSendEmail] = useState(true);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -80,6 +83,7 @@ export function GameNightForm({
             scheduled_at: datetimeLocalToIso(scheduledAt),
             location,
             game_ids: selectedGames,
+            send_email: emailConfigured && sendEmail,
           }),
         }
       );
@@ -191,6 +195,30 @@ export function GameNightForm({
           </div>
         </div>
       )}
+
+      <label
+        className={`flex items-start gap-3 rounded-xl border border-border bg-surface px-4 py-3 ${
+          emailConfigured ? "cursor-pointer" : "opacity-70"
+        }`}
+      >
+        <input
+          type="checkbox"
+          checked={emailConfigured && sendEmail}
+          onChange={(e) => setSendEmail(e.target.checked)}
+          disabled={!emailConfigured}
+          className="mt-1 accent-primary"
+        />
+        <span>
+          <span className="block text-sm font-medium">
+            {isEdit ? "Email the group about these changes" : "Email the group"}
+          </span>
+          <span className="mt-0.5 block text-xs text-muted">
+            {emailConfigured
+              ? "Sends an invite with the time, place, and an .ics calendar file to members who have email notifications on."
+              : "Email isn't configured on this server yet. Push notifications still go out."}
+          </span>
+        </span>
+      </label>
 
       <button
         type="submit"
