@@ -1,9 +1,16 @@
 import { Resend } from "resend";
 import { getAdminClient } from "@/lib/supabase/admin";
+import { escapeHtml } from "@/lib/game-night-email";
 
 export function isEmailConfigured(): boolean {
   return !!(process.env.RESEND_API_KEY && process.env.EMAIL_FROM);
 }
+
+export type EmailAttachment = {
+  filename: string;
+  content: string | Buffer;
+  contentType?: string;
+};
 
 async function getUserEmail(userId: string): Promise<string | null> {
   if (!process.env.SUPABASE_SERVICE_ROLE_KEY) return null;
@@ -15,7 +22,8 @@ async function getUserEmail(userId: string): Promise<string | null> {
 export async function sendEmailToUsers(
   userIds: string[],
   subject: string,
-  html: string
+  html: string,
+  options?: { attachments?: EmailAttachment[] }
 ): Promise<number> {
   if (!isEmailConfigured() || userIds.length === 0) return 0;
 
@@ -39,15 +47,20 @@ export async function sendEmailToUsers(
       if (!email) return;
 
       try {
-        await resend.emails.send({
+        const { error } = await resend.emails.send({
           from: process.env.EMAIL_FROM!,
           to: email,
           subject,
           html,
+          attachments: options?.attachments,
         });
+        if (error) {
+          console.error("Resend email failed:", error);
+          return;
+        }
         sent++;
-      } catch {
-        // Skip failed sends
+      } catch (err) {
+        console.error("Resend email failed:", err);
       }
     })
   );
@@ -62,18 +75,22 @@ export async function notifyUsers(
     body: string;
     url?: string;
   },
-  pushFn: (ids: string[], p: typeof payload) => Promise<number>
+  pushFn: (ids: string[], p: typeof payload) => Promise<number>,
+  options?: { email?: boolean }
 ): Promise<{ push: number; email: number }> {
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
   const link = payload.url ? `${appUrl}${payload.url}` : appUrl;
+  const sendEmail = options?.email !== false;
 
   const [push, email] = await Promise.all([
     pushFn(userIds, payload),
-    sendEmailToUsers(
-      userIds,
-      payload.title,
-      `<p>${payload.body}</p><p><a href="${link}">Open in BgLib</a></p>`
-    ),
+    sendEmail
+      ? sendEmailToUsers(
+          userIds,
+          payload.title,
+          `<p>${escapeHtml(payload.body)}</p><p><a href="${escapeHtml(link)}">Open in BgLib</a></p>`
+        )
+      : Promise.resolve(0),
   ]);
 
   return { push, email };

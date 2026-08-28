@@ -4,6 +4,7 @@ import { isSupabaseConfigured } from "@/lib/utils";
 import { getActiveGroupId, isGroupMember } from "@/lib/group";
 import { SetupBanner } from "@/components/SetupBanner";
 import { GameNightForm } from "@/components/GameNightForm";
+import { isEmailConfigured } from "@/lib/email";
 
 export default async function EditGameNightPage({
   params,
@@ -64,6 +65,7 @@ export default async function EditGameNightPage({
       <h1 className="mb-6 text-2xl font-bold">Edit game night</h1>
       <GameNightForm
         games={games ?? []}
+        emailConfigured={isEmailConfigured()}
         night={{
           id: night.id,
           title: night.title,

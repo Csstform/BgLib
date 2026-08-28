@@ -29,6 +29,8 @@ Both notification paths reuse the app's push and email helpers.
 - `src/app/api/cron/game-night-reminders/route.ts`
 - `src/lib/push.ts`
 - `src/lib/email.ts`
+- `src/lib/game-night-email.ts`
+- `src/lib/send-game-night-invite.ts`
 
 ## Data model
 
@@ -50,16 +52,19 @@ Fresh installs through `supabase/install.sql` include both.
 
 1. A signed-in group member opens `/game-nights/new`.
 2. The form posts `title`, `scheduled_at`, optional `description`, optional
-   `location`, and optional `game_ids` to `POST /api/game-nights`.
+   `location`, optional `game_ids`, and `send_email` to `POST /api/game-nights`.
 3. The route creates the `game_nights` row in the active group, inserts selected
    `game_night_games`, and upserts the host's RSVP as `going`.
-4. `notifyGroupMembers` sends a "New game night planned!" notification to other
-   members in the group.
+4. `notifyGroupMembers` sends a push notification ("New game night planned!") to
+   other members. If the host leaves **Email the group** checked (the default
+   when Resend is configured), those members also receive an invite email with
+   the time, place, planned games, an RSVP link, and an `.ics` attachment.
 5. The user lands on `/game-nights/[id]`, where members can RSVP and the
    `GameNightPicker` can suggest games based on people marked `going`.
 6. The host can open `/game-nights/[id]/edit` to change title, time, location,
    description, or planned games. The form puts those fields to
-   `PUT /api/game-nights/[id]`, which notifies the group of the update.
+   `PUT /api/game-nights/[id]`. Push always goes out; the same email-invite
+   checkbox controls whether an updated invite is emailed.
 
 Only the host can update, cancel, or replace the planned games for a game night.
 The API checks `night.host_id === user.id` before those mutations. Cancelled
@@ -138,4 +143,5 @@ Use the same public origin configured in `NEXT_PUBLIC_APP_URL`.
 | Reminder does not send for an event tomorrow | Confirm the event is not cancelled, `reminder_sent_at` is null, and the server's tomorrow window includes `scheduled_at`. |
 | Declined user still received a create/update notification | Expected: immediate host notifications go to group members except the host. Only the daily reminder excludes declined RSVPs. |
 | Email link points at the wrong host | Set `NEXT_PUBLIC_APP_URL` to the public HTTPS app URL without a trailing slash. |
-| Reminder sends push but not email | Confirm `RESEND_API_KEY`, `EMAIL_FROM`, and the user's `profiles.email_notifications` setting. |
+| Create form has no working email checkbox | Set `RESEND_API_KEY` and `EMAIL_FROM`. The checkbox is visible but disabled until both are set. |
+| Invite email not received | Confirm `SUPABASE_SERVICE_ROLE_KEY` (used to look up member emails), `profiles.email_notifications` is not off, and Resend accepted the send. |

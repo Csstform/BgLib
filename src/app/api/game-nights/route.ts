@@ -4,6 +4,21 @@ import { notifyGroupMembers } from "@/lib/push";
 import { formatDateTime, parseClientIsoDateTime } from "@/lib/utils";
 import { getActiveGroupId } from "@/lib/group";
 import { profileName } from "@/lib/profile-name";
+import { sendGameNightInviteToGroup } from "@/lib/send-game-night-invite";
+
+async function loadGameTitles(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  groupId: string,
+  gameIds: string[]
+): Promise<string[]> {
+  if (gameIds.length === 0) return [];
+  const { data } = await supabase
+    .from("games")
+    .select("title")
+    .eq("group_id", groupId)
+    .in("id", gameIds);
+  return (data ?? []).map((g) => g.title).filter(Boolean);
+}
 
 export async function POST(request: NextRequest) {
   const supabase = await createClient();
@@ -21,7 +36,7 @@ export async function POST(request: NextRequest) {
   }
 
   const body = await request.json();
-  const { title, description, scheduled_at, location, game_ids } = body;
+  const { title, description, scheduled_at, location, game_ids, send_email } = body;
 
   if (!title?.trim() || !scheduled_at) {
     return NextResponse.json(
@@ -75,11 +90,39 @@ export async function POST(request: NextRequest) {
     .eq("id", user.id)
     .single();
 
-  await notifyGroupMembers(groupId, user.id, {
-    title: "New game night planned!",
-    body: `${profileName(host)} is hosting "${title}" on ${formatDateTime(scheduledAtIso)}`,
-    url: `/game-nights/${gameNight.id}`,
-  });
+  const hostName = profileName(host);
+  const gameTitles = await loadGameTitles(
+    supabase,
+    groupId,
+    Array.isArray(game_ids) ? game_ids : []
+  );
+
+  await notifyGroupMembers(
+    groupId,
+    user.id,
+    {
+      title: "New game night planned!",
+      body: `${hostName} is hosting "${title.trim()}" on ${formatDateTime(scheduledAtIso)}`,
+      url: `/game-nights/${gameNight.id}`,
+    },
+    { email: false }
+  );
+
+  if (send_email !== false) {
+    await sendGameNightInviteToGroup({
+      groupId,
+      excludeUserId: user.id,
+      night: {
+        id: gameNight.id,
+        title: title.trim(),
+        scheduled_at: scheduledAtIso,
+        location: location?.trim() || null,
+        description: description?.trim() || null,
+        host_name: hostName,
+        game_titles: gameTitles,
+      },
+    });
+  }
 
   return NextResponse.json(gameNight);
 }

@@ -51,6 +51,19 @@ export function formatDateTime(iso: string): string {
   });
 }
 
+export function formatDateTimeUtc(iso: string): string {
+  return new Date(iso).toLocaleString("en-US", {
+    weekday: "short",
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+    timeZone: "UTC",
+    timeZoneName: "short",
+  });
+}
+
 export function formatDate(iso: string): string {
   return new Date(iso).toLocaleDateString(undefined, {
     month: "short",

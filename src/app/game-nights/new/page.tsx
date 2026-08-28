@@ -4,6 +4,7 @@ import { isSupabaseConfigured } from "@/lib/utils";
 import { getActiveGroupId } from "@/lib/group";
 import { SetupBanner } from "@/components/SetupBanner";
 import { GameNightForm } from "@/components/GameNightForm";
+import { isEmailConfigured } from "@/lib/email";
 
 export default async function NewGameNightPage() {
   if (!isSupabaseConfigured()) {
@@ -33,7 +34,7 @@ export default async function NewGameNightPage() {
   return (
     <div className="page-shell">
       <h1 className="mb-6 text-2xl font-bold">Plan a Game Night</h1>
-      <GameNightForm games={games ?? []} />
+      <GameNightForm games={games ?? []} emailConfigured={isEmailConfigured()} />
     </div>
   );
 }

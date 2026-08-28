@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { notifyGroupMembers } from "@/lib/push";
 import { formatDateTime, parseClientIsoDateTime } from "@/lib/utils";
+import { profileName } from "@/lib/profile-name";
+import { sendGameNightInviteToGroup } from "@/lib/send-game-night-invite";
 
 export async function PATCH(
   request: NextRequest,
@@ -63,7 +65,7 @@ export async function PUT(
   }
 
   const body = await request.json();
-  const { title, description, scheduled_at, location, game_ids } = body;
+  const { title, description, scheduled_at, location, game_ids, send_email } = body;
 
   const { data: night } = await supabase
     .from("game_nights")
@@ -150,11 +152,64 @@ export async function PUT(
   }
 
   if (night.group_id) {
-    await notifyGroupMembers(night.group_id, user.id, {
-      title: "Game night updated",
-      body: `"${nextTitle}" — ${formatDateTime(scheduledAtIso)}`,
-      url: `/game-nights/${id}`,
-    });
+    const { data: host } = await supabase
+      .from("profiles")
+      .select("display_name, real_name")
+      .eq("id", user.id)
+      .single();
+    const hostName = profileName(host);
+
+    let gameTitles: string[] = [];
+    if (Array.isArray(game_ids) && game_ids.length > 0) {
+      const { data: games } = await supabase
+        .from("games")
+        .select("title")
+        .eq("group_id", night.group_id)
+        .in("id", game_ids);
+      gameTitles = (games ?? []).map((g) => g.title);
+    } else {
+      const { data: planned } = await supabase
+        .from("game_night_games")
+        .select("game:games (title)")
+        .eq("game_night_id", id);
+      gameTitles = (planned ?? [])
+        .map((row: { game: { title: string } | { title: string }[] | null }) => {
+          const game = Array.isArray(row.game) ? row.game[0] : row.game;
+          return game?.title;
+        })
+        .filter(Boolean) as string[];
+    }
+
+    await notifyGroupMembers(
+      night.group_id,
+      user.id,
+      {
+        title: "Game night updated",
+        body: `"${nextTitle}" — ${formatDateTime(scheduledAtIso)}`,
+        url: `/game-nights/${id}`,
+      },
+      { email: false }
+    );
+
+    if (send_email !== false) {
+      await sendGameNightInviteToGroup({
+        groupId: night.group_id,
+        excludeUserId: user.id,
+        night: {
+          id,
+          title: nextTitle,
+          scheduled_at: scheduledAtIso,
+          location:
+            typeof location === "string" ? location.trim() || null : night.location,
+          description:
+            typeof description === "string"
+              ? description.trim() || null
+              : night.description,
+          host_name: hostName,
+          game_titles: gameTitles,
+        },
+      });
+    }
   }
 
   return NextResponse.json(updated ?? { ok: true, id });
