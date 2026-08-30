@@ -11,6 +11,7 @@ import { PushNotificationToggle } from "@/components/PushNotificationToggle";
 import { EmailNotificationToggle } from "@/components/EmailNotificationToggle";
 import { OnboardingQuickAdd } from "@/components/OnboardingQuickAdd";
 import { PwaInstallGuide } from "@/components/PwaInstallGuide";
+import type { Group } from "@/lib/types";
 import { Dices, Users, Plus, Smartphone, Check } from "lucide-react";
 
 const STEPS = [
@@ -23,26 +24,30 @@ const STEPS = [
 type Step = (typeof STEPS)[number]["id"];
 
 export function OnboardingWizard({
-  hasGroup,
+  groups,
   userId,
   groupId,
   emailConfigured,
   emailNotificationsEnabled,
 }: {
-  hasGroup: boolean;
+  groups: Group[];
   userId: string;
   groupId: string | null;
   emailConfigured: boolean;
   emailNotificationsEnabled: boolean;
 }) {
   const router = useRouter();
-  const [step, setStep] = useState<Step>(hasGroup ? "games" : "group");
+  const [step, setStep] = useState<Step>("group");
   const [activeGroupId, setActiveGroupId] = useState(groupId);
-  const [groupMode, setGroupMode] = useState<"create" | "join">("create");
+  const [groupMode, setGroupMode] = useState<"create" | "join">(
+    groups.length ? "join" : "create"
+  );
   const [groupName, setGroupName] = useState("");
   const [inviteCode, setInviteCode] = useState("");
   const [error, setError] = useState("");
   const [pending, startTransition] = useTransition();
+  const currentGroup =
+    groups.find((g) => g.id === activeGroupId) ?? groups[0] ?? null;
 
   const stepIndex = STEPS.findIndex((s) => s.id === step);
   const inputClass =
@@ -115,62 +120,105 @@ export function OnboardingWizard({
         <div className="space-y-4">
           <div className="mb-4 text-center">
             <Users className="mx-auto mb-2 h-10 w-10 text-primary" />
-            <h2 className="text-xl font-bold">Set up your group</h2>
+            <h2 className="text-xl font-bold">
+              {currentGroup ? "Your group" : "Set up your group"}
+            </h2>
             <p className="mt-1 text-sm text-muted">
-              Groups share one library, loans, and game nights. Create one or join
-              with an invite code — you can always join more later from Profile.
+              {currentGroup
+                ? "Every account starts with a personal library. Keep it, or join a friend's group with their invite code."
+                : "Groups share one library, loans, and game nights. Create one or join with an invite code."}
             </p>
           </div>
 
-          <div className="flex gap-2">
-            <button
-              type="button"
-              onClick={() => setGroupMode("create")}
-              className={`flex-1 rounded-xl border py-2 text-sm font-medium ${
-                groupMode === "create"
-                  ? "border-primary bg-primary/20 text-primary"
-                  : "border-border"
-              }`}
-            >
-              Create group
-            </button>
-            <button
-              type="button"
-              onClick={() => setGroupMode("join")}
-              className={`flex-1 rounded-xl border py-2 text-sm font-medium ${
-                groupMode === "join"
-                  ? "border-primary bg-primary/20 text-primary"
-                  : "border-border"
-              }`}
-            >
-              Join with code
-            </button>
-          </div>
-
-          {groupMode === "create" ? (
-            <input
-              value={groupName}
-              onChange={(e) => setGroupName(e.target.value)}
-              placeholder="Friday Night Board Gamers"
-              className={inputClass}
-            />
-          ) : (
-            <input
-              value={inviteCode}
-              onChange={(e) => setInviteCode(e.target.value.toUpperCase())}
-              placeholder="INVITE CODE"
-              className={inputClass}
-            />
+          {currentGroup && (
+            <div className="rounded-xl border border-border bg-surface px-4 py-3 text-left">
+              <p className="font-medium">{currentGroup.name}</p>
+              <p className="mt-1 text-xs uppercase tracking-wide text-muted">
+                Invite code
+              </p>
+              <p className="font-mono text-lg tracking-widest text-primary">
+                {currentGroup.invite_code}
+              </p>
+            </div>
           )}
 
-          <button
-            type="button"
-            onClick={handleGroup}
-            disabled={pending}
-            className="w-full rounded-xl bg-primary py-3 font-medium text-primary-fg disabled:opacity-50"
-          >
-            {pending ? "..." : "Continue"}
-          </button>
+          {currentGroup ? (
+            <>
+              <input
+                value={inviteCode}
+                onChange={(e) => setInviteCode(e.target.value.toUpperCase())}
+                placeholder="Friend's invite code (optional)"
+                className={inputClass}
+              />
+              <button
+                type="button"
+                onClick={() => {
+                  if (inviteCode.trim()) handleGroup();
+                  else setStep("games");
+                }}
+                disabled={pending}
+                className="w-full rounded-xl bg-primary py-3 font-medium text-primary-fg disabled:opacity-50"
+              >
+                {pending
+                  ? "..."
+                  : inviteCode.trim()
+                    ? "Join and continue"
+                    : "Continue with this group"}
+              </button>
+            </>
+          ) : (
+            <>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => setGroupMode("create")}
+                  className={`flex-1 rounded-xl border py-2 text-sm font-medium ${
+                    groupMode === "create"
+                      ? "border-primary bg-primary/20 text-primary"
+                      : "border-border"
+                  }`}
+                >
+                  Create group
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setGroupMode("join")}
+                  className={`flex-1 rounded-xl border py-2 text-sm font-medium ${
+                    groupMode === "join"
+                      ? "border-primary bg-primary/20 text-primary"
+                      : "border-border"
+                  }`}
+                >
+                  Join with code
+                </button>
+              </div>
+
+              {groupMode === "create" ? (
+                <input
+                  value={groupName}
+                  onChange={(e) => setGroupName(e.target.value)}
+                  placeholder="Friday Night Board Gamers"
+                  className={inputClass}
+                />
+              ) : (
+                <input
+                  value={inviteCode}
+                  onChange={(e) => setInviteCode(e.target.value.toUpperCase())}
+                  placeholder="INVITE CODE"
+                  className={inputClass}
+                />
+              )}
+
+              <button
+                type="button"
+                onClick={handleGroup}
+                disabled={pending}
+                className="w-full rounded-xl bg-primary py-3 font-medium text-primary-fg disabled:opacity-50"
+              >
+                {pending ? "..." : "Continue"}
+              </button>
+            </>
+          )}
         </div>
       )}
 

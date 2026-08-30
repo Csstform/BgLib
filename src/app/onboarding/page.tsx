@@ -36,7 +36,7 @@ export default async function OnboardingPage() {
     <div className="page-shell mx-auto flex min-h-[calc(100dvh-var(--header-height))] max-w-md flex-col justify-center">
       <h1 className="mb-6 text-center text-2xl font-bold">Welcome to BgLib</h1>
       <OnboardingWizard
-        hasGroup={groups.length > 0}
+        groups={groups}
         userId={user.id}
         groupId={groupId}
         emailConfigured={isEmailConfigured()}
