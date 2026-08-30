@@ -27,9 +27,14 @@ function BarcodeScannerDialog({
   const streamRef = useRef<MediaStream | null>(null);
   const scanFrameRef = useRef<number | null>(null);
   const handledRef = useRef(false);
+  const detectorAvailable = Boolean(getBarcodeDetector());
   const [manualUpc, setManualUpc] = useState("");
-  const [cameraError, setCameraError] = useState("");
-  const [starting, setStarting] = useState(false);
+  const [cameraError, setCameraError] = useState(() =>
+    detectorAvailable
+      ? ""
+      : "Live scanning is not supported in this browser. Type the barcode below (works on all devices)."
+  );
+  const [starting, setStarting] = useState(detectorAvailable);
   const [scannerReady, setScannerReady] = useState(false);
 
   const stopCamera = useCallback(() => {
@@ -63,17 +68,7 @@ function BarcodeScannerDialog({
     const BarcodeDetector = getBarcodeDetector();
 
     async function startCamera() {
-      setStarting(true);
-      setCameraError("");
-      setScannerReady(false);
-
-      if (!BarcodeDetector) {
-        setCameraError(
-          "Live scanning is not supported in this browser. Type the barcode below (works on all devices)."
-        );
-        setStarting(false);
-        return;
-      }
+      if (!BarcodeDetector) return;
 
       try {
         const stream = await navigator.mediaDevices.getUserMedia({
@@ -99,6 +94,8 @@ function BarcodeScannerDialog({
         streamRef.current = stream;
         video.srcObject = stream;
         await video.play();
+
+        if (cancelled) return;
 
         const detector = new BarcodeDetector({ formats: BARCODE_FORMATS });
         setScannerReady(true);

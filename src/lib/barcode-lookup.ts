@@ -1,24 +1,11 @@
 import { isBggConfigured, searchBggGames } from "@/lib/bgg";
 import { isGameUpcConfigured, lookupUpcOnGameUpc } from "@/lib/gameupc";
 import { lookupUpcProductName } from "@/lib/upc-product-lookup";
+import { barcodeResultFromBggSearch } from "@/lib/barcode-match";
+import type { BarcodeLookupResult } from "@/lib/barcode-match";
 import type { GameUpcCandidate } from "@/lib/types";
 
-export type BarcodeLookupResult = {
-  upc: string;
-  bggId: number | null;
-  name?: string;
-  productName?: string;
-  productSource?: string;
-  source:
-    | "library"
-    | "cache"
-    | "gameupc"
-    | "bgg_search"
-    | "manual";
-  candidates: GameUpcCandidate[];
-  needsManualSearch: boolean;
-  message?: string;
-};
+export type { BarcodeLookupResult } from "@/lib/barcode-match";
 
 function bggResultsToCandidates(
   results: Awaited<ReturnType<typeof searchBggGames>>
@@ -89,41 +76,5 @@ export async function resolveBarcodeToBgg(
   const searchQuery = product.title;
   const bggResults = await searchBggGames(searchQuery);
   const candidates = bggResultsToCandidates(bggResults);
-
-  if (candidates.length === 0) {
-    return {
-      upc,
-      bggId: null,
-      productName: product.title,
-      productSource: product.source,
-      source: "manual",
-      candidates: [],
-      needsManualSearch: true,
-      message: `Found "${product.title}" on the box but no BGG match. Search BGG manually.`,
-    };
-  }
-
-  if (candidates.length === 1) {
-    return {
-      upc,
-      bggId: candidates[0].bggId,
-      name: candidates[0].name,
-      productName: product.title,
-      productSource: product.source,
-      source: "bgg_search",
-      candidates,
-      needsManualSearch: false,
-    };
-  }
-
-  return {
-    upc,
-    bggId: null,
-    productName: product.title,
-    productSource: product.source,
-    source: "bgg_search",
-    candidates,
-    needsManualSearch: false,
-    message: `Matched "${product.title}" — pick the correct game:`,
-  };
+  return barcodeResultFromBggSearch(upc, product, candidates);
 }

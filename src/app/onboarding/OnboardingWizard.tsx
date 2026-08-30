@@ -8,24 +8,35 @@ import {
   completeOnboarding,
 } from "@/lib/group-actions";
 import { PushNotificationToggle } from "@/components/PushNotificationToggle";
+import { EmailNotificationToggle } from "@/components/EmailNotificationToggle";
 import { OnboardingQuickAdd } from "@/components/OnboardingQuickAdd";
-import { Dices, Users, Plus, Bell, Check } from "lucide-react";
+import { PwaInstallGuide } from "@/components/PwaInstallGuide";
+import { Dices, Users, Plus, Smartphone, Check } from "lucide-react";
 
-const STEPS = ["group", "game", "notifications", "done"] as const;
+const STEPS = [
+  { id: "group", label: "Group" },
+  { id: "games", label: "Games" },
+  { id: "app", label: "App" },
+  { id: "done", label: "Done" },
+] as const;
+
+type Step = (typeof STEPS)[number]["id"];
 
 export function OnboardingWizard({
   hasGroup,
   userId,
   groupId,
+  emailConfigured,
+  emailNotificationsEnabled,
 }: {
   hasGroup: boolean;
   userId: string;
   groupId: string | null;
+  emailConfigured: boolean;
+  emailNotificationsEnabled: boolean;
 }) {
   const router = useRouter();
-  const [step, setStep] = useState<(typeof STEPS)[number]>(
-    hasGroup ? "game" : "group"
-  );
+  const [step, setStep] = useState<Step>(hasGroup ? "games" : "group");
   const [activeGroupId, setActiveGroupId] = useState(groupId);
   const [groupMode, setGroupMode] = useState<"create" | "join">("create");
   const [groupName, setGroupName] = useState("");
@@ -33,6 +44,7 @@ export function OnboardingWizard({
   const [error, setError] = useState("");
   const [pending, startTransition] = useTransition();
 
+  const stepIndex = STEPS.findIndex((s) => s.id === step);
   const inputClass =
     "w-full rounded-xl border border-border bg-surface px-4 py-2.5 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20";
 
@@ -48,7 +60,7 @@ export function OnboardingWizard({
         if (res.error) setError(res.error);
         else {
           setActiveGroupId(res.group?.id ?? null);
-          setStep("game");
+          setStep("games");
         }
       } else {
         if (!inviteCode.trim()) {
@@ -59,7 +71,7 @@ export function OnboardingWizard({
         if (res.error) setError(res.error);
         else {
           setActiveGroupId(res.groupId ?? null);
-          setStep("game");
+          setStep("games");
         }
       }
     });
@@ -71,39 +83,42 @@ export function OnboardingWizard({
     router.refresh();
   }
 
-  async function goToProfile() {
-    await completeOnboarding();
-    router.push("/profile");
-    router.refresh();
-  }
-
   return (
     <div className="space-y-6">
-      <div className="flex justify-center gap-2">
-        {STEPS.map((s, i) => (
-          <div
-            key={s}
-            className={`h-1.5 flex-1 rounded-full ${
-              STEPS.indexOf(step) >= i ? "bg-primary" : "bg-surface-2"
-            }`}
-          />
-        ))}
+      <div>
+        <div className="mb-2 flex justify-between gap-1 text-[11px] font-medium uppercase tracking-wide text-muted">
+          {STEPS.map((s, i) => (
+            <span key={s.id} className={i <= stepIndex ? "text-primary" : ""}>
+              {s.label}
+            </span>
+          ))}
+        </div>
+        <div className="flex gap-1">
+          {STEPS.map((s, i) => (
+            <div
+              key={s.id}
+              className={`h-1.5 flex-1 rounded-full ${
+                i <= stepIndex ? "bg-primary" : "bg-surface-2"
+              }`}
+            />
+          ))}
+        </div>
       </div>
 
       {error && (
-        <div className="rounded-lg bg-red-500/10 border border-red-500/30 px-4 py-3 text-sm text-red-400">
+        <div className="rounded-lg border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-400">
           {error}
         </div>
       )}
 
       {step === "group" && (
         <div className="space-y-4">
-          <div className="text-center mb-4">
-            <Users className="h-10 w-10 text-primary mx-auto mb-2" />
+          <div className="mb-4 text-center">
+            <Users className="mx-auto mb-2 h-10 w-10 text-primary" />
             <h2 className="text-xl font-bold">Set up your group</h2>
-            <p className="text-sm text-muted mt-1">
-              BgLib is organized by gaming groups. Create one or join with an
-              invite code.
+            <p className="mt-1 text-sm text-muted">
+              Groups share one library, loans, and game nights. Create one or join
+              with an invite code — you can always join more later from Profile.
             </p>
           </div>
 
@@ -111,7 +126,7 @@ export function OnboardingWizard({
             <button
               type="button"
               onClick={() => setGroupMode("create")}
-              className={`flex-1 rounded-xl py-2 text-sm font-medium border ${
+              className={`flex-1 rounded-xl border py-2 text-sm font-medium ${
                 groupMode === "create"
                   ? "border-primary bg-primary/20 text-primary"
                   : "border-border"
@@ -122,7 +137,7 @@ export function OnboardingWizard({
             <button
               type="button"
               onClick={() => setGroupMode("join")}
-              className={`flex-1 rounded-xl py-2 text-sm font-medium border ${
+              className={`flex-1 rounded-xl border py-2 text-sm font-medium ${
                 groupMode === "join"
                   ? "border-primary bg-primary/20 text-primary"
                   : "border-border"
@@ -159,52 +174,77 @@ export function OnboardingWizard({
         </div>
       )}
 
-      {step === "game" && (
+      {step === "games" && (
         <div className="space-y-4">
           <div className="text-center">
-            <Plus className="h-10 w-10 text-primary mx-auto mb-2" />
-            <h2 className="text-xl font-bold">Add your first game</h2>
-            <p className="text-sm text-muted mt-1">
-              Search BoardGameGeek to add games to your group library. You can
-              always add more later.
+            <Plus className="mx-auto mb-2 h-10 w-10 text-primary" />
+            <h2 className="text-xl font-bold">Add a couple of games</h2>
+            <p className="mt-1 text-sm text-muted">
+              Search BoardGameGeek, or add by title if you can&apos;t find a match.
+              A full BGG collection import is available later from Profile.
             </p>
           </div>
 
           {activeGroupId ? (
             <OnboardingQuickAdd userId={userId} groupId={activeGroupId} />
           ) : (
-            <p className="text-sm text-center text-muted">
+            <p className="text-center text-sm text-muted">
               Set up your group first to add games.
             </p>
           )}
 
           <button
             type="button"
-            onClick={() => setStep("notifications")}
+            onClick={() => setStep("app")}
             className="w-full rounded-xl bg-primary py-3 font-medium text-primary-fg"
           >
             Continue
           </button>
           <button
             type="button"
-            onClick={goToProfile}
+            onClick={() => setStep("app")}
             className="w-full text-sm text-muted hover:text-foreground"
           >
-            Import your full BGG collection from Profile
+            Skip for now
           </button>
         </div>
       )}
 
-      {step === "notifications" && (
-        <div className="space-y-4">
-          <div className="text-center mb-2">
-            <Bell className="h-10 w-10 text-primary mx-auto mb-2" />
-            <h2 className="text-xl font-bold">Stay in the loop</h2>
-            <p className="text-sm text-muted mt-1">
-              Get notified about game nights, loan requests, and updates.
+      {step === "app" && (
+        <div className="space-y-5">
+          <div className="text-center">
+            <Smartphone className="mx-auto mb-2 h-10 w-10 text-primary" />
+            <h2 className="text-xl font-bold">Install the app</h2>
+            <p className="mt-1 text-sm text-muted">
+              Add BgLib to your home screen so it opens like a normal app. On
+              iPhone, that also unlocks push notifications.
             </p>
           </div>
-          <PushNotificationToggle />
+
+          <PwaInstallGuide />
+
+          <div className="space-y-3">
+            <h3 className="text-sm font-semibold">Notifications</h3>
+            <p className="text-sm text-muted">
+              Optional. You can change these anytime in Profile.
+            </p>
+            <PushNotificationToggle
+              unsupportedFallback={
+                <p className="rounded-xl border border-border bg-surface px-4 py-3 text-sm text-muted">
+                  Push isn&apos;t available in this browser yet. On iPhone, install
+                  to the Home Screen first, then open BgLib from that icon and
+                  enable notifications here or in Profile.
+                </p>
+              }
+            />
+            {emailConfigured && (
+              <EmailNotificationToggle
+                enabled={emailNotificationsEnabled}
+                userId={userId}
+              />
+            )}
+          </div>
+
           <button
             type="button"
             onClick={() => setStep("done")}
@@ -217,17 +257,25 @@ export function OnboardingWizard({
 
       {step === "done" && (
         <div className="space-y-4 text-center">
-          <Check className="h-10 w-10 text-green-400 mx-auto" />
-          <h2 className="text-xl font-bold">You&apos;re all set!</h2>
-          <p className="text-sm text-muted">
-            Your home screen shows upcoming game nights, recent plays, and
-            suggestions. Invite friends with your group&apos;s invite code from
-            Profile.
-          </p>
+          <Check className="mx-auto h-10 w-10 text-green-400" />
+          <h2 className="text-xl font-bold">You&apos;re all set</h2>
+          <ul className="space-y-2 text-left text-sm text-muted">
+            <li>Home shows upcoming game nights, recent plays, and suggestions.</li>
+            <li>Share your group invite code from Profile so others can join.</li>
+            <li>
+              Plan a game night from the Game nights tab. Hosts can email invites
+              with a calendar file.
+            </li>
+            <li>
+              Subscribe to the group calendar from Profile to see events in Google
+              or Apple Calendar.
+            </li>
+            <li>Import a full BoardGameGeek collection anytime from Profile.</li>
+          </ul>
           <button
             type="button"
             onClick={finish}
-            className="w-full rounded-xl bg-primary py-3 font-medium text-primary-fg flex items-center justify-center gap-2"
+            className="flex w-full items-center justify-center gap-2 rounded-xl bg-primary py-3 font-medium text-primary-fg"
           >
             <Dices className="h-5 w-5" />
             Go to home
