@@ -32,6 +32,7 @@ export type BggGameDetails = {
   bggType: BggItemType;
   baseGameBggId: number | null;
   expansionBggIds: BggLinkRef[];
+  averageWeight: number | null;
 };
 
 const parser = new XMLParser({
@@ -164,6 +165,24 @@ function parseBggLinks(
     .filter((l) => l.id > 0);
 }
 
+export function parseAverageWeight(game: Record<string, unknown>): number | null {
+  const stats = game.statistics as
+    | Record<string, unknown>
+    | Record<string, unknown>[]
+    | undefined;
+  const statsObj = Array.isArray(stats) ? stats[0] : stats;
+  const ratings = statsObj?.ratings as
+    | Record<string, unknown>
+    | Record<string, unknown>[]
+    | undefined;
+  const ratingsObj = Array.isArray(ratings) ? ratings[0] : ratings;
+  const raw = getAttrValue(ratingsObj?.averageweight);
+  if (!raw) return null;
+  const value = parseFloat(raw);
+  if (!Number.isFinite(value) || value <= 0) return null;
+  return Math.round(value * 100) / 100;
+}
+
 function parseThingItem(game: Record<string, unknown>, id: number): BggGameDetails {
   const desc = (game.description as string) ?? "";
   const cleanDesc = cleanBggDescription(desc);
@@ -200,6 +219,7 @@ function parseThingItem(game: Record<string, unknown>, id: number): BggGameDetai
     baseGameBggId:
       bggType === "boardgameexpansion" && baseLinks[0] ? baseLinks[0].id : null,
     expansionBggIds: bggType === "boardgame" ? expansionLinks : [],
+    averageWeight: parseAverageWeight(game),
   };
 }
 

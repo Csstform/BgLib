@@ -8,6 +8,7 @@ export type LibraryFilters = {
   unplayedOnly: boolean;
   ownedByMeOnly: boolean;
   noOwnersOnly: boolean;
+  maxWeight: number | null;
 };
 
 export const DEFAULT_LIBRARY_FILTERS: LibraryFilters = {
@@ -18,6 +19,7 @@ export const DEFAULT_LIBRARY_FILTERS: LibraryFilters = {
   unplayedOnly: false,
   ownedByMeOnly: false,
   noOwnersOnly: false,
+  maxWeight: null,
 };
 
 export function applyLibraryFilters(
@@ -60,6 +62,14 @@ export function applyLibraryFilters(
     }
 
     if (filters.unplayedOnly && opts.lastPlayedByGameId?.[game.id]) {
+      return false;
+    }
+
+    if (
+      filters.maxWeight !== null &&
+      game.bgg_weight != null &&
+      game.bgg_weight > filters.maxWeight
+    ) {
       return false;
     }
 

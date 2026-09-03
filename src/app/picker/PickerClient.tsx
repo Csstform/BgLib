@@ -13,6 +13,7 @@ type Member = { user_id: string; profile: Profile };
 export function PickerClient({ members }: { members: Member[] }) {
   const [players, setPlayers] = useState(4);
   const [maxTime, setMaxTime] = useState("90");
+  const [maxWeight, setMaxWeight] = useState("");
   const [wantToPlayOnly, setWantToPlayOnly] = useState(false);
   const [selectedAttendees, setSelectedAttendees] = useState<string[]>(() =>
     members.map((m) => m.user_id)
@@ -32,6 +33,7 @@ export function PickerClient({ members }: { members: Member[] }) {
         attendees: selectedAttendees.join(","),
       });
       if (maxTime) params.set("max_time", maxTime);
+      if (maxWeight) params.set("max_weight", maxWeight);
       if (wantToPlayOnly) params.set("want_to_play", "1");
       if (random) params.set("random", "1");
 
@@ -41,7 +43,7 @@ export function PickerClient({ members }: { members: Member[] }) {
       setRandomPick(Boolean(data.random_pick));
       setLoading(false);
     },
-    [players, maxTime, selectedAttendees, wantToPlayOnly]
+    [players, maxTime, maxWeight, selectedAttendees, wantToPlayOnly]
   );
 
   function toggleAttendee(id: string) {
@@ -127,6 +129,22 @@ export function PickerClient({ members }: { members: Member[] }) {
         <Heart className="h-4 w-4 text-red-400" />
         Only games someone wants to play
       </label>
+
+      <div>
+        <label className="block text-sm font-medium mb-1.5">
+          Max complexity (BGG weight)
+        </label>
+        <input
+          type="number"
+          min={1}
+          max={5}
+          step={0.5}
+          value={maxWeight}
+          onChange={(e) => setMaxWeight(e.target.value)}
+          className={inputClass}
+          placeholder="Any (1 light – 5 heavy)"
+        />
+      </div>
 
       <div className="grid grid-cols-2 gap-2">
         <button

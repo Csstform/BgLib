@@ -141,7 +141,7 @@ export function computeTopGames(
 
 export function computeTopWinners(
   winners: {
-    user_id: string;
+    user_id?: string | null;
     profile:
       | { id?: string; display_name?: string | null; real_name?: string | null }
       | { id?: string; display_name?: string | null; real_name?: string | null }[]
@@ -155,6 +155,7 @@ export function computeTopWinners(
   >();
 
   for (const row of winners) {
+    if (!row.user_id) continue;
     const profile = Array.isArray(row.profile)
       ? row.profile[0]
       : row.profile;
@@ -217,12 +218,21 @@ export type RecentPlayRow = {
 };
 
 export function computeUniquePlayers(
-  participations: { user_id: string; play_id: string }[],
+  participations: {
+    user_id?: string | null;
+    guest_name?: string | null;
+    play_id: string;
+  }[],
   playIds: Set<string>
 ): number {
   const users = new Set<string>();
   for (const row of participations) {
-    if (playIds.has(row.play_id)) users.add(row.user_id);
+    if (!playIds.has(row.play_id)) continue;
+    if (row.user_id) {
+      users.add(row.user_id);
+    } else if (row.guest_name?.trim()) {
+      users.add(`guest:${row.guest_name.trim().toLowerCase()}`);
+    }
   }
   return users.size;
 }

@@ -38,8 +38,8 @@ export function buildGameNightShareMessage(input: GameNightShareInput): string {
       "",
       `Not in the group yet? Join "${input.groupName.trim()}" with invite code ${input.inviteCode.trim()}.`
     );
-    if (input.signupUrl?.trim()) {
-      lines.push(`Sign up: ${input.signupUrl.trim()}`);
+      if (input.signupUrl?.trim()) {
+      lines.push(`Join: ${input.signupUrl.trim()}`);
     }
   }
 

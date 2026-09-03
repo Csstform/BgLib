@@ -31,6 +31,7 @@ export type Game = {
   bgg_type?: "boardgame" | "boardgameexpansion" | null;
   base_game_id?: string | null;
   upc?: string | null;
+  bgg_weight?: number | null;
   created_by: string | null;
   created_at: string;
   group_id?: string | null;
@@ -146,7 +147,8 @@ export type Play = {
 };
 
 export type PlayParticipant = {
-  user_id: string;
+  user_id: string | null;
+  guest_name?: string | null;
   is_winner?: boolean;
   score?: number | null;
 };

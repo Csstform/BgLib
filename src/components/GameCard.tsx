@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { Users } from "lucide-react";
 import type { GameWithOwners } from "@/lib/types";
-import { formatPlayTime, formatPlayers, formatDate } from "@/lib/utils";
+import { formatPlayTime, formatPlayers, formatDate, formatBggWeight } from "@/lib/utils";
 import { OwnerAvatars } from "./OwnerAvatars";
 import { GameCover } from "./ui/GameCover";
 
@@ -19,6 +19,7 @@ export function GameCard({
   lastPlayed?: string;
 }) {
   const ownerCount = game.owners?.length ?? 0;
+  const weightLabel = formatBggWeight(game.bgg_weight);
 
   return (
     <Link
@@ -52,6 +53,7 @@ export function GameCard({
           {game.play_time_minutes
             ? ` · ${formatPlayTime(game.play_time_minutes)}`
             : ""}
+          {weightLabel ? ` · ${weightLabel} wt` : ""}
           {lastPlayed && (
             <span className="text-muted/80">
               {" "}

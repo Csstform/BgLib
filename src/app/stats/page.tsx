@@ -24,7 +24,7 @@ import {
   computeUniquePlayers,
   countPlaysThisMonth,
 } from "@/lib/play-stats";
-import { profileName } from "@/lib/profile-name";
+import { playParticipantLabel } from "@/lib/play-participant";
 
 export default async function StatsPage() {
   if (!isSupabaseConfigured()) {
@@ -55,6 +55,7 @@ export default async function StatsPage() {
       `
         play_id,
         user_id,
+        guest_name,
         is_winner,
         profile:profiles!play_participants_user_id_fkey (display_name, real_name)
       `
@@ -76,8 +77,7 @@ export default async function StatsPage() {
     { names: string[]; winners: string[] }
   >();
   for (const row of groupParticipants) {
-    const profile = Array.isArray(row.profile) ? row.profile[0] : row.profile;
-    const name = profileName(profile);
+    const name = playParticipantLabel(row);
     const entry = participantsByPlay.get(row.play_id) ?? {
       names: [],
       winners: [],
@@ -96,7 +96,7 @@ export default async function StatsPage() {
 
   const topGames = computeTopGames(allPlays);
   const topWinners = computeTopWinners(
-    groupParticipants.filter((r) => r.is_winner === true)
+    groupParticipants.filter((r) => r.is_winner === true && r.user_id)
   );
 
   const recentActivity = allPlays.slice(0, 15).map((play) => {

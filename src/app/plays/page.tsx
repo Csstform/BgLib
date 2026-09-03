@@ -9,6 +9,7 @@ import { PageHeader } from "@/components/ui/PageHeader";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { PlayHistoryCard } from "@/components/PlayHistoryCard";
 import { profileName } from "@/lib/profile-name";
+import { playParticipantDisplays } from "@/lib/play-participant";
 
 export default async function PlaysPage() {
   if (!isSupabaseConfigured()) {
@@ -36,6 +37,7 @@ export default async function PlaysPage() {
       logger:profiles!plays_logged_by_fkey (display_name, real_name),
       play_participants (
         user_id,
+        guest_name,
         is_winner,
         score,
         profile:profiles!play_participants_user_id_fkey (display_name, real_name)
@@ -94,23 +96,9 @@ export default async function PlaysPage() {
               ? play.logger[0]
               : play.logger;
 
-            const winnerNames = (play.play_participants ?? [])
-              .filter((pp) => pp.is_winner)
-              .map((pp) => {
-                const prof = Array.isArray(pp.profile) ? pp.profile[0] : pp.profile;
-                return prof ? profileName(prof) : undefined;
-              })
-              .filter(Boolean) as string[];
-
-            const otherParticipants = (play.play_participants ?? [])
-              .filter((pp) => !pp.is_winner)
-              .map((pp) => {
-                const prof = Array.isArray(pp.profile) ? pp.profile[0] : pp.profile;
-                const name = prof ? profileName(prof) : undefined;
-                if (!name) return undefined;
-                return pp.score != null ? `${name} (${pp.score} pts)` : name;
-              })
-              .filter(Boolean) as string[];
+            const { winnerNames, otherParticipants } = playParticipantDisplays(
+              play.play_participants ?? []
+            );
 
             const expansionTitles = (play.play_expansions ?? [])
               .map((pe) => {

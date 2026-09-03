@@ -269,6 +269,7 @@ export async function importBggBatch({
           base_game_id: baseGameId,
           group_id: groupId,
           created_by: userId,
+          bgg_weight: details.averageWeight,
         })
         .select("id, title, bgg_id")
         .single();

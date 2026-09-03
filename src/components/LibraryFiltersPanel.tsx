@@ -28,6 +28,7 @@ export function LibraryFiltersPanel({
     filters.unplayedOnly,
     filters.ownedByMeOnly,
     filters.noOwnersOnly,
+    filters.maxWeight,
   ].filter(Boolean).length;
 
   const selectClass =
@@ -119,6 +120,29 @@ export function LibraryFiltersPanel({
 
           <div>
             <label className="block text-xs font-medium text-muted mb-1">
+              Max complexity (BGG weight)
+            </label>
+            <input
+              type="number"
+              min={1}
+              max={5}
+              step={0.5}
+              value={filters.maxWeight ?? ""}
+              onChange={(e) =>
+                onChange({
+                  ...filters,
+                  maxWeight: e.target.value
+                    ? parseFloat(e.target.value)
+                    : null,
+                })
+              }
+              className={selectClass}
+              placeholder="Any (1–5)"
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs font-medium text-muted mb-1">
               Max play time (min)
             </label>
             <input
@@ -192,6 +216,7 @@ export function LibraryFiltersPanel({
                   unplayedOnly: false,
                   ownedByMeOnly: false,
                   noOwnersOnly: false,
+                  maxWeight: null,
                 })
               }
               className="text-xs text-primary hover:underline"

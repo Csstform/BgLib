@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Copy, Check, Users, Share2 } from "lucide-react";
+import { groupJoinUrl } from "@/lib/group-invite";
 
 export function GroupInviteCard({
   name,
@@ -13,13 +14,21 @@ export function GroupInviteCard({
   const [copied, setCopied] = useState<"code" | "message" | null>(null);
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "";
 
+  const joinUrl =
+    appUrl || (typeof window !== "undefined" ? window.location.origin : "")
+      ? groupJoinUrl(
+          appUrl || window.location.origin,
+          inviteCode
+        )
+      : "";
+
   const inviteMessage = [
     `Join "${name}" on BgLib!`,
     "",
     `Invite code: ${inviteCode}`,
-    appUrl ? `Sign up: ${appUrl}/signup` : "",
+    joinUrl ? `Join link: ${joinUrl}` : "",
     "",
-    "After signing up, choose \"Join with code\" during onboarding.",
+    "Open the link, or sign up and enter the invite code.",
   ]
     .filter(Boolean)
     .join("\n");
@@ -37,16 +46,12 @@ export function GroupInviteCard({
   }
 
   async function share() {
-    const signupUrl =
-      appUrl ||
-      (typeof window !== "undefined" ? window.location.origin : "");
-
     if (typeof navigator !== "undefined" && navigator.share) {
       try {
         await navigator.share({
           title: `Join ${name} on BgLib`,
           text: inviteMessage,
-          url: signupUrl ? `${signupUrl}/signup` : undefined,
+          url: joinUrl || undefined,
         });
         return;
       } catch {

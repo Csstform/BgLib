@@ -1,19 +1,18 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { getActiveGroupId } from "@/lib/group";
-
-type ParticipantInput = {
-  user_id: string;
-  is_winner?: boolean;
-  score?: number | null;
-};
+import {
+  normalizePlayParticipantInputs,
+  playParticipantRowsFromInput,
+  type PlayParticipantInput,
+} from "@/lib/play-participant";
 
 async function validatePlayInput(
   supabase: Awaited<ReturnType<typeof createClient>>,
   groupId: string,
   gameId: string,
   playedAt: string,
-  participants: ParticipantInput[],
+  participants: PlayParticipantInput[],
   expansionIds: string[]
 ) {
   const playedDate = new Date(playedAt);
@@ -38,18 +37,19 @@ async function validatePlayInput(
     };
   }
 
-  const participantIds = [
-    ...new Set(participants.map((p) => p.user_id).filter(Boolean)),
-  ];
+  const { members } = normalizePlayParticipantInputs(participants);
+  const participantIds = members
+    .map((p) => p.user_id)
+    .filter((id): id is string => !!id);
 
   if (participantIds.length > 0) {
-    const { data: members } = await supabase
+    const { data: memberRows } = await supabase
       .from("group_members")
       .select("user_id")
       .eq("group_id", groupId)
       .in("user_id", participantIds);
 
-    const memberIds = new Set((members ?? []).map((m) => m.user_id));
+    const memberIds = new Set((memberRows ?? []).map((m) => m.user_id));
     if (participantIds.some((id) => !memberIds.has(id))) {
       return {
         error: "All players must be members of this group",
@@ -181,7 +181,7 @@ export async function PATCH(
     duration_minutes?: number | null;
     notes?: string | null;
     first_time_played?: boolean;
-    participants?: ParticipantInput[];
+    participants?: PlayParticipantInput[];
     expansion_ids?: string[];
   };
 
@@ -208,7 +208,7 @@ export async function PATCH(
     );
   }
 
-  const { playedDate, participantIds, uniqueExpansionIds } = validation;
+  const { playedDate, uniqueExpansionIds } = validation;
 
   const { error: playError } = await supabase
     .from("plays")
@@ -231,30 +231,24 @@ export async function PATCH(
   await supabase.from("play_participants").delete().eq("play_id", id);
   await supabase.from("play_expansions").delete().eq("play_id", id);
 
-  if (participantIds.length > 0) {
-    const participantRows = participantIds.map((uid) => {
-      const input = participants.find((p) => p.user_id === uid);
-      let score: number | null = null;
-      if (input?.score != null && Number.isFinite(input.score)) {
-        score = input.score;
-      }
-      return {
-        play_id: id,
-        user_id: uid,
-        is_winner: !!input?.is_winner,
-        score,
-      };
-    });
-
+  const participantRows = playParticipantRowsFromInput(id, participants);
+  if (participantRows.length > 0) {
     const { error: participantError } = await supabase
       .from("play_participants")
       .insert(participantRows);
 
     if (participantError) {
-      return NextResponse.json(
-        { error: participantError.message },
-        { status: 500 }
-      );
+      const message = participantError.message;
+      if (message.includes("guest_name") || message.includes("player_check")) {
+        return NextResponse.json(
+          {
+            error:
+              "Database is missing guest player columns. Run migration 015_weight_and_guest_players.sql in Supabase.",
+          },
+          { status: 500 }
+        );
+      }
+      return NextResponse.json({ error: message }, { status: 500 });
     }
   }
 

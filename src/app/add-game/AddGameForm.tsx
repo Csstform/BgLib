@@ -19,6 +19,7 @@ type BggDetails = {
   imageUrl: string | null;
   bggType?: "boardgame" | "boardgameexpansion";
   baseGameBggId?: number | null;
+  averageWeight?: number | null;
 };
 
 export function AddGameForm({
@@ -47,6 +48,7 @@ export function AddGameForm({
   const [resolvedBaseGameId, setResolvedBaseGameId] = useState<string | null>(
     baseGameId ?? null
   );
+  const [bggWeight, setBggWeight] = useState<number | null>(null);
   const [addToCollection, setAddToCollection] = useState(true);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -60,6 +62,7 @@ export function AddGameForm({
     setImageUrl(details.imageUrl ?? "");
     setBggId(details.id);
     setBggType(details.bggType ?? "boardgame");
+    setBggWeight(details.averageWeight ?? null);
     if (scannedUpc) setUpc(scannedUpc);
 
     if (baseGameId) {
@@ -130,6 +133,7 @@ export function AddGameForm({
         bgg_type: bggType ?? (baseGameId ? "boardgameexpansion" : "boardgame"),
         base_game_id: linkedBaseId,
         upc: upc,
+        bgg_weight: bggWeight,
         created_by: userId,
         group_id: groupId,
       })

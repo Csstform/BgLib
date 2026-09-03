@@ -1,9 +1,10 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/utils";
-import { getActiveGroupId } from "@/lib/group";
+import { getActiveGroupId, getUserGroups } from "@/lib/group";
 import { SetupBanner } from "@/components/SetupBanner";
 import { PageHeader } from "@/components/ui/PageHeader";
+import { ActiveGroupBanner } from "@/components/ActiveGroupBanner";
 import { AddGameForm } from "./AddGameForm";
 
 export default async function AddGamePage({
@@ -31,6 +32,9 @@ export default async function AddGamePage({
   const groupId = await getActiveGroupId();
   if (!groupId) redirect("/onboarding");
 
+  const groups = await getUserGroups();
+  const activeGroup = groups.find((g) => g.id === groupId);
+
   let baseGameTitle: string | undefined;
   if (baseGameId) {
     const { data: baseGame } = await supabase
@@ -54,6 +58,10 @@ export default async function AddGamePage({
             ? `Add an expansion for ${baseGameTitle}`
             : "Add a new board game to your group's catalogue"
         }
+      />
+      <ActiveGroupBanner
+        groupName={activeGroup?.name ?? "your group"}
+        action="This game will be added to"
       />
       <AddGameForm
         userId={user.id}
