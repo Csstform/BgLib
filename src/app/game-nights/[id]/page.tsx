@@ -12,6 +12,7 @@ import { CancelGameNightButton } from "./CancelGameNightButton";
 import { GameNightPicker } from "@/components/GameNightPicker";
 import { StartPlayerRandomizer } from "@/components/StartPlayerRandomizer";
 import { GameNightCalendarActions } from "@/components/GameNightCalendarActions";
+import { GameNightShareButton } from "@/components/GameNightShareButton";
 import { gameNightToIcsEvent } from "@/lib/game-night-calendar";
 import { getInitials } from "@/lib/utils";
 import { isGroupMember } from "@/lib/group";
@@ -60,6 +61,14 @@ export default async function GameNightDetailPage({
   if (night.group_id && user && !(await isGroupMember(night.group_id))) {
     notFound();
   }
+
+  const { data: group } = night.group_id
+    ? await supabase
+        .from("groups")
+        .select("name, invite_code")
+        .eq("id", night.group_id)
+        .single()
+    : { data: null };
 
   const host = Array.isArray(night.host) ? night.host[0] : night.host;
   const rsvps = (night.rsvps ?? []).map(
@@ -126,6 +135,17 @@ export default async function GameNightDetailPage({
     })
   );
 
+  const shareDetails = {
+    gameNightId: night.id,
+    title: night.title,
+    scheduledAt: night.scheduled_at,
+    location: night.location as string | null,
+    hostName: profileName(host),
+    gameTitles: games.map((g: { title: string }) => g.title),
+    groupName: group?.name,
+    inviteCode: group?.invite_code,
+  };
+
   return (
     <div className="page-shell">
       <Link
@@ -140,15 +160,20 @@ export default async function GameNightDetailPage({
         <div className="p-4">
           <div className="flex items-start justify-between gap-3">
             <h1 className="text-2xl font-bold">{night.title}</h1>
-            {user && user.id === night.host_id && !night.cancelled_at && (
-              <Link
-                href={`/game-nights/${night.id}/edit`}
-                className="pressable inline-flex min-h-10 shrink-0 items-center gap-1.5 rounded-xl border border-border px-3 py-2 text-sm font-medium hover:bg-surface-2"
-              >
-                <Pencil className="h-4 w-4" />
-                Edit
-              </Link>
-            )}
+            <div className="flex shrink-0 items-center gap-2">
+              {!night.cancelled_at && (
+                <GameNightShareButton details={shareDetails} />
+              )}
+              {user && user.id === night.host_id && !night.cancelled_at && (
+                <Link
+                  href={`/game-nights/${night.id}/edit`}
+                  className="pressable inline-flex min-h-10 shrink-0 items-center gap-1.5 rounded-xl border border-border px-3 py-2 text-sm font-medium hover:bg-surface-2"
+                >
+                  <Pencil className="h-4 w-4" />
+                  Edit
+                </Link>
+              )}
+            </div>
           </div>
           <p className="mt-2 flex items-center gap-1.5 text-sm">
             <Calendar className="h-4 w-4 text-primary" />
@@ -178,7 +203,10 @@ export default async function GameNightDetailPage({
       </div>
 
       {!night.cancelled_at && (
-        <GameNightCalendarActions gameNightId={night.id} event={calendarEvent} />
+        <>
+          <GameNightShareButton variant="card" details={shareDetails} />
+          <GameNightCalendarActions gameNightId={night.id} event={calendarEvent} />
+        </>
       )}
 
       {!isPast && goingPlayers.length > 0 && (
