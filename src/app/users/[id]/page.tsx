@@ -3,11 +3,10 @@ import { notFound, redirect } from "next/navigation";
 import { ArrowLeft, Trophy, Dices, Calendar } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured, getInitials } from "@/lib/utils";
-import { getActiveGroupId } from "@/lib/group";
+import { getActiveGroupId, getOwnedGamesInGroup } from "@/lib/group";
 import { SetupBanner } from "@/components/SetupBanner";
 import { GameCard } from "@/components/GameCard";
 import { computePlayerStats } from "@/lib/play-stats";
-import type { GameWithOwners } from "@/lib/types";
 import { profileName, profileUsername } from "@/lib/profile-name";
 
 export default async function UserProfilePage({
@@ -38,28 +37,10 @@ export default async function UserProfilePage({
 
   if (!profile) notFound();
 
-  const { data: groupGames } = await supabase
-    .from("games")
-    .select("id")
-    .eq("group_id", groupId);
-
-  const gameIds = (groupGames ?? []).map((g) => g.id);
   const emptyGameId = "00000000-0000-0000-0000-000000000000";
 
-  const [{ data: ownerships }, { data: plays }] = await Promise.all([
-    supabase
-      .from("ownership")
-      .select(
-        `
-      game_id,
-      games (
-        id, title, description, min_players, max_players,
-        play_time_minutes, image_url, bgg_id, created_by, created_at
-      )
-    `
-      )
-      .eq("user_id", id)
-      .in("game_id", gameIds.length > 0 ? gameIds : [emptyGameId]),
+  const [{ games }, { data: plays }] = await Promise.all([
+    getOwnedGamesInGroup(id, groupId),
     supabase
       .from("plays")
       .select("id, game_id, played_at, game:games!plays_game_id_fkey (id, title)")
@@ -73,14 +54,6 @@ export default async function UserProfilePage({
     .select("play_id, is_winner, score")
     .eq("user_id", id)
     .in("play_id", playIds.length > 0 ? playIds : [emptyGameId]);
-
-  const games: GameWithOwners[] = (ownerships ?? [])
-    .map((o) => {
-      const game = Array.isArray(o.games) ? o.games[0] : o.games;
-      if (!game) return null;
-      return { ...game, owners: [] } as GameWithOwners;
-    })
-    .filter((g): g is GameWithOwners => g !== null);
 
   const playerStats = computePlayerStats(plays ?? [], participations ?? []);
 
