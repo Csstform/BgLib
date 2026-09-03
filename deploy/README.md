@@ -133,7 +133,10 @@ Set at minimum:
 | `NEXT_PUBLIC_APP_URL` | `https://bglib.csst.rocks` |
 | `CRON_SECRET` | Long random string (`openssl rand -hex 32`) |
 
-Add VAPID keys for push (`npx web-push generate-vapid-keys` run locally) and Resend keys if you want email.
+Set `CALENDAR_FEED_SECRET` (`openssl rand -hex 32`) if game-night calendar
+subscription URLs should remain stable across Supabase service-role key
+rotations. Add VAPID keys for push (`npx web-push generate-vapid-keys` run
+locally) and Resend keys if you want email.
 
 ```bash
 chmod 600 .env.local
@@ -382,6 +385,8 @@ To block direct access to the droplet IP (bypassing Cloudflare), allow nginx onl
 | `curl` returns **000** | Nothing listening on port 3000 — see below |
 | 502 Bad Gateway | `systemctl status bglib`, `journalctl -u bglib -n 50` |
 | Auth loops / cookies fail | `NEXT_PUBLIC_APP_URL` must be `https://bglib.csst.rocks` (no trailing slash) |
+| Calendar feed URL points at the wrong host | `NEXT_PUBLIC_APP_URL` must be the public HTTPS app URL before build/start |
+| Calendar subscriptions break after rotating Supabase keys | Set a stable `CALENDAR_FEED_SECRET`, then have users copy a fresh feed URL |
 | Push not working | VAPID keys set, `SUPABASE_SERVICE_ROLE_KEY` set, HTTPS works |
 | Cron 401 | `CRON_SECRET` in env file matches the `Authorization` header |
 | SSL error in browser | Origin cert installed, Cloudflare mode is Full (strict) |

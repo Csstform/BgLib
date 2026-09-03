@@ -1,7 +1,7 @@
 # Game nights and reminders
 
 This guide documents the game-night planning workflow, local-time display,
-immediate notifications, and the daily reminder cron.
+calendar sync, immediate notifications, and the daily reminder cron.
 
 ## Intent
 
@@ -21,11 +21,22 @@ Both notification paths reuse the app's push and email helpers.
 - `src/app/game-nights/[id]/page.tsx`
 - `src/app/game-nights/[id]/edit/page.tsx`
 - `src/app/game-nights/[id]/RsvpButtons.tsx`
+- `src/components/GameNightsCalendarExport.tsx`
+- `src/components/GameNightCalendarActions.tsx`
 - `src/components/GameNightPicker.tsx`
 - `src/components/LocalDateTime.tsx`
 - `src/app/api/game-nights/route.ts`
 - `src/app/api/game-nights/[id]/route.ts`
 - `src/app/api/game-nights/[id]/games/route.ts`
+- `src/app/api/game-nights/calendar/route.ts`
+- `src/app/api/game-nights/calendar/[token]/route.ts`
+- `src/app/api/game-nights/[id]/calendar/route.ts`
+- `src/lib/calendar-feed.ts`
+- `src/lib/calendar-feed-url.ts`
+- `src/lib/calendar-feed-response.ts`
+- `src/lib/load-game-night-calendar.ts`
+- `src/lib/game-night-calendar.ts`
+- `src/lib/ics.ts`
 - `src/app/api/cron/game-night-reminders/route.ts`
 - `src/lib/push.ts`
 - `src/lib/email.ts`
@@ -82,6 +93,59 @@ local timezone. Calendar exports keep the ISO timestamp and let the calendar
 client interpret it. Do not pre-format game-night times on the server for
 user-facing UI; server rendering does not know the viewer's timezone.
 
+## Calendar sync and ICS feeds
+
+The `/game-nights` list page renders a calendar-sync card for signed-in members
+with an active group. The page creates a per-user, per-group feed token with
+`createCalendarFeedToken(user.id, groupId)` and passes it to the client
+component that builds:
+
+- **Add to Google Calendar**: a subscription URL at
+  `https://calendar.google.com/calendar/r?cid=<webcal feed>`.
+- **Apple Calendar**: the same feed URL rewritten from `https://` to `webcal://`.
+- **Copy feed URL**: an HTTPS `.ics` URL for calendar apps that subscribe
+  "From URL".
+- **Download N upcoming**: a session-authenticated one-time download from
+  `/api/game-nights/calendar`.
+
+Subscribed feeds are served by:
+
+| Route | Auth model | Purpose |
+|-------|------------|---------|
+| `GET/HEAD /api/game-nights/calendar/[token].ics` | Signed feed token | Calendar-app subscription without a browser session. |
+| `GET/HEAD /api/game-nights/calendar?token=...` | Signed feed token | Alternate token entry point for clients that cannot keep the path form. |
+| `GET/HEAD /api/game-nights/calendar` | Supabase session | Download the active group's upcoming game nights once. |
+| `GET /api/game-nights/[id]/calendar` | Supabase session + group membership | Download one event from the detail page. |
+
+Feed tokens encode `userId:groupId:signature` as base64url. The signature is an
+HMAC-SHA256 over `userId:groupId`; the secret is resolved in this order:
+`CALENDAR_FEED_SECRET`, then `SUPABASE_SERVICE_ROLE_KEY`, then the local-dev
+fallback `bglib-local-dev-calendar-feed`. Production deployments should set
+`CALENDAR_FEED_SECRET` so calendar subscriptions do not depend on rotating the
+Supabase service-role key. Changing the feed secret invalidates existing
+subscription URLs, so users need to re-add the calendar after a rotation.
+
+Token feeds use the admin Supabase client because external calendar apps do not
+send the user's Supabase cookies. Before returning events,
+`canAccessGroupCalendar` checks that the token's user is still a row in
+`group_members` for that group; removed members receive `403`. Production
+deployments should provide `SUPABASE_SERVICE_ROLE_KEY` so these unauthenticated
+feed requests can pass the membership check and read upcoming events.
+
+Feed content is intentionally narrow:
+
+- only the token's group
+- only upcoming events (`scheduled_at >= now`)
+- no cancelled events
+- title, description, location, host name, planned game titles, and an event URL
+- a default three-hour end time when building each ICS event
+- `REFRESH-INTERVAL` and `X-PUBLISHED-TTL` hints of one hour
+
+Google Calendar may still take several hours to refresh after the first
+subscription. The detail page's Google Calendar action is different: it creates
+a one-off `action=TEMPLATE` URL for that event, not a subscription. Invite emails
+also attach a single-event `.ics` file.
+
 ## Reminder cron
 
 `GET /api/cron/game-night-reminders` sends reminders for uncancelled game nights
@@ -134,6 +198,10 @@ curl -fsS -H "Authorization: Bearer $CRON_SECRET" \
 
 Use the same public origin configured in `NEXT_PUBLIC_APP_URL`.
 
+Calendar sync uses the same public origin for subscription URLs. Set
+`CALENDAR_FEED_SECRET` in production if you want feed tokens to remain stable
+across Supabase service-role key rotations.
+
 ## Troubleshooting
 
 | Symptom | Check |
@@ -145,3 +213,7 @@ Use the same public origin configured in `NEXT_PUBLIC_APP_URL`.
 | Email link points at the wrong host | Set `NEXT_PUBLIC_APP_URL` to the public HTTPS app URL without a trailing slash. |
 | Create form has no working email checkbox | Set `RESEND_API_KEY` and `EMAIL_FROM`. The checkbox is visible but disabled until both are set. |
 | Invite email not received | Confirm `SUPABASE_SERVICE_ROLE_KEY` (used to look up member emails), `profiles.email_notifications` is not off, and Resend accepted the send. |
+| Calendar feed URL points at localhost or the wrong host | Set `NEXT_PUBLIC_APP_URL` to the public HTTPS app URL before building or serving the app. |
+| Calendar subscription returns `401` | The token is malformed or signed with an old `CALENDAR_FEED_SECRET` / service-role key; copy a fresh feed URL from `/game-nights`. |
+| Calendar subscription returns `403` | The token's user is no longer a member of the group in `group_members`. |
+| Calendar app does not show a recent change | Confirm the event is upcoming and not cancelled. Calendar clients may cache feeds despite the one-hour refresh hints; Google can lag for several hours. |

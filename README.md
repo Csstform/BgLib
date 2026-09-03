@@ -10,7 +10,7 @@ A mobile-first PWA for iOS and Android: a shared board game catalogue, ownership
 - **Game picker** — Filter by players, time, and attendees; scores never-played, underplayed, and wanted games
 - **Play logging** — Session history with expansions, winners, scores, and first-play flags
 - **Group stats** — Most-played games, monthly play count, and winner summaries
-- **Game nights** — Schedule, RSVP, suggest games from attendees marked Going
+- **Game nights** — Schedule, RSVP, suggest games from attendees marked Going, and sync upcoming nights to calendars
 - **Loans** — Request, approve, return; due-date reminders via cron
 - **Want to play** — Mark interest on game detail pages
 - **Edit, merge, remove** — Fix catalogue entries, combine duplicates, or remove catalogue records
@@ -35,7 +35,7 @@ A mobile-first PWA for iOS and Android: a shared board game catalogue, ownership
 | Guide | Covers |
 |-------|--------|
 | [`docs/features/bgg-collection-import.md`](docs/features/bgg-collection-import.md) | BGG collection preview/batch import, duplicate handling, expansion linking, token requirements, troubleshooting |
-| [`docs/features/game-night-reminders.md`](docs/features/game-night-reminders.md) | Game-night planning, local-time display, RSVPs, immediate notifications, daily reminder cron, deployment checks |
+| [`docs/features/game-night-reminders.md`](docs/features/game-night-reminders.md) | Game-night planning, local-time display, RSVPs, calendar sync and ICS feeds, immediate notifications, daily reminder cron, deployment checks |
 | [`docs/features/library-plays-picker.md`](docs/features/library-plays-picker.md) | Library grouping and filters, copy-between-groups workflow, catalogue edit/merge/remove flows, expansion linking, play logging, stats, offline cache, picker scoring |
 
 ## Quick Start
@@ -74,13 +74,14 @@ cp .env.local.example .env.local
 
 | Variable | Feature |
 |----------|---------|
-| `SUPABASE_SERVICE_ROLE_KEY` | Push, email, cron (server-side) |
+| `SUPABASE_SERVICE_ROLE_KEY` | Push, email, cron, calendar feeds (server-side) |
 | `NEXT_PUBLIC_VAPID_PUBLIC_KEY` / `VAPID_PRIVATE_KEY` | Web push |
 | `VAPID_SUBJECT` | Push contact (`mailto:you@example.com`) |
 | `RESEND_API_KEY` / `EMAIL_FROM` | Email notifications |
 | `BGG_API_TOKEN` | **Required** for BGG search/import ([register here](https://boardgamegeek.com/applications)) |
 | `GAMEUPC_API_TOKEN` | Optional — improves barcode hit rate ([GameUPC](https://gameupc.com)); not required |
-| `NEXT_PUBLIC_APP_URL` | Email links and cron base URL |
+| `NEXT_PUBLIC_APP_URL` | Email links, calendar feed URLs, and cron base URL |
+| `CALENDAR_FEED_SECRET` | Optional stable signing secret for calendar subscription URLs |
 | `CRON_SECRET` | Bearer token for `/api/cron/loan-reminders` and `/api/cron/game-night-reminders` |
 
 Generate VAPID keys: `npx web-push generate-vapid-keys`
