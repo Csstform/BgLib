@@ -1,6 +1,6 @@
 import { cookies } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
-import type { Group } from "@/lib/types";
+import type { GameWithOwners, Group } from "@/lib/types";
 import { GROUP_COOKIE } from "./group-constants";
 
 export { GROUP_COOKIE };
@@ -116,6 +116,38 @@ export async function getGroupGameIds(groupId: string): Promise<string[]> {
     .select("id")
     .eq("group_id", groupId);
   return (data ?? []).map((g) => g.id);
+}
+
+/** Games this user owns in a group, without a huge `.in(game_id, …)` filter. */
+export async function getOwnedGamesInGroup(
+  userId: string,
+  groupId: string
+): Promise<{ games: GameWithOwners[]; error: string | null }> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("games")
+    .select(
+      `
+      id, title, description, min_players, max_players,
+      play_time_minutes, image_url, bgg_id, bgg_type, base_game_id,
+      upc, bgg_weight, created_by, created_at, group_id,
+      ownership!inner (user_id)
+    `
+    )
+    .eq("group_id", groupId)
+    .eq("ownership.user_id", userId)
+    .order("title");
+
+  if (error) {
+    return { games: [], error: error.message };
+  }
+
+  const games: GameWithOwners[] = (data ?? []).map((row) => {
+    const { ownership: _ownership, ...game } = row;
+    return { ...game, owners: [] };
+  });
+
+  return { games, error: null };
 }
 
 export async function getMyGroupRole(

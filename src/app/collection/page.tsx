@@ -1,14 +1,12 @@
-import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Dices } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/utils";
-import { getActiveGroupId, getGroupGameIds } from "@/lib/group";
+import { getActiveGroupId, getOwnedGamesInGroup } from "@/lib/group";
 import { SetupBanner } from "@/components/SetupBanner";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { GameCard } from "@/components/GameCard";
-import type { GameWithOwners } from "@/lib/types";
 
 export default async function CollectionPage() {
   if (!isSupabaseConfigured()) {
@@ -29,32 +27,7 @@ export default async function CollectionPage() {
   const groupId = await getActiveGroupId();
   if (!groupId) redirect("/onboarding");
 
-  const gameIds = await getGroupGameIds(groupId);
-
-  const { data: ownerships } =
-    gameIds.length > 0
-      ? await supabase
-          .from("ownership")
-          .select(
-            `
-      game_id,
-      games (
-        id, title, description, min_players, max_players,
-        play_time_minutes, image_url, bgg_id, created_by, created_at, group_id
-      )
-    `
-          )
-          .eq("user_id", user.id)
-          .in("game_id", gameIds)
-      : { data: [] };
-
-  const games: GameWithOwners[] = (ownerships ?? [])
-    .map((o) => {
-      const game = Array.isArray(o.games) ? o.games[0] : o.games;
-      if (!game) return null;
-      return { ...game, owners: [] } as GameWithOwners;
-    })
-    .filter((g): g is GameWithOwners => g !== null);
+  const { games, error } = await getOwnedGamesInGroup(user.id, groupId);
 
   return (
     <div className="page-shell">
@@ -63,7 +36,13 @@ export default async function CollectionPage() {
         subtitle={`${games.length} game${games.length !== 1 ? "s" : ""} you own in this group`}
       />
 
-      {games.length === 0 ? (
+      {error && (
+        <div className="mb-4 rounded-lg border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-400">
+          Could not load your collection: {error}
+        </div>
+      )}
+
+      {games.length === 0 && !error ? (
         <EmptyState
           icon={Dices}
           title="Your collection is empty"
