@@ -105,10 +105,9 @@ export default async function GameNightDetailPage({
     declined: rsvps.filter((r: { status: string }) => r.status === "declined"),
   };
 
-  const logPlayHref =
-    games.length === 1
-      ? `/plays/new?game=${games[0].id}`
-      : "/plays/new";
+  const logPlayParams = new URLSearchParams({ night: night.id });
+  if (games.length === 1) logPlayParams.set("game", games[0].id);
+  const logPlayHref = `/plays/new?${logPlayParams.toString()}`;
 
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
   const calendarEvent = gameNightToIcsEvent(

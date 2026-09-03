@@ -2,7 +2,12 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft, History, Users, Heart, Puzzle } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
-import { isSupabaseConfigured, formatPlayTime, formatPlayers } from "@/lib/utils";
+import {
+  isSupabaseConfigured,
+  formatPlayTime,
+  formatPlayers,
+  formatBggWeight,
+} from "@/lib/utils";
 import { getActiveGroupId } from "@/lib/group";
 import { SetupBanner } from "@/components/SetupBanner";
 import { OwnerRow } from "@/components/OwnerRow";
@@ -19,6 +24,7 @@ import { GameDetailActions } from "@/components/GameDetailActions";
 import { PlayHistoryCard } from "@/components/PlayHistoryCard";
 import type { DuplicateMatch, GameWithOwners } from "@/lib/types";
 import { profileName } from "@/lib/profile-name";
+import { playParticipantDisplays } from "@/lib/play-participant";
 
 export default async function GameDetailPage({
   params,
@@ -232,6 +238,7 @@ export default async function GameDetailPage({
       logger:profiles!plays_logged_by_fkey (display_name, real_name),
       play_participants (
         user_id,
+        guest_name,
         is_winner,
         score,
         profile:profiles!play_participants_user_id_fkey (display_name, real_name)
@@ -261,23 +268,9 @@ export default async function GameDetailPage({
         const playGame = Array.isArray(play.game) ? play.game[0] : play.game;
         const logger = Array.isArray(play.logger) ? play.logger[0] : play.logger;
 
-        const winnerNames = (play.play_participants ?? [])
-          .filter((pp) => pp.is_winner)
-          .map((pp) => {
-            const prof = Array.isArray(pp.profile) ? pp.profile[0] : pp.profile;
-            return prof ? profileName(prof) : undefined;
-          })
-          .filter(Boolean) as string[];
-
-        const otherParticipants = (play.play_participants ?? [])
-          .filter((pp) => !pp.is_winner)
-          .map((pp) => {
-            const prof = Array.isArray(pp.profile) ? pp.profile[0] : pp.profile;
-            const name = prof ? profileName(prof) : undefined;
-            if (!name) return undefined;
-            return pp.score != null ? `${name} (${pp.score} pts)` : name;
-          })
-          .filter(Boolean) as string[];
+        const { winnerNames, otherParticipants } = playParticipantDisplays(
+          play.play_participants ?? []
+        );
 
         const expansionTitles = (play.play_expansions ?? [])
           .map((pe) => {
@@ -366,6 +359,9 @@ export default async function GameDetailPage({
             {formatPlayers(game.min_players, game.max_players)} players
             {game.play_time_minutes
               ? ` · ${formatPlayTime(game.play_time_minutes)}`
+              : ""}
+            {formatBggWeight(game.bgg_weight)
+              ? ` · Weight ${formatBggWeight(game.bgg_weight)}`
               : ""}
           </p>
           {game.description && (
@@ -473,6 +469,18 @@ export default async function GameDetailPage({
 
       <div className="mt-6">
         <SectionHeading icon={Users} title={`Owners (${owners.length})`} />
+        {user && owners.some((o: { user_id: string }) => o.user_id !== user.id) && (
+          <div className="mb-3 rounded-xl border border-primary/20 bg-primary/5 px-4 py-3 text-sm">
+            <p className="font-medium">Need a copy?</p>
+            <p className="mt-1 text-muted">
+              Ask an owner below to borrow this game, or{" "}
+              <Link href="/loans" className="text-primary hover:underline">
+                view your loans
+              </Link>
+              .
+            </p>
+          </div>
+        )}
         {owners.length === 0 ? (
           <p className="py-4 text-center text-sm text-muted">
             Nobody owns this game yet. Be the first!

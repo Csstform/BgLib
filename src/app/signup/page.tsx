@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
+import { normalizeInviteCode } from "@/lib/group-invite";
 import { Dices } from "lucide-react";
 
 export default function SignupPage() {
@@ -34,7 +35,10 @@ export default function SignupPage() {
       return;
     }
 
-    router.push("/library");
+    const invite = normalizeInviteCode(
+      new URLSearchParams(window.location.search).get("invite") ?? ""
+    );
+    router.push(invite ? `/join/${invite}` : "/library");
     router.refresh();
   }
 

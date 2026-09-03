@@ -5,6 +5,7 @@ import { isSupabaseConfigured, toDatetimeLocalValue } from "@/lib/utils";
 import { SetupBanner } from "@/components/SetupBanner";
 import { LogPlayForm } from "../../LogPlayForm";
 import { profileName } from "@/lib/profile-name";
+import { guestParticipantKey } from "@/lib/play-participant";
 
 async function loadExpansionsByBase(
   supabase: Awaited<ReturnType<typeof createClient>>,
@@ -86,7 +87,7 @@ export default async function EditPlayPage({
     .select(
       `
       id, game_id, played_at, duration_minutes, notes, logged_by, first_time_played,
-      play_participants (user_id, is_winner, score),
+      play_participants (user_id, guest_name, is_winner, score),
       play_expansions (game_id)
     `
     )
@@ -113,15 +114,20 @@ export default async function EditPlayPage({
 
   const members = await getGroupMembers(groupId);
 
-  const participants = (play.play_participants ?? []).map(
-    (p: { user_id: string }) => p.user_id
-  );
-  const winners = (play.play_participants ?? [])
-    .filter((p: { is_winner: boolean }) => p.is_winner)
-    .map((p: { user_id: string }) => p.user_id);
+  const memberIds: string[] = [];
+  const guestNames: string[] = [];
+  const winners: string[] = [];
   const scores: Record<string, string> = {};
   for (const p of play.play_participants ?? []) {
-    if (p.score != null) scores[p.user_id] = String(p.score);
+    const key = p.user_id
+      ? p.user_id
+      : p.guest_name
+        ? guestParticipantKey(p.guest_name)
+        : null;
+    if (p.user_id) memberIds.push(p.user_id);
+    else if (p.guest_name) guestNames.push(p.guest_name);
+    if (key && p.is_winner) winners.push(key);
+    if (key && p.score != null) scores[key] = String(p.score);
   }
   const expansionIds = (play.play_expansions ?? []).map(
     (pe: { game_id: string }) => pe.game_id
@@ -145,7 +151,8 @@ export default async function EditPlayPage({
           play.duration_minutes != null ? String(play.duration_minutes) : ""
         }
         initialNotes={play.notes ?? ""}
-        initialParticipants={participants.length > 0 ? participants : [user.id]}
+        initialParticipants={memberIds.length > 0 ? memberIds : [user.id]}
+        initialGuests={guestNames}
         initialWinners={winners}
         initialScores={scores}
         initialExpansionIds={expansionIds}

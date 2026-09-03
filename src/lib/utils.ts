@@ -23,6 +23,11 @@ export function formatPlayers(min: number, max: number | null): string {
   return `${min}–${max}`;
 }
 
+export function formatBggWeight(weight: number | null | undefined): string | null {
+  if (weight == null || !Number.isFinite(weight)) return null;
+  return weight.toFixed(1);
+}
+
 export function getInitials(name: string): string {
   return name
     .split(" ")

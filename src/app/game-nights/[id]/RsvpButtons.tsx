@@ -11,10 +11,12 @@ export function RsvpButtons({
   gameNightId,
   userId,
   currentStatus,
+  compact = false,
 }: {
   gameNightId: string;
   userId: string;
   currentStatus?: RsvpStatus;
+  compact?: boolean;
 }) {
   const router = useRouter();
   const [loading, setLoading] = useState<RsvpStatus | null>(null);
@@ -38,7 +40,7 @@ export function RsvpButtons({
 
   return (
     <div className="space-y-2">
-      <p className="text-sm font-medium">Your RSVP</p>
+      {!compact && <p className="text-sm font-medium">Your RSVP</p>}
       <div className="flex gap-2">
         {buttons.map(({ status, label, active }) => (
           <button
@@ -55,7 +57,7 @@ export function RsvpButtons({
           </button>
         ))}
       </div>
-      {currentStatus && (
+      {currentStatus && !compact && (
         <p className="text-xs text-muted">
           You&apos;re marked as {formatRsvpStatus(currentStatus).toLowerCase()}
         </p>

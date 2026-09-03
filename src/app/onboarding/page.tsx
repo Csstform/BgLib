@@ -6,7 +6,11 @@ import { SetupBanner } from "@/components/SetupBanner";
 import { OnboardingWizard } from "./OnboardingWizard";
 import { isEmailConfigured } from "@/lib/email";
 
-export default async function OnboardingPage() {
+export default async function OnboardingPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ invite?: string }>;
+}) {
   if (!isSupabaseConfigured()) {
     return (
       <div className="px-4 py-6">
@@ -29,6 +33,7 @@ export default async function OnboardingPage() {
 
   if (profile?.onboarding_completed) redirect("/library");
 
+  const { invite } = await searchParams;
   const groups = await getUserGroups();
   const groupId = await getActiveGroupId();
 
@@ -41,6 +46,7 @@ export default async function OnboardingPage() {
         groupId={groupId}
         emailConfigured={isEmailConfigured()}
         emailNotificationsEnabled={profile?.email_notifications !== false}
+        initialInviteCode={invite}
       />
     </div>
   );

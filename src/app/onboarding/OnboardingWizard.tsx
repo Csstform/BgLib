@@ -29,12 +29,14 @@ export function OnboardingWizard({
   groupId,
   emailConfigured,
   emailNotificationsEnabled,
+  initialInviteCode,
 }: {
   groups: Group[];
   userId: string;
   groupId: string | null;
   emailConfigured: boolean;
   emailNotificationsEnabled: boolean;
+  initialInviteCode?: string;
 }) {
   const router = useRouter();
   const [step, setStep] = useState<Step>("group");
@@ -43,7 +45,9 @@ export function OnboardingWizard({
     groups.length ? "join" : "create"
   );
   const [groupName, setGroupName] = useState("");
-  const [inviteCode, setInviteCode] = useState("");
+  const [inviteCode, setInviteCode] = useState(
+    (initialInviteCode ?? "").trim().toUpperCase()
+  );
   const [error, setError] = useState("");
   const [pending, startTransition] = useTransition();
   const currentGroup =

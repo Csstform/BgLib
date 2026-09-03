@@ -19,6 +19,8 @@ import { SectionHeading } from "@/components/ui/SectionHeading";
 import type { CSSProperties } from "react";
 import type { GameNightWithDetails } from "@/lib/types";
 import { profileName } from "@/lib/profile-name";
+import { playParticipantLabel } from "@/lib/play-participant";
+import { RsvpButtons } from "@/app/game-nights/[id]/RsvpButtons";
 
 export async function HomeDashboard({ userId }: { userId: string }) {
   const groupId = await getActiveGroupId();
@@ -65,6 +67,7 @@ export async function HomeDashboard({ userId }: { userId: string }) {
         game:games!plays_game_id_fkey (id, title, image_url),
         play_participants (
           is_winner,
+          guest_name,
           profile:profiles!play_participants_user_id_fkey (display_name, real_name)
         )
       `
@@ -139,6 +142,7 @@ export async function HomeDashboard({ userId }: { userId: string }) {
   const goingCount = nextNight
     ? nextNight.rsvps.filter((r) => r.status === "going").length
     : 0;
+  const userRsvp = nextNight?.rsvps.find((r) => r.user_id === userId)?.status;
 
   return (
     <div className="page-shell space-y-6">
@@ -183,19 +187,29 @@ export async function HomeDashboard({ userId }: { userId: string }) {
               </Link>
             }
           />
-          <Link
-            href={`/game-nights/${nextNight.id}`}
-            className="touch-card block rounded-xl border border-border bg-surface p-4"
-          >
-            <h3 className="font-semibold">{nextNight.title}</h3>
-            <p className="mt-1 text-sm text-muted">
-              <LocalDateTime iso={nextNight.scheduled_at} />
-              {nextNight.location ? ` · ${nextNight.location}` : ""}
-            </p>
-            <p className="mt-2 text-xs text-muted">
-              {goingCount} going · Hosted by {profileName(nextNight.host)}
-            </p>
-          </Link>
+          <div className="rounded-xl border border-border bg-surface">
+            <Link
+              href={`/game-nights/${nextNight.id}`}
+              className="touch-card block p-4"
+            >
+              <h3 className="font-semibold">{nextNight.title}</h3>
+              <p className="mt-1 text-sm text-muted">
+                <LocalDateTime iso={nextNight.scheduled_at} />
+                {nextNight.location ? ` · ${nextNight.location}` : ""}
+              </p>
+              <p className="mt-2 text-xs text-muted">
+                {goingCount} going · Hosted by {profileName(nextNight.host)}
+              </p>
+            </Link>
+            <div className="border-t border-border px-4 py-3">
+              <RsvpButtons
+                compact
+                gameNightId={nextNight.id}
+                userId={userId}
+                currentStatus={userRsvp}
+              />
+            </div>
+          </div>
         </section>
       )}
 
@@ -225,13 +239,8 @@ export async function HomeDashboard({ userId }: { userId: string }) {
               const game = Array.isArray(play.game) ? play.game[0] : play.game;
               const winners = (play.play_participants ?? [])
                 .filter((pp) => pp.is_winner)
-                .map((pp) => {
-                  const prof = Array.isArray(pp.profile)
-                    ? pp.profile[0]
-                    : pp.profile;
-                  return prof ? profileName(prof) : undefined;
-                })
-                .filter(Boolean) as string[];
+                .map((pp) => playParticipantLabel(pp))
+                .filter(Boolean);
 
               return (
                 <Link

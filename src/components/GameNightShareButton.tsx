@@ -8,6 +8,7 @@ import {
   gameNightEventUrl,
   gameNightShareTitle,
 } from "@/lib/game-night-share";
+import { groupJoinUrl } from "@/lib/group-invite";
 
 export type GameNightShareDetails = {
   gameNightId: string;
@@ -27,12 +28,12 @@ function shareUrls(gameNightId: string) {
   ).replace(/\/$/, "");
   return {
     eventUrl: gameNightEventUrl(origin || window.location.origin, gameNightId),
-    signupUrl: `${(origin || window.location.origin).replace(/\/$/, "")}/signup`,
+    origin: origin || window.location.origin,
   };
 }
 
 function shareMessage(details: GameNightShareDetails) {
-  const { eventUrl, signupUrl } = shareUrls(details.gameNightId);
+  const { eventUrl, origin } = shareUrls(details.gameNightId);
   return buildGameNightShareMessage({
     title: details.title,
     when: formatDateTime(details.scheduledAt),
@@ -42,7 +43,9 @@ function shareMessage(details: GameNightShareDetails) {
     eventUrl,
     groupName: details.groupName,
     inviteCode: details.inviteCode,
-    signupUrl,
+    signupUrl: details.inviteCode
+      ? groupJoinUrl(origin, details.inviteCode)
+      : undefined,
   });
 }
 

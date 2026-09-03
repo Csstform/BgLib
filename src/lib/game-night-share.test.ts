@@ -50,7 +50,7 @@ describe("buildGameNightShareMessage", () => {
     });
 
     expect(message).toContain('Join "Friday Night Games" with invite code ABCD1234.');
-    expect(message).toContain("Sign up: https://bglib.example.com/signup");
+    expect(message).toContain("Join: https://bglib.example.com/signup");
   });
 
   it("omits empty optional fields", () => {

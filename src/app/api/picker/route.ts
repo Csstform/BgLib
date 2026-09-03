@@ -17,6 +17,8 @@ export async function GET(request: NextRequest) {
     10
   );
   const maxTime = request.nextUrl.searchParams.get("max_time");
+  const maxWeightRaw = request.nextUrl.searchParams.get("max_weight");
+  const maxWeight = maxWeightRaw ? parseFloat(maxWeightRaw) : null;
   const attendeeIds =
     request.nextUrl.searchParams.get("attendees")?.split(",").filter(Boolean) ??
     [];
@@ -137,6 +139,15 @@ export async function GET(request: NextRequest) {
         maxTimeMin &&
         g.play_time_minutes &&
         g.play_time_minutes > maxTimeMin
+      ) {
+        return null;
+      }
+
+      if (
+        maxWeight != null &&
+        Number.isFinite(maxWeight) &&
+        g.bgg_weight != null &&
+        g.bgg_weight > maxWeight
       ) {
         return null;
       }
