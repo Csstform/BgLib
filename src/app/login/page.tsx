@@ -84,6 +84,11 @@ function LoginForm() {
             className="input-field"
             placeholder="••••••••"
           />
+          <p className="mt-1.5 text-right text-sm">
+            <Link href="/forgot-password" className="text-primary hover:underline">
+              Forgot password?
+            </Link>
+          </p>
         </div>
         <button
           type="submit"

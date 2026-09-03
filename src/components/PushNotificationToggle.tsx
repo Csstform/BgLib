@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, type ReactNode } from "react";
 import { Bell, BellOff } from "lucide-react";
 
 function getPushSupported(vapidKey?: string) {
@@ -20,7 +20,11 @@ function urlBase64ToUint8Array(base64String: string) {
   return Uint8Array.from([...rawData].map((char) => char.charCodeAt(0)));
 }
 
-export function PushNotificationToggle() {
+export function PushNotificationToggle({
+  unsupportedFallback,
+}: {
+  unsupportedFallback?: ReactNode;
+} = {}) {
   const vapidKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
   const supported = getPushSupported(vapidKey);
   const [subscribed, setSubscribed] = useState(false);
@@ -87,7 +91,7 @@ export function PushNotificationToggle() {
     }
   }
 
-  if (!supported) return null;
+  if (!supported) return unsupportedFallback ?? null;
 
   return (
     <div className="rounded-xl border border-border bg-surface p-4">
