@@ -3,56 +3,82 @@ import { Calendar, MapPin, Users } from "lucide-react";
 import type { GameNightWithDetails } from "@/lib/types";
 import { OwnerAvatars } from "./OwnerAvatars";
 import { LocalDateTime } from "@/components/LocalDateTime";
+import { GameNightShareButton } from "@/components/GameNightShareButton";
 import { profileName } from "@/lib/profile-name";
 
-export function GameNightCard({ night }: { night: GameNightWithDetails }) {
+export function GameNightCard({
+  night,
+  groupName,
+  inviteCode,
+}: {
+  night: GameNightWithDetails;
+  groupName?: string | null;
+  inviteCode?: string | null;
+}) {
   const going = night.rsvps.filter((r) => r.status === "going");
   const maybe = night.rsvps.filter((r) => r.status === "maybe");
 
   return (
-    <Link
-      href={`/game-nights/${night.id}`}
-      className="touch-card block rounded-xl border border-border bg-surface p-4 shadow-sm"
-    >
-      <h3 className="font-semibold text-lg">{night.title}</h3>
-      <p className="text-sm text-muted mt-1 flex items-center gap-1.5">
-        <Calendar className="h-4 w-4 shrink-0" />
-        <LocalDateTime iso={night.scheduled_at} />
-      </p>
-      {night.location && (
-        <p className="text-sm text-muted mt-0.5 flex items-center gap-1.5">
-          <MapPin className="h-4 w-4 shrink-0" />
-          {night.location}
+    <div className="relative">
+      <Link
+        href={`/game-nights/${night.id}`}
+        className="touch-card block rounded-xl border border-border bg-surface p-4 pr-14 shadow-sm"
+      >
+        <h3 className="font-semibold text-lg">{night.title}</h3>
+        <p className="text-sm text-muted mt-1 flex items-center gap-1.5">
+          <Calendar className="h-4 w-4 shrink-0" />
+          <LocalDateTime iso={night.scheduled_at} />
         </p>
-      )}
-      <p className="text-xs text-muted mt-2">
-        Hosted by {profileName(night.host)}
-      </p>
-
-      {night.games.length > 0 && (
-        <p className="text-xs text-muted mt-1">
-          Games: {night.games.map((g) => g.title).join(", ")}
+        {night.location && (
+          <p className="text-sm text-muted mt-0.5 flex items-center gap-1.5">
+            <MapPin className="h-4 w-4 shrink-0" />
+            {night.location}
+          </p>
+        )}
+        <p className="text-xs text-muted mt-2">
+          Hosted by {profileName(night.host)}
         </p>
-      )}
 
-      <div className="mt-3 flex items-center gap-2">
-        <Users className="h-4 w-4 text-muted" />
-        <OwnerAvatars
-          owners={going.map((r) => ({
-            user_id: r.user_id,
-            display_name: profileName(r.profile),
-            avatar_url: r.profile.avatar_url,
-            condition: "",
-            notes: null,
-            acquired_date: null,
-          }))}
-          max={5}
-          size="sm"
+        {night.games.length > 0 && (
+          <p className="text-xs text-muted mt-1">
+            Games: {night.games.map((g) => g.title).join(", ")}
+          </p>
+        )}
+
+        <div className="mt-3 flex items-center gap-2">
+          <Users className="h-4 w-4 text-muted" />
+          <OwnerAvatars
+            owners={going.map((r) => ({
+              user_id: r.user_id,
+              display_name: profileName(r.profile),
+              avatar_url: r.profile.avatar_url,
+              condition: "",
+              notes: null,
+              acquired_date: null,
+            }))}
+            max={5}
+            size="sm"
+          />
+          <span className="text-xs text-muted">
+            {going.length} going{maybe.length > 0 ? `, ${maybe.length} maybe` : ""}
+          </span>
+        </div>
+      </Link>
+      <div className="absolute right-3 top-3">
+        <GameNightShareButton
+          variant="icon"
+          details={{
+            gameNightId: night.id,
+            title: night.title,
+            scheduledAt: night.scheduled_at,
+            location: night.location,
+            hostName: profileName(night.host),
+            gameTitles: night.games.map((g) => g.title),
+            groupName,
+            inviteCode,
+          }}
         />
-        <span className="text-xs text-muted">
-          {going.length} going{maybe.length > 0 ? `, ${maybe.length} maybe` : ""}
-        </span>
       </div>
-    </Link>
+    </div>
   );
 }

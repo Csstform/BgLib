@@ -82,6 +82,12 @@ export default async function GameNightsPage() {
       .filter(Boolean),
   }));
 
+  const { data: group } = await supabase
+    .from("groups")
+    .select("name, invite_code")
+    .eq("id", groupId)
+    .single();
+
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
   const feedToken =
     user && groupId ? createCalendarFeedToken(user.id, groupId) : null;
@@ -122,7 +128,12 @@ export default async function GameNightsPage() {
       ) : (
         <div className="space-y-3">
           {nightsWithDetails.map((night) => (
-            <GameNightCard key={night.id} night={night} />
+            <GameNightCard
+              key={night.id}
+              night={night}
+              groupName={group?.name}
+              inviteCode={group?.invite_code}
+            />
           ))}
         </div>
       )}
