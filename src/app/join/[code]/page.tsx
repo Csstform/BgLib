@@ -31,9 +31,8 @@ export default async function JoinGroupPage({
   } = await supabase.auth.getUser();
 
   const { data: group } = await supabase
-    .from("groups")
-    .select("id, name, invite_code")
-    .eq("invite_code", code)
+    .rpc("lookup_group_by_invite", { invite: code })
+    .returns<{ id: string; name: string; invite_code: string }[]>()
     .maybeSingle();
 
   if (user) {
