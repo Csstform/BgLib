@@ -5,10 +5,10 @@ A mobile-first PWA for iOS and Android: a shared board game catalogue, ownership
 ## Features
 
 - **Gaming groups** — Separate libraries per group with invite codes and copy-between-groups support
-- **Shared catalogue** — Title, players, play time, cover image; BGG search on add, filters, offline cache
+- **Shared catalogue** — Title, players, play time, cover image, BGG weight; BGG search on add, filters, offline cache
 - **Ownership tracking** — See who owns what in your active group
-- **Game picker** — Filter by players, time, and attendees; scores never-played, underplayed, and wanted games
-- **Play logging** — Session history with expansions, winners, scores, and first-play flags
+- **Game picker** — Filter by players, time, complexity, and attendees; scores never-played, underplayed, and wanted games
+- **Play logging** — Session history with expansions, member or guest players, winners, scores, and first-play flags
 - **Group stats** — Most-played games, monthly play count, and winner summaries
 - **Game nights** — Schedule, RSVP, suggest games from attendees marked Going, and sync upcoming nights to calendars
 - **Loans** — Request, approve, return; due-date reminders via cron
@@ -35,8 +35,8 @@ A mobile-first PWA for iOS and Android: a shared board game catalogue, ownership
 | Guide | Covers |
 |-------|--------|
 | [`docs/features/bgg-collection-import.md`](docs/features/bgg-collection-import.md) | BGG collection preview/batch import, duplicate handling, expansion linking, token requirements, troubleshooting |
-| [`docs/features/game-night-reminders.md`](docs/features/game-night-reminders.md) | Game-night planning, local-time display, RSVPs, calendar sync and ICS feeds, immediate notifications, daily reminder cron, deployment checks |
-| [`docs/features/library-plays-picker.md`](docs/features/library-plays-picker.md) | Library grouping and filters, copy-between-groups workflow, catalogue edit/merge/remove flows, expansion linking, play logging, stats, offline cache, picker scoring |
+| [`docs/features/game-night-reminders.md`](docs/features/game-night-reminders.md) | Game-night planning, local-time display, RSVPs, invite sharing and join links, calendar sync and ICS feeds, immediate notifications, daily reminder cron, deployment checks |
+| [`docs/features/library-plays-picker.md`](docs/features/library-plays-picker.md) | Library grouping and filters, copy-between-groups workflow, catalogue edit/merge/remove flows, expansion linking, guest play logging, stats, offline cache, picker scoring |
 
 ## Quick Start
 
@@ -143,7 +143,7 @@ npm run start:prod   # smoke test, then set up systemd + nginx per deploy/README
 |-------|---------|
 | `profiles` | Usernames, optional real names, avatars, notification prefs |
 | `groups` / `group_members` | Gaming groups and membership |
-| `games` | Group-scoped catalogue |
+| `games` | Group-scoped catalogue, including optional BGG type/weight metadata |
 | `ownership` | User ↔ game ownership |
 | `game_nights` / `game_night_rsvps` / `game_night_games` | Events and planning |
 | `loans` | Borrow/lend tracking |
@@ -163,6 +163,7 @@ Row Level Security scopes data by group membership.
 | `/picker` | What can we play? |
 | `/game-nights` | Upcoming sessions |
 | `/game-nights/[id]` | RSVP, suggest games |
+| `/join/[code]` | Resolve an invite link and join a group |
 | `/loans` | Borrow/lend in your group |
 | `/more` | Hub: collection, players, plays, add game, profile |
 | `/collection` | Games you own |
@@ -188,7 +189,7 @@ src/
 supabase/
 ├── install.sql           # Single-file install (generated)
 ├── schema.sql            # Base schema
-├── migrations/           # Ordered migrations 002–014
+├── migrations/           # Ordered migrations 002–016
 └── README.md             # Database setup guide
 docs/
 └── features/             # Feature architecture and workflow docs

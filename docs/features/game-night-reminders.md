@@ -1,7 +1,8 @@
 # Game nights and reminders
 
-This guide documents the game-night planning workflow, local-time display,
-calendar sync, immediate notifications, and the daily reminder cron.
+This guide documents the game-night planning workflow, RSVP surfaces, invite
+sharing, local-time display, calendar sync, immediate notifications, and the
+daily reminder cron.
 
 ## Intent
 
@@ -16,14 +17,18 @@ Both notification paths reuse the app's push and email helpers.
 ## Primary codepaths
 
 - `src/app/game-nights/page.tsx`
+- `src/components/GameNightCard.tsx`
 - `src/components/GameNightForm.tsx`
 - `src/app/game-nights/new/page.tsx`
 - `src/app/game-nights/[id]/page.tsx`
 - `src/app/game-nights/[id]/edit/page.tsx`
 - `src/app/game-nights/[id]/RsvpButtons.tsx`
+- `src/app/join/[code]/page.tsx`
 - `src/components/GameNightsCalendarExport.tsx`
 - `src/components/GameNightCalendarActions.tsx`
 - `src/components/GameNightPicker.tsx`
+- `src/components/GameNightShareButton.tsx`
+- `src/components/HomeDashboard.tsx`
 - `src/components/LocalDateTime.tsx`
 - `src/app/api/game-nights/route.ts`
 - `src/app/api/game-nights/[id]/route.ts`
@@ -51,13 +56,15 @@ Both notification paths reuse the app's push and email helpers.
 | `game_nights.reminder_sent_at` | Set by the reminder cron after tomorrow's reminder is sent. |
 | `game_night_rsvps` | One RSVP per user per game night. Status values used by the UI are `going`, `maybe`, and `declined`. |
 | `game_night_games` | Candidate or planned games attached to the event. |
+| `groups.invite_code` | Included in share messages so non-members can join before opening the RSVP link. |
 
 Schema support lives in:
 
 - `supabase/migrations/002_extensions.sql`
 - `supabase/migrations/012_game_night_reminders.sql`
+- `supabase/migrations/016_lookup_group_by_invite.sql`
 
-Fresh installs through `supabase/install.sql` include both.
+Fresh installs through `supabase/install.sql` include all of these.
 
 ## Planning workflow
 
@@ -80,6 +87,28 @@ Fresh installs through `supabase/install.sql` include both.
 Only the host can update, cancel, or replace the planned games for a game night.
 The API checks `night.host_id === user.id` before those mutations. Cancelled
 nights cannot be edited.
+
+## RSVP, sharing, and logging plays
+
+Members can RSVP from the detail page and from the next-game-night card on the
+home dashboard. Both surfaces use `RsvpButtons`, which upserts the user's
+`game_night_rsvps` row with one of `going`, `maybe`, or `declined`, then refreshes
+server-rendered counts. The game picker on a night uses only `going` members as
+attendees.
+
+`GameNightShareButton` builds a share payload with the event URL, local display
+time, location, host, planned game titles, and the active group's invite code
+when available. If the user shares with someone outside the group, the message
+includes `/join/<invite-code>` so the recipient can sign up or sign in before
+opening the member-only RSVP page. `lookup_group_by_invite(invite text)` is a
+security-definer RPC that returns only `id`, `name`, and `invite_code`; it exists
+because RLS prevents non-members from reading `groups` directly.
+
+After a session, the detail page links to `/plays/new?night=<id>`. That flow
+pre-fills the scheduled date, selected Going members, and the single planned
+game when exactly one game was attached to the night. The play form still lets
+the logger change the game, add expansions, adjust participants, and add guests
+who do not have BgLib accounts.
 
 ## Timezone handling
 
@@ -213,6 +242,8 @@ across Supabase service-role key rotations.
 | Email link points at the wrong host | Set `NEXT_PUBLIC_APP_URL` to the public HTTPS app URL without a trailing slash. |
 | Create form has no working email checkbox | Set `RESEND_API_KEY` and `EMAIL_FROM`. The checkbox is visible but disabled until both are set. |
 | Invite email not received | Confirm `SUPABASE_SERVICE_ROLE_KEY` (used to look up member emails), `profiles.email_notifications` is not off, and Resend accepted the send. |
+| Shared RSVP link sends a friend to login/signup | Expected for non-members. Use the included `/join/<invite-code>` link or invite code first, then return to the RSVP URL. |
+| Join link shows "No group uses invite code" for a valid group | Run migration `016_lookup_group_by_invite.sql`; `/join/[code]` depends on that RPC because `groups` is protected by RLS. |
 | Calendar feed URL points at localhost or the wrong host | Set `NEXT_PUBLIC_APP_URL` to the public HTTPS app URL before building or serving the app. |
 | Calendar subscription returns `401` | The token is malformed or signed with an old `CALENDAR_FEED_SECRET` / service-role key; copy a fresh feed URL from `/game-nights`. |
 | Calendar subscription returns `403` | The token's user is no longer a member of the group in `group_members`. |
