@@ -2,7 +2,7 @@
 
 This guide documents how BgLib connects the group catalogue, catalogue
 management, copying between groups, expansions, play logging, stats, offline
-browsing, and the game picker.
+browsing, BGG complexity metadata, and the game picker.
 
 ## Intent
 
@@ -24,10 +24,13 @@ data visible only to members.
 
 | Table / column | Purpose |
 |----------------|---------|
+| `games.bgg_weight` | Optional BGG average weight, rounded to two decimals, used for complexity labels and max-weight filters. |
 | `games.base_game_id` | Optional self-reference from an expansion to its base game. |
 | `games.bgg_type` | BGG type: `boardgame` or `boardgameexpansion`. |
 | `play_expansions` | Join table from a logged play to expansion games used in that play. |
 | `plays.first_time_played` | User-marked flag for a group's first play of a game. |
+| `play_participants.user_id` | Member participant ID; nullable when the participant is a guest. |
+| `play_participants.guest_name` | Name-only guest participant for players without an account. |
 | `play_participants.is_winner` | Supports zero, one, or multiple winners for a play. |
 | `play_participants.score` | Optional integer score per participant. |
 
@@ -35,10 +38,13 @@ Schema changes live in:
 
 - `supabase/migrations/008_expansions.sql`
 - `supabase/migrations/010_play_winners_stats.sql`
+- `supabase/migrations/015_weight_and_guest_players.sql`
 
 Migration `009_barcode_upc.sql` adds UPC lookup fields for the Add Game flow.
 Barcode scan uses the shared `upc_bgg_mappings` cache plus BGG search — `BGG_API_TOKEN`
-is required; `GAMEUPC_API_TOKEN` is optional.
+is required; `GAMEUPC_API_TOKEN` is optional. BGG search, barcode lookup, and
+collection import all request BGG statistics and persist `averageweight` into
+`games.bgg_weight` when BGG returns a value greater than zero.
 
 ## Library workflow
 
@@ -66,6 +72,7 @@ Filters are applied client-side after the server load:
 | No owners | Keeps catalogue entries without ownership rows. |
 | Min players | Keeps games whose `max_players` can support that count. |
 | Max players | Keeps games whose `min_players` fits that count. |
+| Max complexity | Keeps games whose BGG weight is at or below the supplied value; games without a known weight are kept. |
 | Max play time | Keeps games at or below the supplied minutes when play time is known. |
 | Never played | Excludes games that have a recorded play in the active group. |
 
@@ -183,9 +190,23 @@ The play logging form accepts:
 - Base game only; expansion entries are not selectable as the primary game.
 - Linked expansions used during the play.
 - Participants from the active group.
+- Guest players by name for people who played without an account.
 - Optional winners. Multiple winners are allowed for ties or cooperative wins.
 - Optional per-participant scores.
 - Optional duration, notes, and `first_time_played` flag.
+
+When logging from `/game-nights/[id]`, the app links to `/plays/new?night=<id>`
+and pre-fills the play date from the scheduled night. If the night has exactly
+one planned game, that game is preselected. Players marked `going` are selected
+as participants, and the current user is added if they were not in the Going
+list. Guests still need to be added manually on the play form.
+
+Guest rows are stored in `play_participants` with `user_id = null` and
+`guest_name` set. The database constraint requires exactly one of `user_id` or
+`guest_name`; per-play uniqueness is enforced separately for member user IDs and
+case-insensitive guest names. The API normalizes inputs before insert/update:
+blank names are ignored, duplicate guest names collapse case-insensitively, and
+scores are kept only when they parse as finite numbers.
 
 The play history page shows the 50 most recent plays for the group with
 participants, winner markers, scores, expansion titles, notes, and logger.
@@ -215,6 +236,7 @@ Primary codepaths:
 |-----------|---------|----------|
 | `players` | `4` | Player count; defaults to `2` when omitted. |
 | `max_time` | `90` | Optional maximum play time in minutes. |
+| `max_weight` | `2.5` | Optional maximum BGG complexity weight. |
 | `attendees` | `uuid-1,uuid-2` | Optional comma-separated user IDs for people present. |
 | `want_to_play` | `1` | Only include games wanted by at least one relevant attendee. |
 | `random` | `1` | Return one random result from the top 5 ranked games. |
@@ -227,9 +249,11 @@ Candidate rules:
 3. When attendees are supplied, keep only games owned by at least one attendee.
 4. Keep games whose player range contains `players`.
 5. Apply `max_time` when the game has `play_time_minutes`.
-6. Count `want_to_play` rows across attendees, or across the group when
+6. Apply `max_weight` when the game has `bgg_weight`; unknown weight does not
+   exclude a game.
+7. Count `want_to_play` rows across attendees, or across the group when
    attendees are omitted.
-7. Surface owned expansions for the base game, limited to attendee-owned
+8. Surface owned expansions for the base game, limited to attendee-owned
    expansions when attendees are supplied.
 
 The default scoring weights are:
@@ -246,17 +270,18 @@ been played, then games with the oldest `last_played_at`.
 Example:
 
 ```text
-/api/picker?players=4&max_time=90&attendees=<alice>,<bob>&want_to_play=1
+/api/picker?players=4&max_time=90&max_weight=2.5&attendees=<alice>,<bob>&want_to_play=1
 ```
 
 This returns owned base games for 4 players, no longer than 90 minutes, owned by
-Alice or Bob, and wanted by at least one of them.
+Alice or Bob, no heavier than BGG weight 2.5 when a weight is known, and wanted
+by at least one of them.
 
 ## Operational checklist
 
 When deploying or debugging this feature cluster:
 
-1. Confirm the database has run migrations `008` through `010`; fresh installs
+1. Confirm the database has run migrations `008` through `010` and `015`; fresh installs
    via `supabase/install.sql` already include them.
 2. Enable Supabase Realtime for `games`, `plays`, and `want_to_play` as listed in
    `supabase/README.md`.
@@ -277,6 +302,8 @@ When deploying or debugging this feature cluster:
 | Expansion became orphaned after removing a base game | Expected when the base game's row is deleted; relink the expansion from another base game or edit it as needed. |
 | Expansion cannot be picked as the main game | Expected behavior; log the base game and select expansions used. |
 | Picker returns no games | Verify at least one attendee owns a matching base game, player count fits, `max_time` is not too strict, and `want_to_play=1` has matching wants. |
+| Max complexity seems to include unknown games | Expected: games without `bgg_weight` are kept because manual entries and older imports may not have BGG statistics. |
+| Guest player fails to save | Run migration `015_weight_and_guest_players.sql`; it makes `play_participants.user_id` nullable, adds `guest_name`, and replaces the participant uniqueness constraint. |
 | Picker ignores an expansion | Expansions are shown as metadata for eligible base games, not standalone candidates. |
 | Copying between groups made no new rows | The matching games already exist in the target group and were linked by BGG ID, UPC, or normalized title. |
 | Copied expansion is not nested | Confirm the base game exists or was included in the copy; orphan relinking is best-effort after the copy succeeds. |

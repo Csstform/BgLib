@@ -32,6 +32,8 @@ Run these files **in order** if you prefer step-by-step:
 | 12 | `migrations/012_game_night_reminders.sql` | Game night reminder tracking for cron |
 | 13 | `migrations/013_group_member_management.sql` | Owner can remove non-owner members |
 | 14 | `migrations/014_profile_real_name.sql` | Optional real name on profiles with username fallback |
+| 15 | `migrations/015_weight_and_guest_players.sql` | BGG complexity weight and name-only guest play participants |
+| 16 | `migrations/016_lookup_group_by_invite.sql` | Public invite-code lookup RPC for join links |
 
 For existing projects, run only the migrations you have not applied yet, in
 order. Fresh projects can use `install.sql`, which already includes all
@@ -59,3 +61,5 @@ In Supabase Dashboard → **Database** → **Replication**, enable Realtime for:
   [`../docs/features/library-plays-picker.md`](../docs/features/library-plays-picker.md).
 - Game-night reminder behavior for migration `012` is documented in
   [`../docs/features/game-night-reminders.md`](../docs/features/game-night-reminders.md).
+- BGG weight, guest player, and invite-link behavior for migrations `015` and
+  `016` is documented in the feature guides above.
