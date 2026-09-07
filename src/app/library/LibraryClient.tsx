@@ -32,15 +32,20 @@ export function LibraryClient({
   groupId,
   games: initialGames,
   lastPlayedByGameId: initialLastPlayed,
+  playedGameIds: initialPlayedIds,
   userId,
 }: {
   groupId: string;
   games: GameWithOwners[];
   lastPlayedByGameId: Record<string, string>;
+  playedGameIds?: string[];
   userId?: string;
 }) {
   const [games, setGames] = useState(initialGames);
   const [lastPlayedByGameId, setLastPlayedByGameId] = useState(initialLastPlayed);
+  const [playedGameIds, setPlayedGameIds] = useState(
+    () => new Set(initialPlayedIds ?? Object.keys(initialLastPlayed))
+  );
   const [search, setSearch] = useState("");
   const [viewMode, setViewMode] = useState<ViewMode>("nested");
   const [filters, setFilters] = useState<LibraryFilters>(DEFAULT_LIBRARY_FILTERS);
@@ -54,10 +59,14 @@ export function LibraryClient({
       const data = await parseJsonResponse<{
         games: GameWithOwners[];
         lastPlayedByGameId: Record<string, string>;
+        playedGameIds?: string[];
       }>(res);
       if (!res.ok) return;
       setGames(data.games);
       setLastPlayedByGameId(data.lastPlayedByGameId);
+      setPlayedGameIds(
+        new Set(data.playedGameIds ?? Object.keys(data.lastPlayedByGameId))
+      );
       cacheLibrary(groupId, data.games).catch(() => {});
     } catch {
       // Network error — keep current list
@@ -68,9 +77,10 @@ export function LibraryClient({
     queueMicrotask(() => {
       setGames(initialGames);
       setLastPlayedByGameId(initialLastPlayed);
+      setPlayedGameIds(new Set(initialPlayedIds ?? Object.keys(initialLastPlayed)));
     });
     cacheLibrary(groupId, initialGames).catch(() => {});
-  }, [groupId, initialGames, initialLastPlayed]);
+  }, [groupId, initialGames, initialLastPlayed, initialPlayedIds]);
 
   useEffect(() => {
     function onRealtimeChange() {
@@ -112,6 +122,7 @@ export function LibraryClient({
     const filtered = applyLibraryFilters(games, filters, {
       userId,
       lastPlayedByGameId,
+      playedGameIds,
     });
     const q = search.toLowerCase().trim();
     if (!q) return filtered;
@@ -120,7 +131,7 @@ export function LibraryClient({
         g.title.toLowerCase().includes(q) ||
         g.owners?.some((o) => o.display_name.toLowerCase().includes(q))
     );
-  }, [games, filters, userId, lastPlayedByGameId, search]);
+  }, [games, filters, userId, lastPlayedByGameId, playedGameIds, search]);
 
   const grouped = useMemo(
     () => groupLibraryGames(filteredGames),

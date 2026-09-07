@@ -32,7 +32,7 @@ export default async function PlaysPage() {
     .from("plays")
     .select(
       `
-      id, played_at, duration_minutes, notes, logged_by,
+      id, played_at, duration_minutes, notes, logged_by, undated,
       game:games!plays_game_id_fkey (id, title, image_url),
       logger:profiles!plays_logged_by_fkey (display_name, real_name),
       play_participants (
@@ -48,6 +48,7 @@ export default async function PlaysPage() {
     `
     )
     .eq("group_id", groupId)
+    .order("undated", { ascending: true })
     .order("played_at", { ascending: false })
     .limit(50);
 
@@ -79,7 +80,7 @@ export default async function PlaysPage() {
           title={playsError ? "Play history unavailable" : "No plays logged yet"}
           description={
             playsError
-              ? "If this persists, ensure database migration 010_play_winners_stats.sql has been applied in Supabase."
+              ? "If this persists, ensure database migrations 010_play_winners_stats.sql and 017_undated_plays.sql have been applied in Supabase."
               : "Record your first game night to start tracking stats."
           }
           action={
@@ -114,6 +115,7 @@ export default async function PlaysPage() {
                 play={{
                   id: play.id,
                   played_at: play.played_at,
+                  undated: !!play.undated,
                   duration_minutes: play.duration_minutes,
                   notes: play.notes,
                   logged_by: play.logged_by,

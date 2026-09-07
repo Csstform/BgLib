@@ -143,6 +143,7 @@ export type Play = {
   notes: string | null;
   logged_by: string;
   first_time_played?: boolean;
+  undated?: boolean;
   created_at: string;
 };
 

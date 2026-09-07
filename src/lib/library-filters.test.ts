@@ -38,3 +38,30 @@ describe("applyLibraryFilters maxWeight", () => {
     expect(result.map((g) => g.id)).toEqual(["light", "unknown"]);
   });
 });
+
+describe("applyLibraryFilters unplayedOnly", () => {
+  const games = [
+    game({ id: "dated", title: "Dated" }),
+    game({ id: "marked", title: "Marked" }),
+    game({ id: "fresh", title: "Fresh" }),
+  ];
+
+  it("uses last-played dates when no playedGameIds are provided", () => {
+    const result = applyLibraryFilters(
+      games,
+      { ...DEFAULT_LIBRARY_FILTERS, unplayedOnly: true },
+      { lastPlayedByGameId: { dated: "2026-01-01" } }
+    );
+    expect(result.map((g) => g.id)).toEqual(["marked", "fresh"]);
+  });
+
+  it("treats undated marks as played", () => {
+    const result = applyLibraryFilters(
+      games,
+      { ...DEFAULT_LIBRARY_FILTERS, unplayedOnly: true },
+      { playedGameIds: new Set(["marked"]) }
+    );
+    expect(result.map((g) => g.id)).toEqual(["dated", "fresh"]);
+  });
+});
+

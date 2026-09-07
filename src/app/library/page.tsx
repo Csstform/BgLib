@@ -8,6 +8,7 @@ import { SetupBanner } from "@/components/SetupBanner";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { LibraryClient } from "./LibraryClient";
 import { groupLibraryGames } from "@/lib/game-expansions";
+import { summarizePlayDates } from "@/lib/play-dates";
 import type { GameWithOwners } from "@/lib/types";
 import { profileName } from "@/lib/profile-name";
 
@@ -46,17 +47,12 @@ export default async function LibraryPage() {
       .order("title"),
     supabase
       .from("plays")
-      .select("game_id, played_at")
+      .select("game_id, played_at, undated")
       .eq("group_id", groupId)
       .order("played_at", { ascending: false }),
   ]);
 
-  const lastPlayedByGameId: Record<string, string> = {};
-  for (const play of plays ?? []) {
-    if (!lastPlayedByGameId[play.game_id]) {
-      lastPlayedByGameId[play.game_id] = play.played_at;
-    }
-  }
+  const { lastPlayedByGameId, playedGameIds } = summarizePlayDates(plays ?? []);
 
   const gamesWithOwners: GameWithOwners[] = (games ?? []).map((g) => ({
     id: g.id,
@@ -119,6 +115,7 @@ export default async function LibraryPage() {
         groupId={groupId}
         games={gamesWithOwners}
         lastPlayedByGameId={lastPlayedByGameId}
+        playedGameIds={playedGameIds}
         userId={user?.id}
       />
     </div>

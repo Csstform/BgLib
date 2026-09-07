@@ -5,6 +5,7 @@ type PlayRow = {
   id: string;
   game_id: string;
   played_at: string;
+  undated?: boolean | null;
   game: { id: string; title: string } | { id: string; title: string }[] | null;
 };
 
@@ -40,6 +41,7 @@ export function computePlayerStats(
     title: string;
     played_at: string;
     is_winner: boolean;
+    undated?: boolean;
   }[] = [];
 
   for (const play of plays) {
@@ -55,6 +57,7 @@ export function computePlayerStats(
       title: game.title,
       played_at: play.played_at,
       is_winner: part.is_winner === true,
+      undated: play.undated === true,
     });
   }
 
@@ -80,6 +83,7 @@ export function computePlayerStats(
     .slice(0, 5);
 
   const recentPlays = [...userPlays]
+    .filter((p) => p.undated !== true)
     .sort(
       (a, b) =>
         new Date(b.played_at).getTime() - new Date(a.played_at).getTime()

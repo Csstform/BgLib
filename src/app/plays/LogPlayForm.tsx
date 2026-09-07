@@ -202,6 +202,7 @@ export function LogPlayForm({
         duration_minutes: duration ? parseInt(duration, 10) : null,
         notes: notes.trim() || null,
         first_time_played: firstTimePlayed,
+        undated: false,
         participants: [...memberPayload, ...guestPayload],
         expansion_ids: selectedExpansions,
       }),

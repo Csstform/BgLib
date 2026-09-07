@@ -33,6 +33,7 @@ export function MarkAsPlayedButton({
         game_id: playGameId,
         played_at: new Date().toISOString(),
         first_time_played: isFirstPlay,
+        undated: true,
         participants: [{ user_id: userId }],
         expansion_ids: expansionId ? [expansionId] : [],
       }),
@@ -82,6 +83,9 @@ export function MarkAsPlayedButton({
         )}
         {loading ? "Saving..." : "Mark as played"}
       </button>
+      <p className="mt-1.5 text-center text-xs text-muted">
+        Counts as played, but won&apos;t appear in recent plays
+      </p>
       {error && <p className="mt-2 text-center text-xs text-red-400">{error}</p>}
     </div>
   );

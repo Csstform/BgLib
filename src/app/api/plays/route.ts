@@ -29,6 +29,7 @@ export async function POST(request: NextRequest) {
     duration_minutes: durationMinutes,
     notes,
     first_time_played: firstTimePlayed,
+    undated,
     participants = [],
     expansion_ids: expansionIds = [],
   } = body as {
@@ -37,6 +38,7 @@ export async function POST(request: NextRequest) {
     duration_minutes?: number | null;
     notes?: string | null;
     first_time_played?: boolean;
+    undated?: boolean;
     participants?: PlayParticipantInput[];
     expansion_ids?: string[];
   };
@@ -124,12 +126,22 @@ export async function POST(request: NextRequest) {
       notes: notes?.trim() || null,
       logged_by: user.id,
       first_time_played: !!firstTimePlayed,
+      undated: !!undated,
     })
     .select("id")
     .single();
 
   if (playError || !play) {
     const message = playError?.message ?? "Failed to log play";
+    if (message.includes("undated")) {
+      return NextResponse.json(
+        {
+          error:
+            "Database is missing undated play columns. Run migration 017_undated_plays.sql in Supabase.",
+        },
+        { status: 500 }
+      );
+    }
     if (message.includes("first_time_played")) {
       return NextResponse.json(
         {

@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { getActiveGroupId } from "@/lib/group";
 import type { GameWithOwners } from "@/lib/types";
 import { profileName } from "@/lib/profile-name";
+import { summarizePlayDates } from "@/lib/play-dates";
 
 export async function GET() {
   const groupId = await getActiveGroupId();
@@ -30,17 +31,12 @@ export async function GET() {
       .order("title"),
     supabase
       .from("plays")
-      .select("game_id, played_at")
+      .select("game_id, played_at, undated")
       .eq("group_id", groupId)
       .order("played_at", { ascending: false }),
   ]);
 
-  const lastPlayedByGameId: Record<string, string> = {};
-  for (const play of plays ?? []) {
-    if (!lastPlayedByGameId[play.game_id]) {
-      lastPlayedByGameId[play.game_id] = play.played_at;
-    }
-  }
+  const { lastPlayedByGameId, playedGameIds } = summarizePlayDates(plays ?? []);
 
   const gamesWithOwners: GameWithOwners[] = (games ?? []).map((g) => ({
     id: g.id,
@@ -79,7 +75,7 @@ export async function GET() {
   }));
 
   return NextResponse.json(
-    { groupId, games: gamesWithOwners, lastPlayedByGameId },
+    { groupId, games: gamesWithOwners, lastPlayedByGameId, playedGameIds },
     {
       headers: {
         "Cache-Control": "private, max-age=60",

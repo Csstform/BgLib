@@ -221,6 +221,7 @@ export default async function GameDetailPage({
   let recentPlays: {
     id: string;
     played_at: string;
+    undated?: boolean;
     duration_minutes: number | null;
     notes: string | null;
     logged_by: string;
@@ -230,10 +231,11 @@ export default async function GameDetailPage({
     otherParticipants: string[];
     expansionTitles: string[];
   }[] = [];
+  let hasAnyPlay = false;
 
   if (groupId) {
     const playSelect = `
-      id, played_at, duration_minutes, notes, logged_by,
+      id, played_at, duration_minutes, notes, logged_by, undated,
       game:games!plays_game_id_fkey (id, title, image_url),
       logger:profiles!plays_logged_by_fkey (display_name, real_name),
       play_participants (
@@ -262,9 +264,15 @@ export default async function GameDetailPage({
 
     const { data: plays } = await playsQuery
       .order("played_at", { ascending: false })
-      .limit(10);
+      .limit(20);
 
-    recentPlays = (plays ?? []).map((play) => {
+    const playRows = plays ?? [];
+    hasAnyPlay = playRows.length > 0;
+
+    recentPlays = playRows
+      .filter((play) => !play.undated)
+      .slice(0, 10)
+      .map((play) => {
         const playGame = Array.isArray(play.game) ? play.game[0] : play.game;
         const logger = Array.isArray(play.logger) ? play.logger[0] : play.logger;
 
@@ -282,6 +290,7 @@ export default async function GameDetailPage({
         return {
           id: play.id,
           played_at: play.played_at,
+          undated: !!play.undated,
           duration_minutes: play.duration_minutes,
           notes: play.notes,
           logged_by: play.logged_by,
@@ -398,7 +407,7 @@ export default async function GameDetailPage({
           wantsToPlay={userWantsToPlay}
           playGameId={baseGame?.id ?? game.id}
           expansionId={baseGame ? game.id : undefined}
-          isFirstPlay={recentPlays.length === 0}
+          isFirstPlay={!hasAnyPlay}
           canMarkAsPlayed={!isOrphanExpansion}
         />
       )}
@@ -414,7 +423,11 @@ export default async function GameDetailPage({
           }
         />
         {recentPlays.length === 0 ? (
-          <p className="py-2 text-sm text-muted">No plays logged yet for this game.</p>
+          <p className="py-2 text-sm text-muted">
+            {hasAnyPlay
+              ? "No dated plays yet — this game is marked as played."
+              : "No plays logged yet for this game."}
+          </p>
         ) : (
           <div className="space-y-2">
             {recentPlays.map((play) => (

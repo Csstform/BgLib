@@ -32,6 +32,9 @@ Run these files **in order** if you prefer step-by-step:
 | 12 | `migrations/012_game_night_reminders.sql` | Game night reminder tracking for cron |
 | 13 | `migrations/013_group_member_management.sql` | Owner can remove non-owner members |
 | 14 | `migrations/014_profile_real_name.sql` | Optional real name on profiles with username fallback |
+| 15 | `migrations/015_weight_and_guest_players.sql` | BGG weight on games and guest play participants |
+| 16 | `migrations/016_lookup_group_by_invite.sql` | Public invite-code lookup RPC |
+| 17 | `migrations/017_undated_plays.sql` | Mark-as-played rows that stay out of recent plays |
 
 For existing projects, run only the migrations you have not applied yet, in
 order. Fresh projects can use `install.sql`, which already includes all
