@@ -48,7 +48,7 @@ export default async function StatsPage() {
   ] = await Promise.all([
     supabase
       .from("plays")
-      .select("id, game_id, played_at, game:games!plays_game_id_fkey (id, title)")
+      .select("id, game_id, played_at, undated, game:games!plays_game_id_fkey (id, title)")
       .eq("group_id", groupId)
       .order("played_at", { ascending: false }),
     supabase.from("play_participants").select(
@@ -88,18 +88,19 @@ export default async function StatsPage() {
   }
 
   const allPlays = plays ?? [];
+  const datedPlays = allPlays.filter((p) => !p.undated);
   const totalPlays = allPlays.length;
   const uniqueGames = new Set(allPlays.map((p) => p.game_id)).size;
-  const playsThisMonth = countPlaysThisMonth(allPlays);
+  const playsThisMonth = countPlaysThisMonth(datedPlays);
   const uniquePlayers = computeUniquePlayers(groupParticipants, playIds);
-  const playsByMonth = computePlaysByMonth(allPlays);
+  const playsByMonth = computePlaysByMonth(datedPlays);
 
   const topGames = computeTopGames(allPlays);
   const topWinners = computeTopWinners(
     groupParticipants.filter((r) => r.is_winner === true && r.user_id)
   );
 
-  const recentActivity = allPlays.slice(0, 15).map((play) => {
+  const recentActivity = datedPlays.slice(0, 15).map((play) => {
     const game = Array.isArray(play.game) ? play.game[0] : play.game;
     const part = participantsByPlay.get(play.id);
     return {
@@ -112,7 +113,7 @@ export default async function StatsPage() {
     };
   });
 
-  const exportRows = allPlays.map((play) => {
+  const exportRows = datedPlays.map((play) => {
     const game = Array.isArray(play.game) ? play.game[0] : play.game;
     const part = participantsByPlay.get(play.id);
     return {

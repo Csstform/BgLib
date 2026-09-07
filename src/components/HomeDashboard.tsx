@@ -73,6 +73,7 @@ export async function HomeDashboard({ userId }: { userId: string }) {
       `
       )
       .eq("group_id", groupId)
+      .eq("undated", false)
       .order("played_at", { ascending: false })
       .limit(4),
     supabase
@@ -225,7 +226,7 @@ export async function HomeDashboard({ userId }: { userId: string }) {
         />
         {(recentPlays ?? []).length === 0 ? (
           <div className="rounded-xl border border-border bg-surface p-4 text-center">
-            <p className="text-sm text-muted">No plays logged yet.</p>
+            <p className="text-sm text-muted">No recent plays.</p>
             <Link
               href="/plays/new"
               className="mt-2 inline-block text-sm text-primary hover:underline"

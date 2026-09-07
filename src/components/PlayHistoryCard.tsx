@@ -12,6 +12,7 @@ type PlayCardProps = {
   play: {
     id: string;
     played_at: string;
+    undated?: boolean;
     duration_minutes: number | null;
     notes: string | null;
     logged_by: string;
@@ -65,7 +66,7 @@ export function PlayHistoryCard({ play, currentUserId }: PlayCardProps) {
         <div className="min-w-0 flex-1 pr-16">
           <p className="truncate font-semibold">{game?.title ?? "Unknown"}</p>
           <p className="text-sm text-muted">
-            {formatDateTime(play.played_at)}
+            {play.undated ? "Date unknown" : formatDateTime(play.played_at)}
             {play.duration_minutes ? ` · ${play.duration_minutes} min` : ""}
           </p>
           {play.winnerNames.length > 0 && (
@@ -127,7 +128,7 @@ export function PlayHistoryCard({ play, currentUserId }: PlayCardProps) {
       <ConfirmDialog
         open={confirmOpen}
         title="Delete play?"
-        description={`Delete the play of "${game?.title ?? "this game"}" from ${formatDateTime(play.played_at)}?\n\nThis cannot be undone.`}
+        description={`Delete the play of "${game?.title ?? "this game"}"${play.undated ? "" : ` from ${formatDateTime(play.played_at)}`}?\n\nThis cannot be undone.`}
         confirmLabel="Delete"
         variant="danger"
         loading={loading}

@@ -28,6 +28,7 @@ data visible only to members.
 | `games.bgg_type` | BGG type: `boardgame` or `boardgameexpansion`. |
 | `play_expansions` | Join table from a logged play to expansion games used in that play. |
 | `plays.first_time_played` | User-marked flag for a group's first play of a game. |
+| `plays.undated` | True for "mark as played" acknowledgements. Counts as played, but is omitted from recent-play lists and last-played dates. |
 | `play_participants.is_winner` | Supports zero, one, or multiple winners for a play. |
 | `play_participants.score` | Optional integer score per participant. |
 
@@ -35,6 +36,7 @@ Schema changes live in:
 
 - `supabase/migrations/008_expansions.sql`
 - `supabase/migrations/010_play_winners_stats.sql`
+- `supabase/migrations/017_undated_plays.sql`
 
 Migration `009_barcode_upc.sql` adds UPC lookup fields for the Add Game flow.
 Barcode scan uses the shared `upc_bgg_mappings` cache plus BGG search — `BGG_API_TOKEN`
@@ -67,7 +69,7 @@ Filters are applied client-side after the server load:
 | Min players | Keeps games whose `max_players` can support that count. |
 | Max players | Keeps games whose `min_players` fits that count. |
 | Max play time | Keeps games at or below the supplied minutes when play time is known. |
-| Never played | Excludes games that have a recorded play in the active group. |
+| Never played | Excludes games that have a recorded play in the active group, including undated "mark as played" rows. |
 
 When the browser receives a successful library load, it caches the group library
 in IndexedDB database `bglib-offline`, store `libraries`, keyed by `groupId`.
@@ -187,14 +189,21 @@ The play logging form accepts:
 - Optional per-participant scores.
 - Optional duration, notes, and `first_time_played` flag.
 
+Game detail pages also offer **Mark as played**, which inserts an `undated`
+play. That still counts toward never-played filters, picker play counts, and
+totals, but it is hidden from Home / stats / game-detail recent lists and does
+not set a last-played date. Saving the full log form always stores
+`undated = false`, so editing a mark turns it into a dated session.
+
 The play history page shows the 50 most recent plays for the group with
 participants, winner markers, scores, expansion titles, notes, and logger.
+Undated marks sort last and display as "Date unknown".
 
 The stats page currently reports:
 
-- Total plays.
-- Unique games played.
-- Plays since the first day of the current month.
+- Total plays (including undated marks).
+- Unique games played (including undated marks).
+- Plays since the first day of the current month (dated sessions only).
 - Top 8 most-played games.
 - Top 8 winners, based on `play_participants.is_winner`.
 

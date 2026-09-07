@@ -173,6 +173,7 @@ export async function PATCH(
     duration_minutes: durationMinutes,
     notes,
     first_time_played: firstTimePlayed,
+    undated,
     participants = [],
     expansion_ids: expansionIds = [],
   } = body as {
@@ -181,6 +182,7 @@ export async function PATCH(
     duration_minutes?: number | null;
     notes?: string | null;
     first_time_played?: boolean;
+    undated?: boolean;
     participants?: PlayParticipantInput[];
     expansion_ids?: string[];
   };
@@ -221,11 +223,22 @@ export async function PATCH(
           : null,
       notes: notes?.trim() || null,
       first_time_played: !!firstTimePlayed,
+      undated: !!undated,
     })
     .eq("id", id);
 
   if (playError) {
-    return NextResponse.json({ error: playError.message }, { status: 500 });
+    const message = playError.message;
+    if (message.includes("undated")) {
+      return NextResponse.json(
+        {
+          error:
+            "Database is missing undated play columns. Run migration 017_undated_plays.sql in Supabase.",
+        },
+        { status: 500 }
+      );
+    }
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 
   await supabase.from("play_participants").delete().eq("play_id", id);

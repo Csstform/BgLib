@@ -43,7 +43,7 @@ export default async function UserProfilePage({
     getOwnedGamesInGroup(id, groupId),
     supabase
       .from("plays")
-      .select("id, game_id, played_at, game:games!plays_game_id_fkey (id, title)")
+      .select("id, game_id, played_at, undated, game:games!plays_game_id_fkey (id, title)")
       .eq("group_id", groupId),
   ]);
 

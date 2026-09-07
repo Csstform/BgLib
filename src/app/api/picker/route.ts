@@ -43,7 +43,7 @@ export async function GET(request: NextRequest) {
       .eq("group_id", groupId),
     supabase
       .from("plays")
-      .select("game_id, played_at")
+      .select("game_id, played_at, undated")
       .eq("group_id", groupId)
       .order("played_at", { ascending: false }),
     supabase.from("want_to_play").select("game_id, user_id").eq("group_id", groupId),
@@ -53,6 +53,7 @@ export async function GET(request: NextRequest) {
   const playCount = new Map<string, number>();
   (plays ?? []).forEach((p) => {
     playCount.set(p.game_id, (playCount.get(p.game_id) ?? 0) + 1);
+    if (p.undated) return;
     if (!lastPlayed.has(p.game_id)) lastPlayed.set(p.game_id, p.played_at);
   });
 

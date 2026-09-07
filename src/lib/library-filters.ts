@@ -28,6 +28,7 @@ export function applyLibraryFilters(
   opts: {
     userId?: string;
     lastPlayedByGameId?: Record<string, string>;
+    playedGameIds?: Set<string> | Record<string, unknown>;
   }
 ): GameWithOwners[] {
   return games.filter((game) => {
@@ -61,8 +62,13 @@ export function applyLibraryFilters(
       return false;
     }
 
-    if (filters.unplayedOnly && opts.lastPlayedByGameId?.[game.id]) {
-      return false;
+    if (filters.unplayedOnly) {
+      const played = opts.playedGameIds;
+      const hasPlay =
+        (played instanceof Set && played.has(game.id)) ||
+        (played && !(played instanceof Set) && played[game.id]) ||
+        !!opts.lastPlayedByGameId?.[game.id];
+      if (hasPlay) return false;
     }
 
     if (
