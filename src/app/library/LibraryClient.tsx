@@ -65,6 +65,7 @@ export function LibraryClient({
   );
   const [filters, setFilters] = useState<LibraryFilters>(DEFAULT_LIBRARY_FILTERS);
   const restoredForGroup = useRef<string | null>(null);
+  const skipSave = useRef(true);
   const [offline, setOffline] = useState(() => isOffline());
   const [cachedAt, setCachedAt] = useState<string | null>(null);
 
@@ -80,10 +81,15 @@ export function LibraryClient({
       setFilters(DEFAULT_LIBRARY_FILTERS);
     }
     restoredForGroup.current = groupId;
+    skipSave.current = true;
   }, [groupId, userId]);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (restoredForGroup.current !== groupId) return;
+    if (skipSave.current) {
+      skipSave.current = false;
+      return;
+    }
     saveLibraryViewState(groupId, { search, viewMode, filters });
   }, [groupId, search, viewMode, filters]);
 
