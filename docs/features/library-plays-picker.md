@@ -63,13 +63,16 @@ Filters are applied client-side after the server load:
 
 | Filter | Behavior |
 |--------|----------|
-| Owner | Keeps games owned by the selected member. |
-| I own | Keeps games owned by the current user. |
-| No owners | Keeps catalogue entries without ownership rows. |
+| Owner | One control: any owner, a selected member, or catalogue entries with no owners. |
 | Min players | Keeps games whose `max_players` can support that count. |
 | Max players | Keeps games whose `min_players` fits that count. |
 | Max play time | Keeps games at or below the supplied minutes when play time is known. |
+| Max complexity | Keeps games at or below the supplied BGG weight when weight is known. |
 | Never played | Excludes games that have a recorded play in the active group, including undated "mark as played" rows. |
+
+Search, filters, and grouped/flat view are stored in `sessionStorage` per
+group (`bglib-library-view:<groupId>`), so they survive opening a game and
+returning to the library. Switching groups loads that group's last view.
 
 When the browser receives a successful library load, it caches the group library
 in IndexedDB database `bglib-offline`, store `libraries`, keyed by `groupId`.
