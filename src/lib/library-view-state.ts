@@ -93,3 +93,70 @@ export function saveLibraryViewState(
     // Ignore quota / private-mode failures.
   }
 }
+
+const listeners = new Map<string, Set<() => void>>();
+const snapshotCache = new Map<string, { raw: string; value: LibraryViewState }>();
+
+function snapshotCacheKey(groupId: string, userId?: string): string {
+  return `${groupId}:${userId ?? ""}`;
+}
+
+function readStoredRaw(groupId: string): string {
+  if (typeof sessionStorage === "undefined") return "";
+  try {
+    return sessionStorage.getItem(libraryViewStorageKey(groupId)) ?? "";
+  } catch {
+    return "";
+  }
+}
+
+export function subscribeLibraryView(
+  groupId: string,
+  onStoreChange: () => void
+): () => void {
+  let set = listeners.get(groupId);
+  if (!set) {
+    set = new Set();
+    listeners.set(groupId, set);
+  }
+  set.add(onStoreChange);
+  return () => {
+    set.delete(onStoreChange);
+  };
+}
+
+export function getLibraryViewSnapshot(
+  groupId: string,
+  userId?: string
+): LibraryViewState {
+  const cacheKey = snapshotCacheKey(groupId, userId);
+  const raw = readStoredRaw(groupId);
+  const cached = snapshotCache.get(cacheKey);
+  if (cached && cached.raw === raw) return cached.value;
+
+  let parsed: unknown = null;
+  if (raw) {
+    try {
+      parsed = JSON.parse(raw);
+    } catch {
+      parsed = null;
+    }
+  }
+  const value = raw
+    ? normalizeLibraryViewState(parsed, userId)
+    : DEFAULT_LIBRARY_VIEW_STATE;
+  snapshotCache.set(cacheKey, { raw, value });
+  return value;
+}
+
+export function getServerLibraryViewSnapshot(): LibraryViewState {
+  return DEFAULT_LIBRARY_VIEW_STATE;
+}
+
+export function writeLibraryViewState(
+  groupId: string,
+  state: LibraryViewState
+): void {
+  saveLibraryViewState(groupId, state);
+  listeners.get(groupId)?.forEach((listener) => listener());
+}

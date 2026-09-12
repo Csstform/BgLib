@@ -2,10 +2,13 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { DEFAULT_LIBRARY_FILTERS } from "@/lib/library-filters";
 import {
   DEFAULT_LIBRARY_VIEW_STATE,
+  getLibraryViewSnapshot,
   libraryViewStorageKey,
   loadLibraryViewState,
   normalizeLibraryViewState,
   saveLibraryViewState,
+  subscribeLibraryView,
+  writeLibraryViewState,
 } from "@/lib/library-view-state";
 
 const memory = new Map<string, string>();
@@ -75,5 +78,25 @@ describe("library view session storage", () => {
     expect(sessionStorage.getItem(libraryViewStorageKey("group-a"))).toContain(
       "wingspan"
     );
+  });
+
+  it("notifies subscribers and returns a stable snapshot", () => {
+    let notified = 0;
+    const unsubscribe = subscribeLibraryView("group-a", () => {
+      notified += 1;
+    });
+
+    writeLibraryViewState("group-a", {
+      search: "ark nova",
+      viewMode: "nested",
+      filters: DEFAULT_LIBRARY_FILTERS,
+    });
+
+    expect(notified).toBe(1);
+    const first = getLibraryViewSnapshot("group-a");
+    const second = getLibraryViewSnapshot("group-a");
+    expect(first.search).toBe("ark nova");
+    expect(first).toBe(second);
+    unsubscribe();
   });
 });

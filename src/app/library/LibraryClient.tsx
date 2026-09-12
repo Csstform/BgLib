@@ -4,9 +4,8 @@ import {
   useState,
   useMemo,
   useEffect,
-  useLayoutEffect,
   useCallback,
-  useRef,
+  useSyncExternalStore,
   type CSSProperties,
 } from "react";
 import Link from "next/link";
@@ -20,16 +19,15 @@ import { groupLibraryGames } from "@/lib/game-expansions";
 import { findDuplicateClusters } from "@/lib/duplicate-detection";
 import {
   applyLibraryFilters,
-  DEFAULT_LIBRARY_FILTERS,
   hasActiveLibraryFilters,
   uniqueOwners,
   type LibraryFilters,
 } from "@/lib/library-filters";
 import {
-  DEFAULT_LIBRARY_VIEW_STATE,
-  loadLibraryViewState,
-  saveLibraryViewState,
-  type LibraryViewMode,
+  getLibraryViewSnapshot,
+  getServerLibraryViewSnapshot,
+  subscribeLibraryView,
+  writeLibraryViewState,
 } from "@/lib/library-view-state";
 import {
   cacheLibrary,
@@ -59,39 +57,41 @@ export function LibraryClient({
   const [playedGameIds, setPlayedGameIds] = useState(
     () => new Set(initialPlayedIds ?? Object.keys(initialLastPlayed))
   );
-  const [search, setSearch] = useState(DEFAULT_LIBRARY_VIEW_STATE.search);
-  const [viewMode, setViewMode] = useState<LibraryViewMode>(
-    DEFAULT_LIBRARY_VIEW_STATE.viewMode
+  const view = useSyncExternalStore(
+    (onStoreChange) => subscribeLibraryView(groupId, onStoreChange),
+    () => getLibraryViewSnapshot(groupId, userId),
+    getServerLibraryViewSnapshot
   );
-  const [filters, setFilters] = useState<LibraryFilters>(DEFAULT_LIBRARY_FILTERS);
-  const restoredForGroup = useRef<string | null>(null);
-  const skipSave = useRef(true);
+  const { search, viewMode, filters } = view;
+  const setSearch = useCallback(
+    (next: string) => {
+      writeLibraryViewState(groupId, {
+        ...getLibraryViewSnapshot(groupId, userId),
+        search: next,
+      });
+    },
+    [groupId, userId]
+  );
+  const setViewMode = useCallback(
+    (next: typeof viewMode) => {
+      writeLibraryViewState(groupId, {
+        ...getLibraryViewSnapshot(groupId, userId),
+        viewMode: next,
+      });
+    },
+    [groupId, userId]
+  );
+  const setFilters = useCallback(
+    (next: LibraryFilters) => {
+      writeLibraryViewState(groupId, {
+        ...getLibraryViewSnapshot(groupId, userId),
+        filters: next,
+      });
+    },
+    [groupId, userId]
+  );
   const [offline, setOffline] = useState(() => isOffline());
   const [cachedAt, setCachedAt] = useState<string | null>(null);
-
-  useLayoutEffect(() => {
-    const stored = loadLibraryViewState(groupId, userId);
-    if (stored) {
-      setSearch(stored.search);
-      setViewMode(stored.viewMode);
-      setFilters(stored.filters);
-    } else {
-      setSearch(DEFAULT_LIBRARY_VIEW_STATE.search);
-      setViewMode(DEFAULT_LIBRARY_VIEW_STATE.viewMode);
-      setFilters(DEFAULT_LIBRARY_FILTERS);
-    }
-    restoredForGroup.current = groupId;
-    skipSave.current = true;
-  }, [groupId, userId]);
-
-  useLayoutEffect(() => {
-    if (restoredForGroup.current !== groupId) return;
-    if (skipSave.current) {
-      skipSave.current = false;
-      return;
-    }
-    saveLibraryViewState(groupId, { search, viewMode, filters });
-  }, [groupId, search, viewMode, filters]);
 
   const refreshFromApi = useCallback(async () => {
     if (offline) return;
@@ -171,7 +171,7 @@ export function LibraryClient({
         g.title.toLowerCase().includes(q) ||
         g.owners?.some((o) => o.display_name.toLowerCase().includes(q))
     );
-  }, [games, filters, userId, lastPlayedByGameId, playedGameIds, search]);
+  }, [games, filters, lastPlayedByGameId, playedGameIds, search]);
 
   const grouped = useMemo(
     () => groupLibraryGames(filteredGames),
