@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   DEFAULT_LIBRARY_FILTERS,
   applyLibraryFilters,
+  hasActiveLibraryFilters,
 } from "@/lib/library-filters";
 import type { GameWithOwners } from "@/lib/types";
 
@@ -62,6 +63,46 @@ describe("applyLibraryFilters unplayedOnly", () => {
       { playedGameIds: new Set(["marked"]) }
     );
     expect(result.map((g) => g.id)).toEqual(["dated", "fresh"]);
+  });
+});
+
+describe("hasActiveLibraryFilters", () => {
+  it("is false for defaults and true for any applied filter", () => {
+    expect(hasActiveLibraryFilters(DEFAULT_LIBRARY_FILTERS)).toBe(false);
+    expect(
+      hasActiveLibraryFilters({ ...DEFAULT_LIBRARY_FILTERS, noOwnersOnly: true })
+    ).toBe(true);
+  });
+});
+
+describe("applyLibraryFilters ownership", () => {
+  const alice = {
+    user_id: "alice",
+    display_name: "Alice",
+    avatar_url: null,
+    condition: "good",
+    notes: null,
+    acquired_date: null,
+  };
+  const games = [
+    game({ id: "owned", title: "Owned", owners: [alice] }),
+    game({ id: "orphan", title: "Orphan" }),
+  ];
+
+  it("filters to a selected owner", () => {
+    const result = applyLibraryFilters(games, {
+      ...DEFAULT_LIBRARY_FILTERS,
+      ownerId: "alice",
+    });
+    expect(result.map((g) => g.id)).toEqual(["owned"]);
+  });
+
+  it("filters to games with no owners", () => {
+    const result = applyLibraryFilters(games, {
+      ...DEFAULT_LIBRARY_FILTERS,
+      noOwnersOnly: true,
+    });
+    expect(result.map((g) => g.id)).toEqual(["orphan"]);
   });
 });
 

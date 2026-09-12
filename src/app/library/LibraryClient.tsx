@@ -1,6 +1,14 @@
 "use client";
 
-import { useState, useMemo, useEffect, useCallback, type CSSProperties } from "react";
+import {
+  useState,
+  useMemo,
+  useEffect,
+  useLayoutEffect,
+  useCallback,
+  useRef,
+  type CSSProperties,
+} from "react";
 import Link from "next/link";
 import { Layers, List, Library, WifiOff, Link2 } from "lucide-react";
 import { GameCard } from "@/components/GameCard";
@@ -13,9 +21,16 @@ import { findDuplicateClusters } from "@/lib/duplicate-detection";
 import {
   applyLibraryFilters,
   DEFAULT_LIBRARY_FILTERS,
+  hasActiveLibraryFilters,
   uniqueOwners,
   type LibraryFilters,
 } from "@/lib/library-filters";
+import {
+  DEFAULT_LIBRARY_VIEW_STATE,
+  loadLibraryViewState,
+  saveLibraryViewState,
+  type LibraryViewMode,
+} from "@/lib/library-view-state";
 import {
   cacheLibrary,
   getCachedLibrary,
@@ -25,8 +40,6 @@ import { REALTIME_CHANGED_EVENT } from "@/lib/realtime-scope";
 import { parseJsonResponse } from "@/lib/parse-json-response";
 import { formatDateTime } from "@/lib/utils";
 import type { GameWithOwners } from "@/lib/types";
-
-type ViewMode = "nested" | "flat";
 
 export function LibraryClient({
   groupId,
@@ -46,11 +59,33 @@ export function LibraryClient({
   const [playedGameIds, setPlayedGameIds] = useState(
     () => new Set(initialPlayedIds ?? Object.keys(initialLastPlayed))
   );
-  const [search, setSearch] = useState("");
-  const [viewMode, setViewMode] = useState<ViewMode>("nested");
+  const [search, setSearch] = useState(DEFAULT_LIBRARY_VIEW_STATE.search);
+  const [viewMode, setViewMode] = useState<LibraryViewMode>(
+    DEFAULT_LIBRARY_VIEW_STATE.viewMode
+  );
   const [filters, setFilters] = useState<LibraryFilters>(DEFAULT_LIBRARY_FILTERS);
+  const restoredForGroup = useRef<string | null>(null);
   const [offline, setOffline] = useState(() => isOffline());
   const [cachedAt, setCachedAt] = useState<string | null>(null);
+
+  useLayoutEffect(() => {
+    const stored = loadLibraryViewState(groupId, userId);
+    if (stored) {
+      setSearch(stored.search);
+      setViewMode(stored.viewMode);
+      setFilters(stored.filters);
+    } else {
+      setSearch(DEFAULT_LIBRARY_VIEW_STATE.search);
+      setViewMode(DEFAULT_LIBRARY_VIEW_STATE.viewMode);
+      setFilters(DEFAULT_LIBRARY_FILTERS);
+    }
+    restoredForGroup.current = groupId;
+  }, [groupId, userId]);
+
+  useEffect(() => {
+    if (restoredForGroup.current !== groupId) return;
+    saveLibraryViewState(groupId, { search, viewMode, filters });
+  }, [groupId, search, viewMode, filters]);
 
   const refreshFromApi = useCallback(async () => {
     if (offline) return;
@@ -120,7 +155,6 @@ export function LibraryClient({
 
   const filteredGames = useMemo(() => {
     const filtered = applyLibraryFilters(games, filters, {
-      userId,
       lastPlayedByGameId,
       playedGameIds,
     });
@@ -189,15 +223,18 @@ export function LibraryClient({
         </Link>
       )}
 
-      <div className="flex items-start gap-2">
-        <SearchBar value={search} onChange={setSearch} className="flex-1" />
+      <div className="flex flex-wrap items-start gap-2">
+        <SearchBar
+          value={search}
+          onChange={setSearch}
+          className="order-1 min-w-0 flex-1"
+        />
         <LibraryFiltersPanel
           filters={filters}
           onChange={setFilters}
           owners={owners}
-          userId={userId}
         />
-        <div className="flex shrink-0 rounded-xl border border-border bg-surface p-0.5">
+        <div className="order-3 flex shrink-0 rounded-xl border border-border bg-surface p-0.5">
           <button
             type="button"
             onClick={() => setViewMode("nested")}
@@ -233,17 +270,17 @@ export function LibraryClient({
         <EmptyState
           icon={Library}
           title={
-            search || filters.ownerId
+            search || hasActiveLibraryFilters(filters)
               ? "No games match your filters"
               : "Your library is empty"
           }
           description={
-            search || filters.ownerId
+            search || hasActiveLibraryFilters(filters)
               ? "Try a different search or clear your filters."
               : "Add your group's first game to get started."
           }
           action={
-            !search && !filters.ownerId
+            !search && !hasActiveLibraryFilters(filters)
               ? { href: "/add-game", label: "Add a game" }
               : undefined
           }

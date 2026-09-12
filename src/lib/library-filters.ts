@@ -6,7 +6,6 @@ export type LibraryFilters = {
   maxPlayers: number | null;
   maxPlayTime: number | null;
   unplayedOnly: boolean;
-  ownedByMeOnly: boolean;
   noOwnersOnly: boolean;
   maxWeight: number | null;
 };
@@ -17,32 +16,40 @@ export const DEFAULT_LIBRARY_FILTERS: LibraryFilters = {
   maxPlayers: null,
   maxPlayTime: null,
   unplayedOnly: false,
-  ownedByMeOnly: false,
   noOwnersOnly: false,
   maxWeight: null,
 };
+
+export const NO_OWNERS_FILTER_VALUE = "__none__";
+
+export function hasActiveLibraryFilters(filters: LibraryFilters): boolean {
+  return (
+    filters.ownerId != null ||
+    filters.minPlayers != null ||
+    filters.maxPlayers != null ||
+    filters.maxPlayTime != null ||
+    filters.unplayedOnly ||
+    filters.noOwnersOnly ||
+    filters.maxWeight != null
+  );
+}
 
 export function applyLibraryFilters(
   games: GameWithOwners[],
   filters: LibraryFilters,
   opts: {
-    userId?: string;
     lastPlayedByGameId?: Record<string, string>;
     playedGameIds?: Set<string> | Record<string, unknown>;
-  }
+  } = {}
 ): GameWithOwners[] {
   return games.filter((game) => {
     const owners = game.owners ?? [];
 
-    if (filters.ownerId && !owners.some((o) => o.user_id === filters.ownerId)) {
+    if (filters.noOwnersOnly && owners.length > 0) {
       return false;
     }
 
-    if (filters.ownedByMeOnly && opts.userId) {
-      if (!owners.some((o) => o.user_id === opts.userId)) return false;
-    }
-
-    if (filters.noOwnersOnly && owners.length > 0) {
+    if (filters.ownerId && !owners.some((o) => o.user_id === filters.ownerId)) {
       return false;
     }
 
