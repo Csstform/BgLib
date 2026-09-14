@@ -36,7 +36,7 @@ A mobile-first PWA for iOS and Android: a shared board game catalogue, ownership
 |-------|--------|
 | [`docs/features/bgg-collection-import.md`](docs/features/bgg-collection-import.md) | BGG collection preview/batch import, duplicate handling, expansion linking, token requirements, troubleshooting |
 | [`docs/features/game-night-reminders.md`](docs/features/game-night-reminders.md) | Game-night planning, local-time display, RSVPs, calendar sync and ICS feeds, immediate notifications, daily reminder cron, deployment checks |
-| [`docs/features/library-plays-picker.md`](docs/features/library-plays-picker.md) | Library grouping and filters, copy-between-groups workflow, catalogue edit/merge/remove flows, expansion linking, play logging, stats, offline cache, picker scoring |
+| [`docs/features/library-plays-picker.md`](docs/features/library-plays-picker.md) | Library grouping and filters, ownership and My Collection, copy-between-groups workflow, catalogue edit/merge/remove flows, expansion linking, play logging, stats, offline cache, picker scoring |
 
 ## Quick Start
 

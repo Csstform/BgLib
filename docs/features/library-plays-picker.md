@@ -80,6 +80,37 @@ If the browser later reports offline status, the library page shows cached data
 with the cache timestamp. Offline cache is browsing-only; mutations still need
 the network.
 
+## Ownership and My Collection
+
+Primary codepaths:
+
+- `src/app/collection/page.tsx`
+- `src/app/users/[id]/page.tsx`
+- `src/app/library/[id]/OwnGameButton.tsx`
+- `src/app/add-game/AddGameForm.tsx`
+- `src/lib/group.ts`
+
+Ownership is a per-user marker on a group catalogue entry. Members can create or
+remove their own `ownership` row from a game detail page with **Add to my
+collection** / **In my collection - tap to remove**. The Add Game form also
+creates an ownership row by default when **Add to my collection** stays checked.
+
+`/collection` is the current user's owned subset of the active group library. It
+redirects unauthenticated users to `/login` and users without an active group to
+`/onboarding`; otherwise it renders cards from `getOwnedGamesInGroup(userId,
+groupId)` and hides owner badges because every row is owned by the viewer.
+
+User profile pages (`/users/[id]`) show another member's owned games in the same
+active group alongside that player's stats. Both views are group-scoped: owning a
+game in one group does not imply ownership in another group unless the member
+copies or imports it there.
+
+For large libraries, owned-game reads must start from `games` with an inner
+`ownership` join filtered by `ownership.user_id`, rather than loading every
+owned `game_id` and passing a large `.in("id", ids)` list back to Supabase. The
+join keeps My Collection stable for groups with many catalogue entries and
+avoids oversized URL/query payloads.
+
 ## Copying a library between groups
 
 Primary codepaths:
