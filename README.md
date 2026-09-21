@@ -34,6 +34,7 @@ A mobile-first PWA for iOS and Android: a shared board game catalogue, ownership
 
 | Guide | Covers |
 |-------|--------|
+| [`docs/features/account-onboarding-pwa.md`](docs/features/account-onboarding-pwa.md) | Signup/login, group invite joins, onboarding enforcement, PWA install guidance, password reset operations, troubleshooting |
 | [`docs/features/bgg-collection-import.md`](docs/features/bgg-collection-import.md) | BGG collection preview/batch import, duplicate handling, expansion linking, token requirements, troubleshooting |
 | [`docs/features/game-night-reminders.md`](docs/features/game-night-reminders.md) | Game-night planning, local-time display, RSVPs, calendar sync and ICS feeds, immediate notifications, daily reminder cron, deployment checks |
 | [`docs/features/library-plays-picker.md`](docs/features/library-plays-picker.md) | Library grouping and filters, copy-between-groups workflow, catalogue edit/merge/remove flows, expansion linking, play logging, stats, offline cache, picker scoring |
@@ -188,7 +189,7 @@ src/
 supabase/
 ├── install.sql           # Single-file install (generated)
 ├── schema.sql            # Base schema
-├── migrations/           # Ordered migrations 002–014
+├── migrations/           # Ordered migrations 002-017
 └── README.md             # Database setup guide
 docs/
 └── features/             # Feature architecture and workflow docs
