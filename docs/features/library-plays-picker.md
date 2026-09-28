@@ -50,6 +50,7 @@ Primary codepaths:
 - `src/app/library/LibraryClient.tsx`
 - `src/lib/game-expansions.ts`
 - `src/lib/library-filters.ts`
+- `src/lib/library-view-state.ts`
 - `src/lib/offline-library.ts`
 
 The library page loads all games for the active group, ownership details, and the
@@ -73,6 +74,28 @@ Filters are applied client-side after the server load:
 Search, filters, and grouped/flat view are stored in `sessionStorage` per
 group (`bglib-library-view:<groupId>`), so they survive opening a game and
 returning to the library. Switching groups loads that group's last view.
+
+### Library view state persistence
+
+`LibraryClient` reads and writes view state through `useSyncExternalStore` and
+`writeLibraryViewState`. This keeps the current search, filters, and view mode
+available synchronously to link clicks and back-navigation, avoiding a flash of
+the default library view before the stored state is applied.
+
+Stored values are normalized on read:
+
+| Stored field | Constraint |
+|--------------|------------|
+| `search` | Must be a string; invalid values become an empty search. |
+| `viewMode` | Only `nested` and `flat` are accepted; invalid values become `nested`. |
+| `filters.ownerId` | Must be a non-empty string, or `null` for any owner. |
+| `filters.noOwnersOnly` | When true, it clears `ownerId` because "No owners" and a selected owner are mutually exclusive. |
+| `filters.ownedByMeOnly` | Legacy stored flag; converted to `ownerId = <current user id>` when a user id is available. |
+| Numeric filters | Must be finite numbers; invalid values become `null`. |
+
+The persisted state is browser-session scoped, not cross-device or server
+state. Clearing site data or opening a new browser session returns the library
+to the default nested view with no filters.
 
 When the browser receives a successful library load, it caches the group library
 in IndexedDB database `bglib-offline`, store `libraries`, keyed by `groupId`.
