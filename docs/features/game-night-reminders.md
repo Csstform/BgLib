@@ -21,10 +21,13 @@ Both notification paths reuse the app's push and email helpers.
 - `src/app/game-nights/[id]/page.tsx`
 - `src/app/game-nights/[id]/edit/page.tsx`
 - `src/app/game-nights/[id]/RsvpButtons.tsx`
+- `src/components/GameNightCard.tsx`
+- `src/components/GameNightShareButton.tsx`
 - `src/components/GameNightsCalendarExport.tsx`
 - `src/components/GameNightCalendarActions.tsx`
 - `src/components/GameNightPicker.tsx`
 - `src/components/LocalDateTime.tsx`
+- `src/app/join/[code]/page.tsx`
 - `src/app/api/game-nights/route.ts`
 - `src/app/api/game-nights/[id]/route.ts`
 - `src/app/api/game-nights/[id]/games/route.ts`
@@ -36,6 +39,8 @@ Both notification paths reuse the app's push and email helpers.
 - `src/lib/calendar-feed-response.ts`
 - `src/lib/load-game-night-calendar.ts`
 - `src/lib/game-night-calendar.ts`
+- `src/lib/game-night-share.ts`
+- `src/lib/group-invite.ts`
 - `src/lib/ics.ts`
 - `src/app/api/cron/game-night-reminders/route.ts`
 - `src/lib/push.ts`
@@ -56,8 +61,9 @@ Schema support lives in:
 
 - `supabase/migrations/002_extensions.sql`
 - `supabase/migrations/012_game_night_reminders.sql`
+- `supabase/migrations/016_lookup_group_by_invite.sql`
 
-Fresh installs through `supabase/install.sql` include both.
+Fresh installs through `supabase/install.sql` include all three.
 
 ## Planning workflow
 
@@ -72,6 +78,7 @@ Fresh installs through `supabase/install.sql` include both.
    the time, place, planned games, an RSVP link, and an `.ics` attachment.
 5. The user lands on `/game-nights/[id]`, where members can RSVP and the
    `GameNightPicker` can suggest games based on people marked `going`.
+   The dashboard also renders compact RSVP buttons for the next upcoming night.
 6. The host can open `/game-nights/[id]/edit` to change title, time, location,
    description, or planned games. The form puts those fields to
    `PUT /api/game-nights/[id]`. Push always goes out; the same email-invite
@@ -80,6 +87,45 @@ Fresh installs through `supabase/install.sql` include both.
 Only the host can update, cancel, or replace the planned games for a game night.
 The API checks `night.host_id === user.id` before those mutations. Cancelled
 nights cannot be edited.
+
+When a past game night is opened, the detail page shows **Log plays**. The link
+passes `night=<game-night-id>` to `/plays/new`; if exactly one planned game is
+attached, it also passes that `game` id. The play form uses the night's scheduled
+time as the initial play time and preselects everyone marked `going`, adding the
+current user if they were not already in that RSVP set.
+
+## Sharing and invite links
+
+Upcoming, uncancelled game nights can be shared from both the `/game-nights`
+list cards and the `/game-nights/[id]` detail page. `GameNightShareButton` uses
+the Web Share API when available and falls back to copying text to the clipboard.
+The copied/shared message includes:
+
+- title and viewer-formatted scheduled time
+- location, host, and planned games when present
+- an RSVP link to `/game-nights/[id]`
+- group join instructions and `/join/<invite-code>` when the active group has an
+  invite code
+
+Share URLs use `NEXT_PUBLIC_APP_URL` when it is set, otherwise the browser
+origin. Set `NEXT_PUBLIC_APP_URL` in production so copied messages, email links,
+and calendar URLs all point at the public HTTPS app.
+
+The join route normalizes invite codes with `normalizeInviteCode`, then resolves
+the group through the `lookup_group_by_invite` RPC. This RPC is `security
+definer` because normal `groups` RLS only allows members to read group rows, but
+the public join page needs to show the group name before someone belongs to it.
+
+Join behavior:
+
+- signed-out visitors see signup and login links; signup carries
+  `?invite=<code>`, and login redirects back to `/join/<code>`
+- signed-in users are added through `joinGroupByInvite(code)` and then redirected
+  to `/library` if onboarding is complete, otherwise `/onboarding`
+- if the code is invalid, the page shows an error instead of joining a group
+
+The game-night detail page still requires group membership for signed-in users;
+a shared RSVP link becomes useful after the recipient joins the group.
 
 ## Timezone handling
 
