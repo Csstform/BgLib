@@ -188,7 +188,7 @@ src/
 supabase/
 ├── install.sql           # Single-file install (generated)
 ├── schema.sql            # Base schema
-├── migrations/           # Ordered migrations 002–014
+├── migrations/           # Ordered migrations 002–017
 └── README.md             # Database setup guide
 docs/
 └── features/             # Feature architecture and workflow docs

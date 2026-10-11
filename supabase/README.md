@@ -58,7 +58,9 @@ In Supabase Dashboard → **Database** → **Replication**, enable Realtime for:
   user-facing name helpers display `real_name` when present, otherwise
   `display_name`.
 - Existing users running migration `003` get backfilled groups and `onboarding_completed = true`.
-- Feature behavior for migrations `008` and `010` is documented in
+- Feature behavior for migrations `008`, `010`, `015`, and `017` is documented in
   [`../docs/features/library-plays-picker.md`](../docs/features/library-plays-picker.md).
 - Game-night reminder behavior for migration `012` is documented in
+  [`../docs/features/game-night-reminders.md`](../docs/features/game-night-reminders.md).
+- Public invite-code lookup behavior for migration `016` is documented in
   [`../docs/features/game-night-reminders.md`](../docs/features/game-night-reminders.md).

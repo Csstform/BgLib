@@ -26,9 +26,11 @@ data visible only to members.
 |----------------|---------|
 | `games.base_game_id` | Optional self-reference from an expansion to its base game. |
 | `games.bgg_type` | BGG type: `boardgame` or `boardgameexpansion`. |
+| `games.bgg_weight` | Optional BGG average complexity used by the library max-complexity filter. |
 | `play_expansions` | Join table from a logged play to expansion games used in that play. |
 | `plays.first_time_played` | User-marked flag for a group's first play of a game. |
 | `plays.undated` | True for "mark as played" acknowledgements. Counts as played, but is omitted from recent-play lists and last-played dates. |
+| `play_participants.guest_name` | Name-only participant for guests who do not have an account in the group. |
 | `play_participants.is_winner` | Supports zero, one, or multiple winners for a play. |
 | `play_participants.score` | Optional integer score per participant. |
 
@@ -36,6 +38,7 @@ Schema changes live in:
 
 - `supabase/migrations/008_expansions.sql`
 - `supabase/migrations/010_play_winners_stats.sql`
+- `supabase/migrations/015_weight_and_guest_players.sql`
 - `supabase/migrations/017_undated_plays.sql`
 
 Migration `009_barcode_upc.sql` adds UPC lookup fields for the Add Game flow.
@@ -188,6 +191,9 @@ The play logging form accepts:
 - Base game only; expansion entries are not selectable as the primary game.
 - Linked expansions used during the play.
 - Participants from the active group.
+- Optional guest participants by name. Guest names are stored directly on
+  `play_participants` with `user_id = null` and are unique per play
+  case-insensitively.
 - Optional winners. Multiple winners are allowed for ties or cooperative wins.
 - Optional per-participant scores.
 - Optional duration, notes, and `first_time_played` flag.
@@ -268,8 +274,8 @@ Alice or Bob, and wanted by at least one of them.
 
 When deploying or debugging this feature cluster:
 
-1. Confirm the database has run migrations `008` through `010`; fresh installs
-   via `supabase/install.sql` already include them.
+1. Confirm the database has run migrations `008` through `010`, plus `015` and
+   `017`; fresh installs via `supabase/install.sql` already include them.
 2. Enable Supabase Realtime for `games`, `plays`, and `want_to_play` as listed in
    `supabase/README.md`.
 3. Log at least one play with participants and a winner before validating
