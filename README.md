@@ -34,6 +34,7 @@ A mobile-first PWA for iOS and Android: a shared board game catalogue, ownership
 
 | Guide | Covers |
 |-------|--------|
+| [`docs/features/auth-onboarding-pwa.md`](docs/features/auth-onboarding-pwa.md) | Auth/session redirects, password reset, onboarding, PWA install prompts, push/email notification opt-ins, troubleshooting |
 | [`docs/features/bgg-collection-import.md`](docs/features/bgg-collection-import.md) | BGG collection preview/batch import, duplicate handling, expansion linking, token requirements, troubleshooting |
 | [`docs/features/game-night-reminders.md`](docs/features/game-night-reminders.md) | Game-night planning, local-time display, RSVPs, calendar sync and ICS feeds, immediate notifications, daily reminder cron, deployment checks |
 | [`docs/features/library-plays-picker.md`](docs/features/library-plays-picker.md) | Library grouping, persisted filters/view state, copy-between-groups workflow, catalogue edit/merge/remove flows, expansion linking, play logging, stats, offline cache, picker scoring |
