@@ -211,6 +211,9 @@ On Vercel, `vercel.json` runs both reminder crons:
 | `/api/cron/loan-reminders` | Due-date reminders for open loans | 09:00 UTC daily |
 | `/api/cron/game-night-reminders` | Tomorrow reminders for uncancelled game nights | 10:00 UTC daily |
 
+See [`docs/features/loans-and-reminders.md`](../docs/features/loans-and-reminders.md)
+for the loan reminder eligibility rules and notification prerequisites.
+
 On a droplet, use systemd timers with the same authenticated curl pattern. The
 included `bglib-cron.service` / `.timer` files run loan reminders; copy them if
 you also want a separate game-night reminder timer:
