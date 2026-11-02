@@ -42,8 +42,8 @@ Schema changes live in:
 - `supabase/migrations/017_undated_plays.sql`
 
 Migration `009_barcode_upc.sql` adds UPC lookup fields for the Add Game flow.
-Barcode scan uses the shared `upc_bgg_mappings` cache plus BGG search — `BGG_API_TOKEN`
-is required; `GAMEUPC_API_TOKEN` is optional.
+Barcode scan uses `games.upc`, the shared `upc_bgg_mappings` cache, BGG
+search, and optional GameUPC lookup.
 
 ## Library workflow
 
@@ -105,6 +105,66 @@ in IndexedDB database `bglib-offline`, store `libraries`, keyed by `groupId`.
 If the browser later reports offline status, the library page shows cached data
 with the cache timestamp. Offline cache is browsing-only; mutations still need
 the network.
+
+## Add Game barcode workflow
+
+Primary codepaths:
+
+- `src/app/add-game/AddGameForm.tsx`
+- `src/components/BarcodeLookupPanel.tsx`
+- `src/components/BarcodeScanner.tsx`
+- `src/app/api/barcode/lookup/route.ts`
+- `src/app/api/barcode/map/route.ts`
+- `src/app/api/barcode/status/route.ts`
+- `src/lib/barcode.ts`
+- `src/lib/barcode-lookup.ts`
+- `src/lib/barcode-match.ts`
+- `src/lib/upc-product-lookup.ts`
+- `src/lib/gameupc.ts`
+
+The Add Game form lets members import details from a scanned or typed UPC/EAN
+barcode before saving the new `games` row. The scanner uses the browser's native
+`BarcodeDetector` when available. If the browser does not support live scanning,
+or camera access fails, the dialog falls back to a numeric manual entry field.
+All inputs are normalized to digits only and must be 8-14 digits.
+
+`GET /api/barcode/lookup?upc=<digits>` is authenticated and resolves a barcode
+in this order:
+
+1. Normalize and validate the barcode.
+2. Check `games.upc` inside the active group. If a row already exists, return a
+   duplicate result so the UI can stop before adding another copy.
+3. Check the shared `upc_bgg_mappings` table. A cached mapping returns a BGG ID
+   without another external lookup.
+4. If `GAMEUPC_API_TOKEN` is configured, ask GameUPC for a verified BGG match or
+   candidate list. UPC-A and leading-zero EAN-13 variants are tried.
+5. If `BGG_API_TOKEN` is configured, look up a product title through the free
+   UPCItemDB trial endpoint, then Open Food Facts, and search BGG with that
+   title. A single BGG hit is auto-selected; multiple hits are shown as
+   candidates.
+6. If no automatic match is safe, prompt for manual BGG search. Choosing a
+   candidate stores the confirmed UPC -> BGG link for future scans.
+
+Successful automatic matches are upserted into `upc_bgg_mappings` with their
+source (`gameupc` or `bgg_search`). User-confirmed choices are saved through
+`POST /api/barcode/map` with source `user`. The cache is intentionally global:
+authenticated users can read and improve UPC -> BGG mappings, but the table
+does not store group membership, ownership, or private collection data.
+
+After a BGG ID is selected, the form calls `/api/bgg/thing?id=<bgg-id>` and
+fills title, description, player counts, play time, cover image, BGG type, base
+game link, and BGG weight. On submit, the scanned UPC is stored on `games.upc`
+with the rest of the catalogue row.
+
+Operational constraints:
+
+| Constraint | Behavior |
+|------------|----------|
+| `BGG_API_TOKEN` missing | The form cannot search BGG or hydrate a selected BGG ID into game details; manual game entry still works. |
+| `GAMEUPC_API_TOKEN` missing | Barcode lookup skips GameUPC and falls back to public product-name lookup plus BGG search. |
+| Browser lacks `BarcodeDetector` | Live camera scanning is hidden behind the same dialog, but typed barcode lookup still works. |
+| Existing active-group `games.upc` match | Lookup returns a duplicate warning instead of importing details. |
+| Bad or short barcode | Lookup returns `400 Invalid barcode`; the client accepts only 8-14 digits after normalization. |
 
 ## Copying a library between groups
 
@@ -309,6 +369,8 @@ When deploying or debugging this feature cluster:
    history, loans, wants, or game-night suggestions should survive.
 7. Use copy-library preview before importing between groups; duplicate matching
    depends on BGG ID, UPC, then normalized title.
+8. Set `BGG_API_TOKEN` before validating barcode import. Add `GAMEUPC_API_TOKEN`
+   only if you want the optional GameUPC lookup path.
 
 ## Troubleshooting
 
@@ -321,6 +383,9 @@ When deploying or debugging this feature cluster:
 | Picker ignores an expansion | Expansions are shown as metadata for eligible base games, not standalone candidates. |
 | Copying between groups made no new rows | The matching games already exist in the target group and were linked by BGG ID, UPC, or normalized title. |
 | Copied expansion is not nested | Confirm the base game exists or was included in the copy; orphan relinking is best-effort after the copy succeeds. |
+| Barcode scanner cannot open the camera | Use the barcode dialog's manual entry fallback; live scanning depends on browser `BarcodeDetector` support and camera permission. |
+| Barcode lookup shows manual search every time | Confirm `BGG_API_TOKEN` is set; without it, in-app BGG search and BGG detail import cannot complete. |
+| Barcode found the wrong game | Select the correct BGG result in manual search; `POST /api/barcode/map` saves the corrected UPC mapping for future scans. |
 | Stats show no winners | Winners are counted only from plays where participants were marked with `is_winner`. |
 | Offline library shows old data | The cache is updated only after a successful online `/library` load for that group. |
 | Removed game disappeared from plays, loans, or game nights | Expected: removal deletes the game and cascades dependent records. Use duplicate merge instead when those records need to be preserved. |
