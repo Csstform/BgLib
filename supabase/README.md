@@ -12,6 +12,92 @@ To regenerate `install.sql` after editing migrations:
 npm run db:build
 ```
 
+## Local development
+
+Use the Supabase CLI stack for local app work so auth, Postgres, Realtime,
+and the REST Data API match the app's backend contract.
+
+### 1. Start Docker and Supabase
+
+Start Docker first. On Cursor Cloud there is no systemd, so run the daemon
+manually in a long-lived terminal:
+
+```bash
+sudo dockerd
+```
+
+If Docker reports `permission denied` for `/var/run/docker.sock`, fix the
+socket permissions in another terminal:
+
+```bash
+sudo chmod 666 /var/run/docker.sock
+```
+
+Then start the local Supabase stack from the repo root:
+
+```bash
+supabase start
+```
+
+The repo's `supabase/config.toml` uses `project_id = "workspace"`, API port
+`54321`, database port `54322`, Studio port `54323`, and disables local email
+confirmation so email/password signups log in immediately.
+
+### 2. Initialize an empty local database
+
+Do **not** run `supabase db reset` for this project. The files in
+`supabase/migrations/` are incremental and assume `schema.sql` already exists,
+so a reset cannot rebuild the database from migrations alone.
+
+For a fresh or empty local database, apply the generated single-file install:
+
+```bash
+docker exec -i supabase_db_workspace psql -U postgres -d postgres < supabase/install.sql
+```
+
+Then enable Realtime for the tables the app subscribes to:
+
+```bash
+docker exec -i supabase_db_workspace psql -U postgres -d postgres -c \
+  "ALTER PUBLICATION supabase_realtime ADD TABLE public.games, public.loans, public.game_night_rsvps, public.plays, public.want_to_play;"
+```
+
+Run the Realtime command only when those tables are not already in the
+publication. Existing local Docker volumes usually keep the schema and data, so
+later sessions only need `supabase start`.
+
+### 3. Configure `.env.local`
+
+Get local keys with:
+
+```bash
+supabase status -o env
+```
+
+Set these app variables from that output:
+
+```bash
+NEXT_PUBLIC_SUPABASE_URL=http://127.0.0.1:54321
+NEXT_PUBLIC_SUPABASE_ANON_KEY=<ANON_KEY from supabase status>
+SUPABASE_SERVICE_ROLE_KEY=<SERVICE_ROLE_KEY from supabase status>
+```
+
+Keep the optional feature variables from `.env.local.example` as needed. BGG
+search/import still requires `BGG_API_TOKEN`; adding a game manually works
+without it.
+
+### Local troubleshooting
+
+- Keep `[api].auto_expose_new_tables = true` in `config.toml`. The schema relies
+  on RLS policies plus Supabase's legacy auto-grants for `anon` and
+  `authenticated`; turning it off causes REST reads and profile updates to fail
+  with `permission denied for table ...`.
+- If a new signup keeps returning to onboarding, first check that
+  `NEXT_PUBLIC_SUPABASE_URL` points at `http://127.0.0.1:54321`, the anon key is
+  from `supabase status -o env`, and `auto_expose_new_tables` is still enabled.
+- If Realtime-driven pages do not refresh, confirm the five tables above are in
+  the `supabase_realtime` publication.
+
 ## Manual install
 
 Run these files **in order** if you prefer step-by-step:

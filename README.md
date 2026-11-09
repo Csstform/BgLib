@@ -57,6 +57,9 @@ npm install
 4. Under **Project Settings → API**, copy the **Project URL** and **anon public** key
 
 See [`supabase/README.md`](supabase/README.md) for manual step-by-step migrations or regenerating `install.sql`.
+For local development with Docker and the Supabase CLI, follow the
+[`supabase/README.md#local-development`](supabase/README.md#local-development)
+runbook instead of creating a hosted project.
 
 ### 3. Configure environment
 
@@ -94,6 +97,10 @@ npm run dev
 ```
 
 Open [http://localhost:3000](http://localhost:3000).
+
+When using the local Supabase stack, `NEXT_PUBLIC_SUPABASE_URL` should be
+`http://127.0.0.1:54321`; copy the anon and service-role keys from
+`supabase status -o env`.
 
 ### 5. Install on mobile
 
