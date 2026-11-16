@@ -64,5 +64,6 @@ In Supabase Dashboard → **Database** → **Replication**, enable Realtime for:
   [`../docs/features/library-plays-picker.md`](../docs/features/library-plays-picker.md).
 - Game-night reminder behavior for migration `012` is documented in
   [`../docs/features/game-night-reminders.md`](../docs/features/game-night-reminders.md).
-- Public invite-code lookup behavior for migration `016` is documented in
-  [`../docs/features/game-night-reminders.md`](../docs/features/game-night-reminders.md).
+- Group signup, invite-code lookup, and onboarding behavior for migrations
+  `003`, `007`, `013`, and `016` are documented in
+  [`../docs/features/groups-onboarding.md`](../docs/features/groups-onboarding.md).
